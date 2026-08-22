@@ -1,0 +1,83 @@
+/*
+ * Design tokens Tennly IA — repris tels quels de mockups/prototype.html et
+ * de Spec_Maquette_Figma.docx pour que l'appli Vue reste visuellement
+ * identique au prototype déjà validé (cahier des charges section 5).
+ */
+:root {
+  --bg: #ffffff;
+  --ink: #1d1d1f;
+  --grey: #86868b;
+  --card: #f5f5f7;
+  --line: #e5e5e7;
+  --blue: #0071e3;
+  --green: #0f3d3e;
+  --green2: #0a2c2d;
+  --lime: #c7ff3c;
+  --amber: #ff9f0a;
+  --red: #ff453a;
+  --radius-card: 22px;
+  --radius-pill: 999px;
+  --shadow-soft: 0 2px 24px rgba(0, 0, 0, 0.06);
+
+  /* Palette "terre battue" — utilisée uniquement par la section clay-hero de
+     la page d'accueil (HomeView.vue), reprise du prototype validé. */
+  --clay: #c1652e;
+  --clay2: #6e3618;
+  --chalk: #f5efe2;
+  /* Bouton "toujours sombre" (texte blanc) : volontairement pas lié à --ink,
+     pour rester lisible le jour où un thème sombre sera ajouté à l'app
+     (voir mockups/prototype.html, qui a déjà ce thème et ce token). */
+  --btn: #1d1d1f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    'SF Pro Display',
+    'Segoe UI',
+    Helvetica,
+    Arial,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 14px 28px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+}
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+}

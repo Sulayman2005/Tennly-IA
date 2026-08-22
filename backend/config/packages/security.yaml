@@ -1,0 +1,68 @@
+security:
+    password_hashers:
+        App\Entity\User:
+            algorithm: auto
+
+    providers:
+        app_user_provider:
+            entity:
+                class: App\Entity\User
+                property: email
+
+    firewalls:
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
+
+        # Endpoint de connexion : reçoit email/mot de passe, renvoie un JWT.
+        login:
+            pattern: ^/api/login_check
+            stateless: true
+            json_login:
+                check_path: /api/login_check
+                username_path: email
+                password_path: password
+                success_handler: lexik_jwt_authentication.handler.authentication_success
+                failure_handler: lexik_jwt_authentication.handler.authentication_failure
+
+        # Rafraîchissement de token (voir gesdinet_jwt_refresh_token.yaml).
+        refresh:
+            pattern: ^/api/token/refresh
+            stateless: true
+
+        # Toutes les autres routes /api/* : authentification par JWT (Bearer token),
+        # sauf exceptions listées en access_control (inscription publique, docs).
+        api:
+            pattern: ^/api
+            stateless: true
+            jwt: ~
+
+        main:
+            lazy: true
+            provider: app_user_provider
+
+    access_control:
+        # Inscription : c'est justement l'endpoint qui crée le compte, donc public.
+        # Rappel produit (cahier des charges section 3.9) : ce n'est pas un bouton
+        # d'inscription libre côté frontend — l'appel à cet endpoint n'est déclenché
+        # par le Vue app qu'après le clic sur une formule dans la popup paywall.
+        - { path: ^/api/register, roles: PUBLIC_ACCESS }
+        - { path: ^/api/login_check, roles: PUBLIC_ACCESS }
+        - { path: ^/api/token/refresh, roles: PUBLIC_ACCESS }
+        - { path: ^/api/docs, roles: PUBLIC_ACCESS }
+        - { path: ^/api/contexts, roles: PUBLIC_ACCESS }
+        # Le reste de l'API gère ses propres règles de sécurité au niveau de chaque
+        # ressource / opération API Platform (voir attributs #[ApiResource] et
+        # #[ApiFilter] dans src/Entity), pour distinguer par exemple l'aperçu
+        # gratuit du tableau des matchs (section 3.2) de la fiche détaillée
+        # réservée aux abonnés (section 3.3 / paywall en 3.2.1).
+        - { path: ^/api, roles: PUBLIC_ACCESS }
+
+when@test:
+    security:
+        password_hashers:
+            App\Entity\User:
+                algorithm: auto
+                cost: 4
+                time_cost: 3
+                memory_cost: 10
