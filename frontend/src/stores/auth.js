@@ -16,6 +16,15 @@ export const useAuthStore = defineStore('auth', () => {
 
   const hasActiveSubscription = computed(() => Boolean(user.value?.activeSubscription))
 
+  /**
+   * Reflète User::getRoles() côté backend (exposé sur GET /api/me depuis
+   * l'ajout du groupe "user:read" sur User::$roles). Sert uniquement à
+   * afficher/masquer le lien "Back-office" (section 3.7) et à garder les
+   * routes /admin/* côté client — la vraie sécurité reste imposée par les
+   * `is_granted('ROLE_ADMIN')` côté API, jamais par cet état local.
+   */
+  const isAdmin = computed(() => Boolean(user.value?.roles?.includes('ROLE_ADMIN')))
+
   async function login(email, password) {
     await api.login(email, password)
     isAuthenticated.value = true
@@ -23,13 +32,15 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * @param {{email: string, password: string, firstName: string, lastName: string, planCode?: string}} payload
-   * @returns {Promise<string|null>} l'URL Stripe Checkout à ouvrir si une formule a été choisie, sinon null.
+   * @param {{email: string, password: string, firstName: string, lastName: string}} payload
+   *
+   * Crée le compte puis connecte immédiatement l'utilisateur — ne déclenche
+   * aucun paiement (voir api.createCheckoutSession(), appelé séparément
+   * depuis ConnexionView.vue/PaywallModal.vue quand une formule est choisie).
    */
   async function register(payload) {
-    const created = await api.register(payload)
+    await api.register(payload)
     await login(payload.email, payload.password)
-    return created.checkoutUrl ?? null
   }
 
   async function fetchCurrentUser() {
@@ -61,5 +72,5 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
   }
 
-  return { user, isAuthenticated, hasActiveSubscription, login, register, logout, fetchCurrentUser }
+  return { user, isAuthenticated, hasActiveSubscription, isAdmin, login, register, logout, fetchCurrentUser }
 })

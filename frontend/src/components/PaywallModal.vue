@@ -1,11 +1,16 @@
 <script setup>
-import { useRouter } from 'vue-router'
+import { ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { api } from '@/api/client'
+import { useAuthStore } from '@/stores/auth'
 
 defineProps({
   open: { type: Boolean, default: false },
 })
 const emit = defineEmits(['close'])
+const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 
 const plans = [
   { code: 'classique', name: 'Classique', price: '9,99 €', per: 'par mois' },
@@ -13,13 +18,39 @@ const plans = [
   { code: 'vip-annuel', name: 'VIP annuel', price: '199,99 €', per: 'par an' },
 ]
 
+const startingCheckout = ref(null)
+const errorMessage = ref('')
+
 /**
- * Cahier des charges section 3.2.1 / 3.9 : le clic sur une formule redirige
- * vers l'écran de connexion en mode inscription — jamais l'inverse. C'est le
- * SEUL chemin qui mène à la création d'un compte.
+ * Le paiement n'est plus déclenché à l'inscription (voir
+ * UserRegistrationProcessor côté backend) : cette popup n'apparaît que
+ * lorsque l'utilisateur clique sur "Débloquer l'analyse complète" d'un match
+ * précis (voir MatchDetailView.vue), et le paiement ne démarre qu'ici,
+ * jamais avant.
+ *
+ * - Déjà connecté : on démarre tout de suite une session Stripe Checkout
+ *   pour la formule choisie (CheckoutSessionController), avec le chemin du
+ *   match courant comme point de retour après paiement.
+ * - Pas encore connecté : direction l'écran de connexion (qui ne s'occupe
+ *   plus que de créer le compte / se connecter, jamais de formule) avec le
+ *   match d'origine mémorisé en ?redirect= — une fois connecté, l'utilisateur
+ *   retombe sur ce même match et peut y rouvrir cette popup pour payer.
  */
-function choosePlan(code) {
-  router.push({ name: 'connexion', query: { plan: code } })
+async function choosePlan(code) {
+  if (!auth.isAuthenticated) {
+    router.push({ name: 'connexion', query: { redirect: route.fullPath } })
+    return
+  }
+
+  errorMessage.value = ''
+  startingCheckout.value = code
+  try {
+    const { checkoutUrl } = await api.createCheckoutSession(code, route.fullPath)
+    window.location.href = checkoutUrl
+  } catch {
+    errorMessage.value = 'Impossible de démarrer le paiement pour le moment.'
+    startingCheckout.value = null
+  }
 }
 </script>
 
@@ -29,14 +60,17 @@ function choosePlan(code) {
       <div class="close" @click="emit('close')">✕</div>
       <span class="lock-tag">🔒 Contenu réservé aux abonnés</span>
       <h3>Débloquez l'analyse complète de ce match</h3>
-      <p>Probabilités détaillées, comparatif des facteurs et explication du pronostic — choisissez votre formule pour continuer.</p>
+      <p>Probabilités détaillées, comparatif des facteurs et analyse IA complète — choisissez votre formule pour continuer.</p>
+      <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
       <div class="plans">
         <div v-for="plan in plans" :key="plan.code" class="plan" :class="{ reco: plan.reco }">
           <span v-if="plan.reco" class="badge">LE PLUS CHOISI</span>
           <div class="p">{{ plan.name }}</div>
           <div class="price">{{ plan.price }}</div>
           <div class="per">{{ plan.per }}</div>
-          <button @click="choosePlan(plan.code)">Choisir</button>
+          <button :disabled="Boolean(startingCheckout)" @click="choosePlan(plan.code)">
+            {{ startingCheckout === plan.code ? 'Redirection…' : 'Choisir' }}
+          </button>
         </div>
       </div>
       <div class="foot">Résiliable à tout moment en un clic. Aucun engagement caché.</div>
@@ -136,4 +170,17 @@ function choosePlan(code) {
   font-size: 12px;
   color: var(--grey);
 }
+.error {
+  background: #fdecea;
+  color: #b3261e;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  margin-top: -8px;
+}
+.plan button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 </style>
+

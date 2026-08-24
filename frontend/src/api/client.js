@@ -3,8 +3,8 @@
  * Pas de dépendance externe (axios, etc.) — fetch natif suffit pour ce MVP.
  */
 
-const ACCESS_TOKEN_KEY = 'tennly-ia.accessToken'
-const REFRESH_TOKEN_KEY = 'tennly-ia.refreshToken'
+const ACCESS_TOKEN_KEY = 'tennly.accessToken'
+const REFRESH_TOKEN_KEY = 'tennly.refreshToken'
 
 function getAccessToken() {
   return sessionStorage.getItem(ACCESS_TOKEN_KEY)
@@ -106,16 +106,30 @@ export const api = {
   },
 
   /**
-   * POST /api/register — n'est appelé QUE depuis l'écran de connexion en
-   * mode inscription, lui-même atteint uniquement depuis la popup paywall
-   * (voir ConnexionView.vue et cahier des charges section 3.9). `planCode`
-   * correspond au paramètre ?plan= de la maquette (classique|vip|vip-annuel).
+   * POST /api/register — crée un compte, sans déclencher aucun paiement (voir
+   * UserRegistrationProcessor côté backend). Le paiement se démarre
+   * séparément via createCheckoutSession(), au moment où l'utilisateur choisit
+   * une formule depuis la popup paywall d'un match précis.
    */
-  async register({ email, password, firstName, lastName, planCode }) {
+  async register({ email, password, firstName, lastName }) {
     return request('/api/register', {
       method: 'POST',
-      body: { email, plainPassword: password, firstName, lastName, planCode },
+      body: { email, plainPassword: password, firstName, lastName },
       auth: false,
+    })
+  },
+
+  /**
+   * POST /api/checkout-sessions — démarre un paiement Stripe pour
+   * l'utilisateur courant (déjà connecté) et une formule donnée.
+   * `redirectPath` est le chemin du match qui a déclenché le paiement (voir
+   * PaywallModal.vue) : Stripe y renvoie l'utilisateur une fois le paiement
+   * confirmé, au lieu d'une page générique.
+   */
+  async createCheckoutSession(planCode, redirectPath) {
+    return request('/api/checkout-sessions', {
+      method: 'POST',
+      body: { planCode, redirectPath },
     })
   },
 

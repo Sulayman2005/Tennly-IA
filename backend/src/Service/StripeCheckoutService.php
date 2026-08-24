@@ -11,9 +11,13 @@ use Stripe\StripeClient;
  * Encapsule la création d'une session Stripe Checkout pour un couple
  * (utilisateur, formule) — cahier des charges section 3.6 "Paiement et abonnement".
  *
- * Déclenchée uniquement juste après l'inscription initiée depuis la popup
- * paywall (voir UserRegistrationProcessor et section 3.9), jamais à un autre
- * moment : il n'y a pas de tunnel d'abonnement indépendant de l'inscription.
+ * Déclenchée depuis CheckoutSessionController, lui-même appelé au moment où
+ * un utilisateur DÉJÀ connecté choisit une formule depuis la popup paywall
+ * d'un match précis (voir PaywallModal.vue) — plus jamais automatiquement à
+ * l'inscription (voir UserRegistrationProcessor, qui ne fait plus que créer
+ * le compte). `$returnPath` est le chemin du match qui a déclenché le
+ * paiement, pour renvoyer l'utilisateur exactement là où il voulait aller une
+ * fois le paiement confirmé plutôt que sur une page d'accueil générique.
  */
 class StripeCheckoutService
 {
@@ -26,8 +30,11 @@ class StripeCheckoutService
         $this->stripe = new StripeClient($stripeSecretKey);
     }
 
-    public function createCheckoutSessionUrl(User $user, Plan $plan): string
+    public function createCheckoutSessionUrl(User $user, Plan $plan, string $returnPath = '/matchs'): string
     {
+        $base = rtrim($this->frontendBaseUrl, '/').$returnPath;
+        $separator = str_contains($returnPath, '?') ? '&' : '?';
+
         /** @var Session $session */
         $session = $this->stripe->checkout->sessions->create([
             'mode' => 'subscription',
@@ -45,8 +52,8 @@ class StripeCheckoutService
             'metadata' => [
                 'plan_code' => $plan->getCode(),
             ],
-            'success_url' => rtrim($this->frontendBaseUrl, '/').'/compte/bienvenue?session_id={CHECKOUT_SESSION_ID}',
-            'cancel_url' => rtrim($this->frontendBaseUrl, '/').'/matchs',
+            'success_url' => $base.$separator.'paiement=reussi&session_id={CHECKOUT_SESSION_ID}',
+            'cancel_url' => $base,
         ]);
 
         return $session->url;

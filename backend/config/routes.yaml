@@ -1,9 +1,37 @@
+# controllers:
+#     resource:
+#         path: ../src/Controller/
+#         namespace: App\Controller
+#     type: attribute
+
+# # api_platform:
+# #     resource: .
+# #     type: api_platform
+
+# /api/login_check et /api/token/refresh ne sont jamais atteints par un
+# contrôleur : ils sont interceptés plus tôt par les listeners de sécurité
+# (json_login pour le premier, gesdinet/jwt-refresh-token-bundle pour le
+# second — voir security.yaml/gesdinet_jwt_refresh_token.yaml). Mais le
+# routeur Symfony (RouterListener) s'exécute AVANT ces listeners de sécurité
+# et lève une 404 "No route found" si aucune route ne correspond au chemin —
+# même si la sécurité aurait pu intercepter la requête ensuite. Ces deux
+# entrées, sans contrôleur, existent uniquement pour que le routeur trouve
+# une correspondance et laisse la main à la sécurité.
+login_check:
+    path: /api/login_check
+    methods: [POST]
+
+token_refresh:
+    path: /api/token/refresh
+    methods: [POST]
+
 controllers:
     resource:
         path: ../src/Controller/
         namespace: App\Controller
     type: attribute
 
-# api_platform:
-#     resource: .
-#     type: api_platform
+api_platform:
+    resource: .
+    type: api_platform
+    # prefix: /api

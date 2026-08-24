@@ -2,17 +2,13 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
-import { useAuthStore } from '@/stores/auth'
 import MatchCard from '@/components/MatchCard.vue'
-import PaywallModal from '@/components/PaywallModal.vue'
 
 const router = useRouter()
-const auth = useAuthStore()
 
 const matches = ref([])
 const loading = ref(true)
 const error = ref(null)
-const paywallOpen = ref(false)
 
 onMounted(async () => {
   try {
@@ -26,16 +22,12 @@ onMounted(async () => {
   }
 })
 
-/**
- * Cahier des charges section 3.2.1 : un abonné accède directement à la fiche
- * détaillée ; un visiteur non abonné voit la popup paywall, jamais l'inverse.
- */
+// Un clic sur un match amène toujours à sa fiche détaillée (MatchDetailView.vue),
+// qu'il soit abonné ou non. C'est cette fiche, et elle seule, qui décide si
+// l'aperçu suffit ou si elle affiche la carte verrouillée + le bouton
+// "Débloquer l'analyse complète" ouvrant PaywallModal — jamais cette liste.
 function openMatch(match) {
-  if (auth.hasActiveSubscription) {
-    router.push({ name: 'match-detail', params: { id: match.id } })
-  } else {
-    paywallOpen.value = true
-  }
+  router.push({ name: 'match-detail', params: { id: match.id } })
 }
 </script>
 
@@ -44,14 +36,12 @@ function openMatch(match) {
     <h1>Matchs du jour</h1>
     <p class="sub">Mis à jour en continu</p>
 
-    <p v-if="loading">Chargement des pronostics…</p>
+    <p v-if="loading">Chargement des analyses…</p>
     <p v-else-if="error">Impossible de charger les matchs pour le moment.</p>
     <template v-else>
       <MatchCard v-for="match in matches" :key="match.id" :match="match" @open="openMatch" />
     </template>
   </section>
-
-  <PaywallModal :open="paywallOpen" @close="paywallOpen = false" />
 </template>
 
 <style scoped>

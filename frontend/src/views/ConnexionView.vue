@@ -7,36 +7,35 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
-const PLANS = {
-  classique: { name: 'Classique', price: '9,99 € / mois' },
-  vip: { name: 'VIP', price: '49,99 € / tous les 3 mois' },
-  'vip-annuel': { name: 'VIP annuel', price: '199,99 € / an' },
-}
-
-const planCode = computed(() => route.query.plan)
-const plan = computed(() => PLANS[planCode.value] ?? null)
-
-// Arrivée depuis la popup paywall (un plan est présent) => onglet inscription
-// pré-sélectionné, conformément à connexion.html et à la section 3.9 du
-// cahier des charges. Sinon (ex. clic sur "Se connecter" dans le header),
-// onglet connexion pour un abonné existant.
-const activeTab = ref(plan.value ? 'signup' : 'login')
+const activeTab = ref('login')
 
 const loginForm = reactive({ email: '', password: '' })
 const signupForm = reactive({ firstName: '', lastName: '', email: '', password: '', acceptTerms: false })
 const submitting = ref(false)
 const errorMessage = ref('')
 
-function clearPlan() {
-  router.replace({ name: 'connexion' })
-}
+// Redirection après connexion/inscription : si l'utilisateur arrivait d'une
+// page précise (ex. le lien "Déjà abonné ? Se connecter" ou "Débloquer
+// l'analyse complète" depuis une fiche match — voir PaywallModal.vue et
+// MatchDetailView.vue — ou "Se connecter" cliqué depuis une page donnée, voir
+// App.vue), on le renvoie sur cette même page plutôt que sur la liste
+// générique. Le choix d'une formule et le paiement se font entièrement sur la
+// fiche du match une fois connecté (voir PaywallModal.vue) — cet écran ne
+// s'occupe plus jamais de formule ni de paiement. On n'accepte qu'un chemin
+// relatif commençant par "/" (et jamais "//...", qui serait interprété comme
+// une URL externe par le navigateur) pour ne jamais rediriger vers un site
+// tiers à partir d'un ?redirect= qu'un utilisateur pourrait bricoler dans l'URL.
+const safeRedirect = computed(() => {
+  const target = route.query.redirect
+  return typeof target === 'string' && target.startsWith('/') && !target.startsWith('//') ? target : '/matchs'
+})
 
 async function submitLogin() {
   submitting.value = true
   errorMessage.value = ''
   try {
     await auth.login(loginForm.email, loginForm.password)
-    router.push('/matchs')
+    router.push(safeRedirect.value)
   } catch {
     errorMessage.value = 'Email ou mot de passe incorrect.'
   } finally {
@@ -52,19 +51,17 @@ async function submitSignup() {
   submitting.value = true
   errorMessage.value = ''
   try {
-    const checkoutUrl = await auth.register({
+    // Créer un compte n'entraîne jamais de paiement (voir
+    // UserRegistrationProcessor côté backend) : le paiement ne se déclenche
+    // que plus tard, depuis la fiche d'un match, quand l'utilisateur veut
+    // réellement voir l'analyse complète.
+    await auth.register({
       email: signupForm.email,
       password: signupForm.password,
       firstName: signupForm.firstName,
       lastName: signupForm.lastName,
-      planCode: planCode.value,
     })
-    if (checkoutUrl) {
-      // Redirection vers Stripe Checkout — voir StripeCheckoutService côté backend.
-      window.location.href = checkoutUrl
-    } else {
-      router.push('/matchs')
-    }
+    router.push(safeRedirect.value)
   } catch {
     errorMessage.value = "Impossible de créer le compte pour le moment."
   } finally {
@@ -77,11 +74,6 @@ async function submitSignup() {
   <div class="auth-wrap">
     <div class="auth-form-panel">
       <div class="auth-card">
-        <div v-if="plan" class="plan-banner">
-          <span>Formule sélectionnée : <b>{{ plan.name }}</b> — {{ plan.price }}</span>
-          <span class="chg" @click="clearPlan">Changer</span>
-        </div>
-
         <div class="tabswitch">
           <button :class="{ active: activeTab === 'login' }" @click="activeTab = 'login'">Connexion</button>
           <button :class="{ active: activeTab === 'signup' }" @click="activeTab = 'signup'">Créer un compte</button>
@@ -91,32 +83,24 @@ async function submitSignup() {
 
         <form v-if="activeTab === 'login'" @submit.prevent="submitLogin">
           <h2>Content de te revoir</h2>
-          <p class="lead">Connecte-toi pour retrouver tes pronostics et ton abonnement.</p>
+          <p class="lead">Connecte-toi pour retrouver tes analyses et ton abonnement.</p>
           <label>Adresse email<input v-model="loginForm.email" type="email" required /></label>
           <label>Mot de passe<input v-model="loginForm.password" type="password" required /></label>
           <button class="btn-primary" type="submit" :disabled="submitting">Se connecter</button>
         </form>
 
         <form v-else @submit.prevent="submitSignup">
-          <h2>{{ plan ? 'Finalise ton inscription' : 'Crée ton compte' }}</h2>
-          <p class="lead">
-            {{
-              plan
-                ? `Crée ton compte pour activer la formule ${plan.name} — tu seras redirigé vers le paiement sécurisé juste après.`
-                : "Crée ton compte pour finaliser ton abonnement et débloquer l'analyse complète des matchs."
-            }}
-          </p>
+          <h2>Crée ton compte</h2>
+          <p class="lead">Crée ton compte gratuitement — tu ne paieras que si tu veux débloquer l'analyse complète d'un match.</p>
           <label>Prénom<input v-model="signupForm.firstName" type="text" required /></label>
           <label>Nom<input v-model="signupForm.lastName" type="text" required /></label>
           <label>Adresse email<input v-model="signupForm.email" type="email" required /></label>
           <label>Mot de passe<input v-model="signupForm.password" type="password" minlength="8" required /></label>
           <label class="checkline"><input v-model="signupForm.acceptTerms" type="checkbox" /> J'accepte les CGU et la politique de confidentialité</label>
-          <button class="btn-primary" type="submit" :disabled="submitting">
-            {{ plan ? 'Continuer vers le paiement →' : 'Créer mon compte' }}
-          </button>
+          <button class="btn-primary" type="submit" :disabled="submitting">Créer mon compte</button>
           <p class="fine">
             En créant un compte, tu confirmes avoir pris connaissance de l'avertissement jeu responsable : nos
-            pronostics sont un outil d'aide à la décision, ils ne garantissent aucun gain.
+            analyses sont un outil d'aide à la décision, elles ne garantissent aucun gain.
           </p>
         </form>
       </div>
@@ -133,26 +117,6 @@ async function submitSignup() {
 .auth-card {
   width: 100%;
   max-width: 420px;
-}
-.plan-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  background: #eef7f1;
-  border: 1px solid #cdeedb;
-  border-radius: 14px;
-  padding: 12px 16px;
-  margin-bottom: 20px;
-  font-size: 13px;
-  color: #1c3a2a;
-}
-.chg {
-  font-size: 12px;
-  color: var(--green);
-  font-weight: 700;
-  text-decoration: underline;
-  cursor: pointer;
 }
 .tabswitch {
   display: flex;
@@ -225,3 +189,4 @@ label input[type='password'] {
   font-size: 13px;
 }
 </style>
+
