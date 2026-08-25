@@ -70,6 +70,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     /** @var list<string> */
     #[ORM\Column]
+    #[Groups(['user:read'])]
     private array $roles = [];
 
     #[ORM\Column]

@@ -10,7 +10,7 @@ const props = defineProps({
 // Les 4 surfaces existent toujours (voir Surface::class côté backend) : on les
 // affiche systématiquement, même sans donnée, plutôt que de ne montrer que
 // les surfaces déjà jouées — un axe sans échantillon reste visuellement
-// distinct (secteur clair, pointillé) au lieu d'être masqué ou inventé.
+// distinct (marqueur clair, trait pointillé) au lieu d'être masqué ou inventé.
 const SURFACES = [
   { key: 'dur', label: 'Dur', color: '#0071E3' },
   { key: 'gazon', label: 'Gazon', color: '#1F8A6B' },
@@ -20,94 +20,154 @@ const SURFACES = [
 
 const CX = 100
 const CY = 100
-const R = 72
+const R = 66
+const N = SURFACES.length
 
 function point(angle, r) {
   return [CX + r * Math.cos(angle), CY + r * Math.sin(angle)]
 }
 
-const sectors = computed(() => {
-  const n = SURFACES.length
-  return SURFACES.map((s, i) => {
+function axisAngle(i) {
+  return (2 * Math.PI * i) / N - Math.PI / 2
+}
+
+// Grille de fond : anneaux concentriques à 33/66/100 % du rayon, tracés comme
+// des polygones à 4 côtés (et non des cercles) pour lire un vrai radar plutôt
+// que l'ancienne rose en camembert.
+const gridRings = computed(() =>
+  [0.33, 0.66, 1].map((frac) =>
+    Array.from({ length: N }, (_, i) => point(axisAngle(i), R * frac))
+      .map((p) => p.join(','))
+      .join(' '),
+  ),
+)
+
+const axisEnds = computed(() => Array.from({ length: N }, (_, i) => point(axisAngle(i), R)))
+
+const vertices = computed(() =>
+  SURFACES.map((s, i) => {
     const data = props.bySurface.find((x) => x.surface === s.key)
-    const axisAngle = (2 * Math.PI * i) / n - Math.PI / 2
-    const start = axisAngle - Math.PI / n
-    const end = axisAngle + Math.PI / n
     const hasData = Boolean(data)
-    const radius = hasData ? Math.max(6, (data.accuracy / 100) * R) : R * 0.16
-    const p1 = point(start, radius)
-    const p2 = point(end, radius)
-    const trackP1 = point(start, R)
-    const trackP2 = point(end, R)
-    const labelPos = point(axisAngle, R + 22)
+    const radius = hasData ? Math.max(6, (data.accuracy / 100) * R) : R * 0.12
+    const angle = axisAngle(i)
+    const [x, y] = point(angle, radius)
+    const [lx, ly] = point(angle, R + 24)
     return {
       ...s,
       hasData,
       accuracy: data?.accuracy ?? null,
       sampleSize: data?.sampleSize ?? 0,
-      path: `M ${CX},${CY} L ${p1[0]},${p1[1]} A ${radius},${radius} 0 0 1 ${p2[0]},${p2[1]} Z`,
-      trackPath: `M ${CX},${CY} L ${trackP1[0]},${trackP1[1]} A ${R},${R} 0 0 1 ${trackP2[0]},${trackP2[1]} Z`,
-      labelX: labelPos[0],
-      labelY: labelPos[1],
+      x,
+      y,
+      labelX: lx,
+      labelY: ly,
     }
-  })
-})
+  }),
+)
+
+const polygonPoints = computed(() => vertices.value.map((v) => `${v.x},${v.y}`).join(' '))
 </script>
 
 <template>
-  <div class="rose-wrap">
+  <div class="radar-wrap">
     <svg viewBox="0 0 200 200" width="200" height="200">
-      <circle :cx="CX" :cy="CY" :r="R" fill="none" stroke="var(--admin-bg)" stroke-width="1" />
-      <circle :cx="CX" :cy="CY" :r="R * 0.5" fill="none" stroke="var(--admin-bg)" stroke-width="1" />
-      <path v-for="s in sectors" :key="'track-' + s.key" :d="s.trackPath" fill="var(--admin-bg)" />
-      <path
-        v-for="s in sectors"
-        :key="s.key"
-        :d="s.path"
-        :fill="s.color"
-        :fill-opacity="s.hasData ? 0.88 : 0.35"
-        :stroke="s.color"
-        stroke-width="1"
-        :stroke-dasharray="s.hasData ? 'none' : '2 2'"
+      <defs>
+        <linearGradient id="radarFill" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="var(--lime)" stop-opacity="0.6" />
+          <stop offset="100%" stop-color="var(--green)" stop-opacity="0.4" />
+        </linearGradient>
+      </defs>
+
+      <polygon
+        v-for="(ring, i) in gridRings"
+        :key="'ring-' + i"
+        :points="ring"
+        fill="none"
+        stroke="var(--admin-bg)"
+        stroke-width="1.2"
       />
-      <circle :cx="CX" :cy="CY" r="34" fill="var(--admin-card)" />
-      <text :x="CX" :y="CY - 4" text-anchor="middle" font-size="20" font-weight="700" fill="var(--ink)">
+      <line
+        v-for="(p, i) in axisEnds"
+        :key="'axis-' + i"
+        :x1="CX"
+        :y1="CY"
+        :x2="p[0]"
+        :y2="p[1]"
+        stroke="var(--admin-bg)"
+        stroke-width="1.2"
+      />
+
+      <polygon
+        :points="polygonPoints"
+        fill="url(#radarFill)"
+        stroke="var(--green)"
+        stroke-width="1.6"
+        stroke-linejoin="round"
+      />
+
+      <circle
+        v-for="v in vertices"
+        :key="'dot-' + v.key"
+        :cx="v.x"
+        :cy="v.y"
+        r="4"
+        :fill="v.hasData ? v.color : 'var(--admin-card)'"
+        :stroke="v.color"
+        stroke-width="1.6"
+        :stroke-dasharray="v.hasData ? 'none' : '1.6 1.6'"
+      />
+
+      <circle :cx="CX" :cy="CY" r="25" fill="var(--admin-card)" />
+      <text :x="CX" :y="CY - 3" text-anchor="middle" font-size="17" font-weight="700" fill="var(--ink)">
         {{ overall !== null ? Math.round(overall) + '%' : '—' }}
       </text>
-      <text :x="CX" :y="CY + 14" text-anchor="middle" font-size="8" fill="var(--grey)">toutes surfaces</text>
+      <text :x="CX" :y="CY + 11" text-anchor="middle" font-size="7" fill="var(--grey)">global</text>
+
+      <text
+        v-for="v in vertices"
+        :key="'label-' + v.key"
+        :x="v.labelX"
+        :y="v.labelY"
+        text-anchor="middle"
+        font-size="8.5"
+        font-weight="700"
+        fill="var(--ink)"
+      >
+        {{ v.label }}
+      </text>
     </svg>
 
-    <div class="rose-legend">
-      <div v-for="s in sectors" :key="'legend-' + s.key" class="rose-legend-item">
-        <i :style="{ background: s.color, opacity: s.hasData ? 1 : 0.35 }"></i>
-        <span class="rl-label">{{ s.label }}</span>
-        <span class="rl-value">{{ s.hasData ? s.accuracy + ' %' : '—' }}</span>
+    <div class="radar-legend">
+      <div v-for="v in vertices" :key="'legend-' + v.key" class="radar-legend-item">
+        <i :style="{ background: v.color, opacity: v.hasData ? 1 : 0.35 }"></i>
+        <span class="rl-label">{{ v.label }}</span>
+        <span class="rl-value">{{ v.hasData ? v.accuracy + ' %' : '—' }}</span>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.rose-wrap {
+.radar-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
 }
-.rose-legend {
+.radar-legend {
   width: 100%;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px 14px;
   margin-top: 4px;
 }
-.rose-legend-item {
+.radar-legend-item {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 11px;
 }
-.rose-legend-item i {
+.radar-legend-item i {
   width: 8px;
   height: 8px;
   border-radius: 50%;

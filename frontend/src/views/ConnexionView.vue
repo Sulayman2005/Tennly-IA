@@ -18,24 +18,33 @@ const errorMessage = ref('')
 // page précise (ex. le lien "Déjà abonné ? Se connecter" ou "Débloquer
 // l'analyse complète" depuis une fiche match — voir PaywallModal.vue et
 // MatchDetailView.vue — ou "Se connecter" cliqué depuis une page donnée, voir
-// App.vue), on le renvoie sur cette même page plutôt que sur la liste
-// générique. Le choix d'une formule et le paiement se font entièrement sur la
-// fiche du match une fois connecté (voir PaywallModal.vue) — cet écran ne
-// s'occupe plus jamais de formule ni de paiement. On n'accepte qu'un chemin
-// relatif commençant par "/" (et jamais "//...", qui serait interprété comme
-// une URL externe par le navigateur) pour ne jamais rediriger vers un site
-// tiers à partir d'un ?redirect= qu'un utilisateur pourrait bricoler dans l'URL.
-const safeRedirect = computed(() => {
+// App.vue), on le renvoie sur cette même page plutôt que sur une page par
+// défaut. On n'accepte qu'un chemin relatif commençant par "/" (et jamais
+// "//...", qui serait interprété comme une URL externe par le navigateur)
+// pour ne jamais rediriger vers un site tiers à partir d'un ?redirect= qu'un
+// utilisateur pourrait bricoler dans l'URL.
+const explicitRedirect = computed(() => {
   const target = route.query.redirect
-  return typeof target === 'string' && target.startsWith('/') && !target.startsWith('//') ? target : '/matchs'
+  return typeof target === 'string' && target.startsWith('/') && !target.startsWith('//') ? target : null
 })
+
+// Sans page précise à retrouver (ex. arrivée directe sur /connexion, pas de
+// clic sur un match), un compte ROLE_ADMIN atterrit sur le tableau de bord
+// back-office plutôt que sur la liste publique des matchs — c'est là que se
+// trouvent toutes les stats de l'app (voir AdminDashboardView.vue) ; un
+// utilisateur normal continue d'atterrir sur /matchs. auth.login()/register()
+// attendent déjà fetchCurrentUser() en interne, donc auth.isAdmin reflète le
+// bon compte au moment où cette fonction est appelée, juste après connexion.
+function postLoginTarget() {
+  return explicitRedirect.value ?? (auth.isAdmin ? '/admin' : '/matchs')
+}
 
 async function submitLogin() {
   submitting.value = true
   errorMessage.value = ''
   try {
     await auth.login(loginForm.email, loginForm.password)
-    router.push(safeRedirect.value)
+    router.push(postLoginTarget())
   } catch {
     errorMessage.value = 'Email ou mot de passe incorrect.'
   } finally {
@@ -61,7 +70,7 @@ async function submitSignup() {
       firstName: signupForm.firstName,
       lastName: signupForm.lastName,
     })
-    router.push(safeRedirect.value)
+    router.push(postLoginTarget())
   } catch {
     errorMessage.value = "Impossible de créer le compte pour le moment."
   } finally {
@@ -189,4 +198,3 @@ label input[type='password'] {
   font-size: 13px;
 }
 </style>
-

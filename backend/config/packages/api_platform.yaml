@@ -1,18 +1,19 @@
 api_platform:
-    title: 'Tennly IA API'
-    description: "API de l'application Tennly IA (pronostics tennis calibrés par IA) — voir cahier des charges section 4."
-    version: '0.1.0'
-    formats:
-        jsonld: ['application/ld+json']
-        json: ['application/json']
-    docs_formats:
-        jsonld: ['application/ld+json']
-        json: ['application/json']
-        html: ['text/html']
-    defaults:
-        pagination_client_items_per_page: true
-        pagination_maximum_items_per_page: 50
-        route_prefix: /api
-    mapping:
-        paths:
-            - '%kernel.project_dir%/src/Entity'
+  title: 'Tennly IA API'
+  description: "API de l'application Tennly IA (pronostics tennis calibrés par IA) — voir cahier des charges section 4."
+  version: '0.1.0'
+  formats:
+    jsonld: ['application/ld+json']
+    json: ['application/json']
+  docs_formats:
+    jsonld: ['application/ld+json']
+    json: ['application/json']
+    html: ['text/html']
+  defaults:
+    pagination_client_items_per_page: true
+    pagination_maximum_items_per_page: 50
+    route_prefix: /api
+  mapping:
+    paths:
+      - '%kernel.project_dir%/src/Entity'
+      - '%kernel.project_dir%/src/Dto'

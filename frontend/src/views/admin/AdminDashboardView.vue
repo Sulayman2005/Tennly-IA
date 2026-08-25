@@ -5,6 +5,7 @@ import { api } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import AdminLayout from '@/components/admin/AdminLayout.vue'
 import SurfaceRoseChart from '@/components/admin/SurfaceRoseChart.vue'
+import GrowthAreaChart from '@/components/admin/GrowthAreaChart.vue'
 
 const auth = useAuthStore()
 const summary = ref(null)
@@ -79,11 +80,21 @@ const bestSurface = computed(() => {
 
 const surfaceLabels = { dur: 'dur', terre_battue: 'terre battue', gazon: 'gazon', indoor: 'indoor (salle)' }
 
+// Part des comptes inscrits qui sont aujourd'hui abonnés actifs — ratio réel
+// (activeSubscriptionsCount / totalUsersCount), jamais affiché si on n'a
+// encore aucun compte (division par zéro).
+const conversionRate = computed(() => {
+  const total = summary.value?.totalUsersCount ?? 0
+  if (total === 0) return null
+  return Math.round((totalSubscribers.value / total) * 1000) / 10
+})
+
 function playerInitials(name) {
   return (name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
 }
 
 const STATUS_DOT = { scheduled: 'grey', live: 'red', finished: 'green', walkover: 'grey' }
+const STATUS_PRIORITY = ['live', 'scheduled', 'finished', 'walkover']
 
 // ---- Mini calendrier du mois en cours, marquant les jours avec au moins un
 // match connu (données réelles issues de la même requête que la liste
@@ -100,6 +111,24 @@ const matchDaysInMonth = computed(() => {
     }
   }
   return set
+})
+
+// Statut le plus significatif du jour (un match en direct prime sur un match
+// simplement programmé, etc.) — sert uniquement à colorer le petit point sous
+// le numéro du jour, à partir des vrais statuts de TennisMatch::status.
+const matchStatusByDay = computed(() => {
+  const map = new Map()
+  for (const m of upcomingMatches.value) {
+    const d = new Date(m.scheduledAt)
+    if (d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth()) {
+      const day = d.getDate()
+      const current = map.get(day)
+      if (!current || STATUS_PRIORITY.indexOf(m.status) < STATUS_PRIORITY.indexOf(current)) {
+        map.set(day, m.status)
+      }
+    }
+  }
+  return map
 })
 
 const calendarCells = computed(() => {
@@ -148,9 +177,9 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
           Pas encore de match terminé avec analyse IA associée : ce taux apparaîtra dès le premier résultat enregistré.
         </p>
         <div class="perf-mini">
-          <div><b>{{ summary.predictionsCount }}</b><span>Analyses calculées</span></div>
-          <div><b>{{ summary.upcomingMatchesCount }}</b><span>Matchs à venir</span></div>
-          <div><b>{{ totalSubscribers }}</b><span>Abonnements actifs</span></div>
+          <div class="chip"><b>{{ summary.predictionsCount }}</b><span>Analyses calculées</span></div>
+          <div class="chip"><b>{{ summary.upcomingMatchesCount }}</b><span>Matchs à venir</span></div>
+          <div class="chip"><b>{{ totalSubscribers }}</b><span>Abonnements actifs</span></div>
         </div>
       </RouterLink>
 
@@ -176,6 +205,47 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
           que sur {{ surfaceLabels[bestSurface[bestSurface.length - 1].surface] }}
           ({{ bestSurface[bestSurface.length - 1].accuracy }} %), sur l'historique disponible.
         </p>
+      </div>
+
+      <!-- CROISSANCE DES ABONNEMENTS -->
+      <div class="card span2">
+        <h3>Croissance des abonnements</h3>
+        <div class="sub">Nouveaux abonnements par jour, 14 derniers jours</div>
+        <GrowthAreaChart :points="summary.subscriptionsGrowth" />
+      </div>
+
+      <!-- COMPTES & CONVERSION -->
+      <div class="card accounts-card">
+        <h3>Comptes</h3>
+        <div class="sub">Inscriptions et conversion en abonnés</div>
+        <div class="accounts-body">
+          <div class="accounts-stats">
+            <div class="acc-stat"><b>{{ summary.totalUsersCount }}</b><span>Comptes inscrits</span></div>
+            <div class="acc-stat"><b>+{{ summary.newUsersLast7Days }}</b><span>Nouveaux — 7 jours</span></div>
+            <div class="acc-stat"><b>{{ summary.canceledSubscriptionsLast30Days }}</b><span>Résiliations — 30 jours</span></div>
+          </div>
+          <div class="acc-gauge">
+            <svg width="86" height="86" viewBox="0 0 36 36">
+              <circle cx="18" cy="18" r="15.9155" fill="none" stroke="var(--admin-bg)" stroke-width="4" />
+              <circle
+                v-if="conversionRate !== null"
+                cx="18"
+                cy="18"
+                r="15.9155"
+                fill="none"
+                stroke="var(--blue)"
+                stroke-width="4"
+                stroke-linecap="round"
+                :stroke-dasharray="`${(conversionRate / 100) * 2 * Math.PI * 15.9155} ${2 * Math.PI * 15.9155}`"
+                transform="rotate(-90 18 18)"
+              />
+            </svg>
+            <div class="acc-gauge-label">
+              <b>{{ conversionRate !== null ? conversionRate + '%' : '—' }}</b>
+              <span>conversion</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- ABONNÉS -->
@@ -261,6 +331,11 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
             }"
           >
             {{ cell }}
+            <span
+              v-if="cell !== null && matchStatusByDay.has(cell)"
+              class="cal-dot"
+              :class="STATUS_DOT[matchStatusByDay.get(cell)]"
+            ></span>
           </div>
         </div>
       </div>
@@ -310,76 +385,112 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
 }
 
 /* HERO */
-.perf-hero {
+/* .perf-hero {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, var(--green), var(--green2));
+  background: linear-gradient(135deg, var(--ink), #1a3a2e);
   color: #fff;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 220px;
+  text-decoration: none;
+} */
+
+.card.perf-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--ink), #1a3a2e);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 220px;
   text-decoration: none;
 }
+
 .court-lines {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  opacity: 0.7;
 }
-.perf-hero .rowtop,
-.perf-hero .empty-note,
-.perf-hero .perf-mini {
+
+.perf-hero .rowtop {
   position: relative;
-  z-index: 1;
-}
-.rowtop {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
+  justify-content: space-between;
 }
-.eyebrow {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+
+.perf-hero .eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   opacity: 0.75;
   margin-bottom: 8px;
 }
+
+.perf-hero .big {
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.perf-hero .lbl {
+  font-size: 13px;
+  opacity: 0.8;
+  margin-top: 8px;
+}
+
 .hero-arrow {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
   flex: none;
 }
-.perf-hero .lbl {
+
+.empty-note {
+  position: relative;
   font-size: 12px;
   opacity: 0.75;
-  margin-top: 2px;
+  margin-top: 10px;
+  max-width: 420px;
 }
-.perf-hero .big {
-  font-size: 40px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-.perf-hero .empty-note {
-  color: rgba(255, 255, 255, 0.85);
-}
+
 .perf-mini {
+  position: relative;
   display: flex;
-  gap: 28px;
-  margin-top: 24px;
+  gap: 10px;
+  margin-top: 20px;
   flex-wrap: wrap;
 }
-.perf-mini div b {
-  display: block;
-  font-size: 18px;
+
+.perf-mini .chip {
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(6px);
+  border-radius: 999px;
+  padding: 8px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 90px;
 }
-.perf-mini div span {
-  font-size: 11px;
-  opacity: 0.75;
+
+.perf-mini .chip b {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.perf-mini .chip span {
+  font-size: 10px;
+  opacity: 0.8;
+  text-align: center;
 }
 
 /* INSIGHT */
@@ -399,6 +510,55 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
   line-height: 1.6;
   margin: 8px 0 0;
   color: #1c3a2a;
+}
+
+/* COMPTES */
+.accounts-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.accounts-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+.acc-stat b {
+  display: block;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.acc-stat span {
+  font-size: 11px;
+  color: var(--grey);
+}
+.acc-gauge {
+  position: relative;
+  flex: none;
+  width: 86px;
+  height: 86px;
+}
+.acc-gauge svg {
+  position: absolute;
+  inset: 0;
+}
+.acc-gauge-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.acc-gauge-label b {
+  font-size: 15px;
+  font-weight: 700;
+}
+.acc-gauge-label span {
+  font-size: 9px;
+  color: var(--grey);
 }
 
 /* DONUT */
@@ -532,9 +692,10 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
   padding: 2px 0 6px;
 }
 .cal-n {
+  position: relative;
   text-align: center;
   font-size: 11px;
-  padding: 7px 0;
+  padding: 7px 0 10px;
   border-radius: 8px;
   color: var(--ink);
 }
@@ -550,5 +711,24 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
   background: var(--ink);
   color: #fff;
   font-weight: 700;
+}
+.cal-dot {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--grey);
+}
+.cal-dot.red {
+  background: var(--red);
+}
+.cal-dot.green {
+  background: #2e9e4d;
+}
+.cal-n.today .cal-dot {
+  background: #fff;
 }
 </style>

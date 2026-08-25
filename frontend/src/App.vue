@@ -52,15 +52,31 @@ onMounted(() => {
     </RouterLink>
     <nav>
       <RouterLink to="/matchs">Analyse IA</RouterLink>
-      <!-- Visible seulement pour un compte ROLE_ADMIN (section 3.7) — voir
-           auth.isAdmin, dérivé de User::getRoles() exposé sur GET /api/me. -->
-      <RouterLink v-if="auth.isAdmin" to="/admin">Back-office</RouterLink>
     </nav>
-    <div v-if="auth.isAuthenticated" class="account">
-      <span class="account-email">{{ auth.user?.email }}</span>
-      <button type="button" class="cta-mini logout-btn" @click="handleLogout">Se déconnecter</button>
+
+    <div class="header-actions">
+      <!-- Bouton "Dashboard" visible uniquement pour un compte ROLE_ADMIN
+           (section 3.7) — voir auth.isAdmin, dérivé de User::getRoles()
+           exposé sur GET /api/me. Avant, ce lien existait mais se fondait
+           dans la nav en simple texte gris ("Back-office") : pas assez
+           visible. Ici c'est un vrai bouton, toujours affiché en tête de
+           page tant qu'on est connecté en admin. -->
+      <RouterLink v-if="auth.isAdmin" to="/admin" class="dashboard-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="3" width="8" height="8" rx="2" stroke="currentColor" stroke-width="1.8" />
+          <rect x="13" y="3" width="8" height="8" rx="2" stroke="currentColor" stroke-width="1.8" />
+          <rect x="3" y="13" width="8" height="8" rx="2" stroke="currentColor" stroke-width="1.8" />
+          <rect x="13" y="13" width="8" height="8" rx="2" stroke="currentColor" stroke-width="1.8" />
+        </svg>
+        Dashboard
+      </RouterLink>
+
+      <div v-if="auth.isAuthenticated" class="account">
+        <span class="account-email">{{ auth.user?.email }}</span>
+        <button type="button" class="cta-mini logout-btn" @click="handleLogout">Se déconnecter</button>
+      </div>
+      <RouterLink v-else :to="loginTarget" class="cta-mini">Se connecter</RouterLink>
     </div>
-    <RouterLink v-else :to="loginTarget" class="cta-mini">Se connecter</RouterLink>
   </header>
 
   <main>
@@ -110,6 +126,28 @@ nav {
 .cta-mini {
   font-size: 14px;
   font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dashboard-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--green);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 16px;
+  border-radius: 999px;
+}
+
+.dashboard-btn:hover {
+  background: var(--green2);
 }
 
 .account {
