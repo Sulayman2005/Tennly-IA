@@ -6,6 +6,8 @@ use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Doctrine\Orm\Filter\DateFilter;
+use ApiPlatform\Doctrine\Orm\Filter\OrderFilter;
 use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
 use App\Entity\Enum\MatchStatus;
 use App\Entity\Enum\Surface;
@@ -19,7 +21,7 @@ use Symfony\Component\Serializer\Annotation\Groups;
  *
  * Correspond au "Tableau des matchs" (cahier des charges section 3.2) : la
  * collection reste consultable librement en aperçu (nom des joueurs,
- * pronostic du favori, niveau de confiance — voir Prediction), tandis que
+ * analyse du favori, niveau de confiance — voir Prediction), tandis que
  * l'item détaillé (fiche "player vs player", section 3.3) est réservé aux
  * abonnés, cf. la sécurité définie sur Prediction::class.
  */
@@ -32,6 +34,19 @@ use Symfony\Component\Serializer\Annotation\Groups;
     paginationItemsPerPage: 20,
 )]
 #[ApiFilter(SearchFilter::class, properties: ['surface' => 'exact', 'status' => 'exact', 'tournamentName' => 'partial'])]
+// Nécessaire pour le calendrier des matchs à venir (frontend/src/views/MatchesView.vue) :
+// l'ordre par défaut de la ressource est ASC (le plus ancien d'abord), mais
+// l'onglet "Résultats récents" a besoin du sens inverse (le plus récent
+// d'abord) — order[scheduledAt]=desc — sans changer l'ordre par défaut
+// pour tout le reste de l'API qui ne le demande pas explicitement.
+#[ApiFilter(OrderFilter::class, properties: ['scheduledAt'])]
+// Un match "scheduled" reste "scheduled" en base tant que personne n'a
+// relancé l'import (voir ml-service/import_upcoming_matches.py) — sans
+// filtre de date, un match programmé dont l'heure est déjà passée resterait
+// affiché dans "À venir" jusqu'au prochain import. Ce filtre permet au
+// frontend de demander scheduledAt[strictly_after]=<maintenant> pour ne
+// garder que ce qui est VRAIMENT encore à venir au moment de l'affichage.
+#[ApiFilter(DateFilter::class, properties: ['scheduledAt'])]
 class TennisMatch
 {
     #[ORM\Id]
@@ -82,6 +97,19 @@ class TennisMatch
     #[ORM\OneToOne(targetEntity: Prediction::class, mappedBy: 'match', cascade: ['persist', 'remove'])]
     #[Groups(['match:read'])]
     private ?Prediction $prediction = null;
+
+    /**
+     * Identifiant du match dans une source externe (ex. "livetennisapi:12345"),
+     * uniquement pour les matchs à venir importés par
+     * ml-service/import_upcoming_matches.py — sert à savoir qu'un match a
+     * déjà été importé lors d'une exécution précédente, pour ne jamais créer
+     * de doublon quand le script tourne automatiquement chaque jour tant que
+     * le match n'a pas encore eu lieu. Jamais exposé côté API (pas de Groups) :
+     * c'est un détail d'implémentation du pipeline d'import, pas une donnée
+     * utile au frontend.
+     */
+    #[ORM\Column(length: 60, nullable: true, unique: true)]
+    private ?string $externalRef = null;
 
     public function getId(): ?int
     {
@@ -199,5 +227,17 @@ class TennisMatch
     public function getPrediction(): ?Prediction
     {
         return $this->prediction;
+    }
+
+    public function getExternalRef(): ?string
+    {
+        return $this->externalRef;
+    }
+
+    public function setExternalRef(?string $externalRef): static
+    {
+        $this->externalRef = $externalRef;
+
+        return $this;
     }
 }

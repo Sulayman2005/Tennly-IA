@@ -5,6 +5,7 @@ import { api, ApiError } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import RadarChart from '@/components/RadarChart.vue'
 import PaywallModal from '@/components/PaywallModal.vue'
+import TourBadge from '@/components/TourBadge.vue'
 
 const props = defineProps({ id: { type: [String, Number], required: true } })
 const route = useRoute()
@@ -48,6 +49,12 @@ async function loadMatch() {
       prediction.value = await api.get(`/api/predictions/${match.value.prediction.id}`)
     }
   } catch (e) {
+    // 403 : compte connecté mais sans abonnement actif (voir Prediction::class
+    // côté backend). 401 "JWT Token not found" : visiteur non connecté du
+    // tout — le firewall Symfony rejette la requête avant même d'évaluer
+    // l'expression de sécurité, donc jamais de 403 dans ce cas précis. Les
+    // deux veulent dire la même chose côté interface : l'analyse complète
+    // n'est pas accessible à cet utilisateur, donc la carte verrouillée.
     if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
       forbidden.value = true
     } else {
@@ -83,6 +90,7 @@ onMounted(async () => {
 
     <template v-else-if="match">
       <div class="card face-off">
+        <TourBadge :tour="match.playerA.tour" class="circuit-badge" />
         <div class="player">
           <div class="avatar">{{ match.playerA.fullName.split(' ').map((w) => w[0]).join('') }}</div>
           <div class="name">{{ match.playerA.fullName }}</div>
@@ -145,9 +153,16 @@ onMounted(async () => {
   margin-bottom: 18px;
 }
 .face-off {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-around;
+}
+.circuit-badge {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 .player {
   text-align: center;
@@ -211,5 +226,3 @@ h3 {
   color: #2e9e4d;
 }
 </style>
-
-

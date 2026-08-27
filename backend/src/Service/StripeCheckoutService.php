@@ -30,10 +30,23 @@ class StripeCheckoutService
         $this->stripe = new StripeClient($stripeSecretKey);
     }
 
-    public function createCheckoutSessionUrl(User $user, Plan $plan, string $returnPath = '/matchs'): string
-    {
+    public function createCheckoutSessionUrl(
+        User $user,
+        Plan $plan,
+        string $returnPath = '/matchs',
+        ?\DateTimeImmutable $withdrawalWaiverAcceptedAt = null,
+    ): string {
         $base = rtrim($this->frontendBaseUrl, '/').$returnPath;
         $separator = str_contains($returnPath, '?') ? '&' : '?';
+
+        // Preuve de la renonciation au droit de rétractation : enregistrée à la
+        // fois sur la session ET sur l'abonnement Stripe (subscription_data),
+        // pour rester consultable dans le temps, pas seulement le temps d'une
+        // session Checkout éphémère.
+        $waiverMetadata = null !== $withdrawalWaiverAcceptedAt ? [
+            'withdrawal_waiver_accepted' => 'true',
+            'withdrawal_waiver_accepted_at' => $withdrawalWaiverAcceptedAt->format(DATE_ATOM),
+        ] : [];
 
         /** @var Session $session */
         $session = $this->stripe->checkout->sessions->create([
@@ -44,13 +57,12 @@ class StripeCheckoutService
                 'price' => $plan->getStripePriceId(),
                 'quantity' => 1,
             ]],
-            // Le webhook (StripeWebhookController) n'a accès qu'au payload de
-            // l'événement Stripe, jamais à la requête HTTP d'origine : la
-            // formule choisie doit donc voyager dans les métadonnées de la
-            // session plutôt que dans un paramètre de requête inexistant à ce
-            // stade (voir cahier des charges section 3.6).
             'metadata' => [
                 'plan_code' => $plan->getCode(),
+                ...$waiverMetadata,
+            ],
+            'subscription_data' => [
+                'metadata' => $waiverMetadata,
             ],
             'success_url' => $base.$separator.'paiement=reussi&session_id={CHECKOUT_SESSION_ID}',
             'cancel_url' => $base,

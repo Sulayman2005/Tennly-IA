@@ -1,4 +1,6 @@
 <script setup>
+import TourBadge from '@/components/TourBadge.vue'
+
 defineProps({
   match: { type: Object, required: true },
 })
@@ -15,7 +17,10 @@ const confidenceLabel = {
 <template>
   <div class="match-card" @click="emit('open', match)">
     <div class="mc-top">
-      <span class="mc-tag">{{ match.tournamentName }} · {{ match.round }}</span>
+      <span class="mc-tag">
+        <TourBadge :tour="match.playerA.tour" on-dark />
+        {{ match.tournamentName }} · {{ match.round }}
+      </span>
       <span class="mc-time">{{ new Date(match.scheduledAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) }}</span>
     </div>
     <div class="mc-body">
@@ -61,6 +66,11 @@ const confidenceLabel = {
   font-size: 11px;
   opacity: 0.75;
   margin-bottom: 14px;
+}
+.mc-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 .mc-body {
   display: flex;

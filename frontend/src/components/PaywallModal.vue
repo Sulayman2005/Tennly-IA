@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 
@@ -20,6 +20,12 @@ const plans = [
 
 const startingCheckout = ref(null)
 const errorMessage = ref('')
+
+// Case à cocher obligatoire (CGV article 4) : l'abonnement donne un accès
+// immédiat, donc la loi (art. L221-28 13° du Code de la consommation)
+// exige une renonciation EXPRESSE au droit de rétractation de 14 jours pour
+// pouvoir l'écarter légalement — pas de case pré-cochée, jamais implicite.
+const withdrawalWaiverAccepted = ref(false)
 
 /**
  * Le paiement n'est plus déclenché à l'inscription (voir
@@ -42,10 +48,15 @@ async function choosePlan(code) {
     return
   }
 
+  if (!withdrawalWaiverAccepted.value) {
+    errorMessage.value = 'Coche la case ci-dessous pour continuer — elle est obligatoire pour un accès immédiat.'
+    return
+  }
+
   errorMessage.value = ''
   startingCheckout.value = code
   try {
-    const { checkoutUrl } = await api.createCheckoutSession(code, route.fullPath)
+    const { checkoutUrl } = await api.createCheckoutSession(code, route.fullPath, withdrawalWaiverAccepted.value)
     window.location.href = checkoutUrl
   } catch {
     errorMessage.value = 'Impossible de démarrer le paiement pour le moment.'
@@ -68,11 +79,21 @@ async function choosePlan(code) {
           <div class="p">{{ plan.name }}</div>
           <div class="price">{{ plan.price }}</div>
           <div class="per">{{ plan.per }}</div>
-          <button :disabled="Boolean(startingCheckout)" @click="choosePlan(plan.code)">
+          <button
+            :disabled="Boolean(startingCheckout) || !withdrawalWaiverAccepted"
+            @click="choosePlan(plan.code)"
+          >
             {{ startingCheckout === plan.code ? 'Redirection…' : 'Choisir' }}
           </button>
         </div>
       </div>
+
+      <label class="waiver">
+        <input v-model="withdrawalWaiverAccepted" type="checkbox" />
+        Je demande l'exécution immédiate de mon abonnement et je renonce en conséquence à mon droit de rétractation
+        de 14 jours (<RouterLink to="/cgv">voir les CGV</RouterLink>).
+      </label>
+
       <div class="foot">Résiliable à tout moment en un clic. Aucun engagement caché.</div>
     </div>
   </div>
@@ -165,6 +186,27 @@ async function choosePlan(code) {
 .plan.reco button {
   background: var(--green);
 }
+.waiver {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--grey);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.waiver input {
+  margin-top: 2px;
+  flex: none;
+}
+
+.waiver :deep(a) {
+  color: var(--ink);
+  text-decoration: underline;
+  font-weight: 600;
+}
+
 .foot {
   text-align: center;
   font-size: 12px;
@@ -183,4 +225,3 @@ async function choosePlan(code) {
   cursor: not-allowed;
 }
 </style>
-

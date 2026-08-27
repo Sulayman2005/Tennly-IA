@@ -1,0 +1,20 @@
+{
+  "model_version": "xgboost-v1-2026.08",
+  "trained_at": "2026-08-27T20:49:01.753909",
+  "hist_years_back": 8,
+  "n_train": 74672,
+  "n_test": 13178,
+  "metrics": {
+    "model": {
+      "accuracy": 0.6506298376081348,
+      "log_loss": 0.6213301604374437,
+      "brier_score": 0.21624986324667755
+    },
+    "elo_baseline": {
+      "accuracy": 0.6286234633480042,
+      "log_loss": 0.6424034527413105,
+      "brier_score": 0.22555966747974335
+    }
+  },
+  "better_than_baseline": true
+}

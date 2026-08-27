@@ -126,10 +126,10 @@ export const api = {
    * PaywallModal.vue) : Stripe y renvoie l'utilisateur une fois le paiement
    * confirmé, au lieu d'une page générique.
    */
-  async createCheckoutSession(planCode, redirectPath) {
+  async createCheckoutSession(planCode, redirectPath, withdrawalWaiverAccepted) {
     return request('/api/checkout-sessions', {
       method: 'POST',
-      body: { planCode, redirectPath },
+      body: { planCode, redirectPath, withdrawalWaiverAccepted },
     })
   },
 

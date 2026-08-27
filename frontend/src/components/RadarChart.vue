@@ -2,46 +2,59 @@
 import { computed } from 'vue'
 
 const props = defineProps({
-  /** { eloSurface: [a,b], forme: [a,b], service: [a,b], retour: [a,b], repos: [a,b], h2h: [a,b] }, valeurs 0-100. */
+  /** { <cle-axe>: [a,b], ... }, valeurs 0-100 — les clés doivent correspondre à celles de `axes`. */
   profile: { type: Object, required: true },
   labelA: { type: String, required: true },
   labelB: { type: String, required: true },
+  // Personnalise les axes affichés — utilisé par ComparateurView.vue, qui
+  // compare deux joueurs hors contexte d'un match précis (donc pas les mêmes
+  // signaux disponibles que le radar d'analyse de match). Par défaut : les
+  // 6 axes historiques du radar d'analyse de match (MatchDetailView.vue),
+  // comportement inchangé pour tout le reste de l'app. Le littéral est
+  // recopié directement ici (et non référencé via une constante externe) car
+  // le compilateur Vue interdit à defineProps() de référencer une variable
+  // déclarée ailleurs dans <script setup> (son contenu est hoisté hors de
+  // setup()).
+  axes: {
+    type: Array,
+    default: () => [
+      { key: 'eloSurface', label: 'Elo surface' },
+      { key: 'forme', label: 'Forme' },
+      { key: 'service', label: 'Service' },
+      { key: 'retour', label: 'Retour' },
+      { key: 'repos', label: 'Repos' },
+      { key: 'h2h', label: 'H2H' },
+    ],
+  },
 })
 
-const axes = [
-  { key: 'eloSurface', label: 'Elo surface' },
-  { key: 'forme', label: 'Forme' },
-  { key: 'service', label: 'Service' },
-  { key: 'retour', label: 'Retour' },
-  { key: 'repos', label: 'Repos' },
-  { key: 'h2h', label: 'H2H' },
-]
+const axes = computed(() => props.axes)
 
 const CX = 110
 const CY = 110
 const R = 90
-const N = axes.length
+const N = computed(() => axes.value.length)
 
 function pointFor(index, value) {
-  const angle = (Math.PI * 2 * index) / N - Math.PI / 2
+  const angle = (Math.PI * 2 * index) / N.value - Math.PI / 2
   const dist = (Math.max(0, Math.min(100, value)) / 100) * R
   return [CX + dist * Math.cos(angle), CY + dist * Math.sin(angle)]
 }
 
 function axisEndpoint(index) {
-  const angle = (Math.PI * 2 * index) / N - Math.PI / 2
+  const angle = (Math.PI * 2 * index) / N.value - Math.PI / 2
   return [CX + R * Math.cos(angle), CY + R * Math.sin(angle)]
 }
 
 function polygonPoints(playerIndex) {
-  return axes
+  return axes.value
     .map((axis, i) => pointFor(i, props.profile[axis.key]?.[playerIndex] ?? 0).join(','))
     .join(' ')
 }
 
 const pointsA = computed(() => polygonPoints(0))
 const pointsB = computed(() => polygonPoints(1))
-const axisLines = computed(() => axes.map((axis, i) => ({ ...axis, end: axisEndpoint(i) })))
+const axisLines = computed(() => axes.value.map((axis, i) => ({ ...axis, end: axisEndpoint(i) })))
 </script>
 
 <template>

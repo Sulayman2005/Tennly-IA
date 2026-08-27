@@ -2,6 +2,8 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
@@ -21,6 +23,10 @@ use Symfony\Component\Serializer\Annotation\Groups;
     normalizationContext: ['groups' => ['player:read']],
     order: ['eloOverall' => 'DESC'],
 )]
+// Nécessaire pour le comparateur de joueurs (frontend/src/views/ComparateurView.vue) :
+// recherche d'un joueur par nom (partiel, insensible à l'ordre des mots côté
+// frontend) via fullName=<recherche>.
+#[ApiFilter(SearchFilter::class, properties: ['fullName' => 'partial'])]
 class Player
 {
     #[ORM\Id]
@@ -57,7 +63,11 @@ class Player
     #[Groups(['player:read'])]
     private float $eloGrass = 1500.0;
 
+    // Exposé côté API (Groups) pour le comparateur de joueurs — déjà utilisé
+    // en interne par les scripts d'import (facteur "habitude du jeu face à
+    // un gaucher/droitier"), jamais affiché côté frontend avant maintenant.
     #[ORM\Column(length: 1, nullable: true)]
+    #[Groups(['player:read'])]
     private ?string $dominantHand = null;
 
     #[ORM\Column(nullable: true)]

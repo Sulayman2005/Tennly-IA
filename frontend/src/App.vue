@@ -51,7 +51,13 @@ onMounted(() => {
       Tennly IA
     </RouterLink>
     <nav>
-      <RouterLink to="/matchs">Analyse IA</RouterLink>
+      <RouterLink to="/matchs">Analyse</RouterLink>
+      <!-- Comparateur réservé à l'admin + aux abonnés (voir router/index.js,
+           requiresSubscriptionOrAdmin) — masqué ici pour le reste des
+           utilisateurs, même s'ils sont connectés. -->
+      <RouterLink v-if="auth.isAdmin || auth.hasActiveSubscription" to="/comparateur">Comparateur</RouterLink>
+      <RouterLink to="/fiabilite">Fiabilité</RouterLink>
+
     </nav>
 
     <div class="header-actions">

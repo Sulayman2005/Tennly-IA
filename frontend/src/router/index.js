@@ -3,10 +3,12 @@ import HomeView from '@/views/HomeView.vue'
 import MatchesView from '@/views/MatchesView.vue'
 import MatchDetailView from '@/views/MatchDetailView.vue'
 import ConnexionView from '@/views/ConnexionView.vue'
+import ComparateurView from '@/views/ComparateurView.vue'
 import AdminDashboardView from '@/views/admin/AdminDashboardView.vue'
 import AdminMatchesView from '@/views/admin/AdminMatchesView.vue'
 import AdminMatchAnalysisView from '@/views/admin/AdminMatchAnalysisView.vue'
 import AdminSubscribersView from '@/views/admin/AdminSubscribersView.vue'
+import ModelReliabilityView from '@/views/ModelReliabilityView.vue'
 
 // Correspondance directe avec le parcours principal décrit en section 5.2.1
 // du cahier des charges.
@@ -18,6 +20,13 @@ const router = createRouter({
     { path: '/matchs/:id', name: 'match-detail', component: MatchDetailView, props: true },
     // ?plan=classique|vip|vip-annuel : voir connexion.html et section 3.9.
     { path: '/connexion', name: 'connexion', component: ConnexionView },
+    { path: '/fiabilite', name: 'model-reliability', component: ModelReliabilityView },
+    // Comparateur de joueurs : compare deux joueurs (classement, Elo global
+    // + par surface, main dominante) hors contexte d'un match précis, et
+    // propose une analyse IA complète à la demande — voir ComparateurView.vue.
+    // Réservé à l'admin + aux abonnés (même règle que l'analyse complète
+    // d'un match, voir le garde ci-dessous et Prediction.php côté backend).
+    { path: '/comparateur', name: 'comparateur', component: ComparateurView, meta: { requiresSubscriptionOrAdmin: true } },
     { path: '/inscription', name: 'inscription', component: ConnexionView },
     { path: '/profil', name: 'profil', component: ConnexionView },
 
@@ -59,7 +68,7 @@ const router = createRouter({
 // le recharge ici si besoin avant de trancher, pour ne pas éjecter à tort un
 // admin qui vient juste de rafraîchir la page.
 router.beforeEach(async (to) => {
-  if (!to.meta.requiresAdmin) return true
+  if (!to.meta.requiresAdmin && !to.meta.requiresSubscriptionOrAdmin) return true
 
   const { useAuthStore } = await import('@/stores/auth')
   const auth = useAuthStore()
@@ -76,7 +85,14 @@ router.beforeEach(async (to) => {
     }
   }
 
-  if (!auth.isAdmin) {
+  if (to.meta.requiresAdmin && !auth.isAdmin) {
+    return { name: 'matches' }
+  }
+
+  // Comparateur : admin OU abonné actif (voir hasActiveSubscription() côté
+  // backend, User.php) — un utilisateur connecté mais non-abonné est
+  // redirigé vers /matchs plutôt que /connexion, il est déjà authentifié.
+  if (to.meta.requiresSubscriptionOrAdmin && !auth.isAdmin && !auth.hasActiveSubscription) {
     return { name: 'matches' }
   }
 

@@ -46,6 +46,15 @@ final class CheckoutSessionController extends AbstractController
         if (null === $plan) {
             return $this->json(['detail' => 'Formule inconnue.'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
+        // CGV article 4 : renonciation obligatoire au droit de rétractation pour
+        // un accès immédiat (art. L221-28 13° du Code de la consommation). On
+        // revalide ici même si le frontend a déjà la case à cocher : un appel
+        // direct à cette API ne doit jamais pouvoir la contourner.
+        if (true !== ($payload['withdrawalWaiverAccepted'] ?? null)) {
+            return $this->json([
+                'detail' => 'Tu dois confirmer renoncer à ton droit de rétractation pour un accès immédiat avant de continuer.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
 
         // `redirectPath` vient du client (chemin du match affiché au moment du
         // clic, voir MatchDetailView.vue/PaywallModal.vue) : on n'accepte
@@ -59,7 +68,12 @@ final class CheckoutSessionController extends AbstractController
         /** @var User $user */
         $user = $this->getUser();
 
-        $checkoutUrl = $this->stripeCheckoutService->createCheckoutSessionUrl($user, $plan, $safeRedirectPath);
+        $checkoutUrl = $this->stripeCheckoutService->createCheckoutSessionUrl(
+            $user,
+            $plan,
+            $safeRedirectPath,
+            withdrawalWaiverAcceptedAt: new \DateTimeImmutable(),
+        );
 
         return $this->json(['checkoutUrl' => $checkoutUrl]);
     }
