@@ -1157,3 +1157,5 @@ def write_log(new_players, updated_players, new_matches, new_predictions):
 
 if __name__ == "__main__":
     main()
+
+

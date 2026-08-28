@@ -70,6 +70,24 @@ class Player
     #[Groups(['player:read'])]
     private ?string $dominantHand = null;
 
+    /**
+     * Circuit du joueur : 'atp' ou 'wta' (voir ml-service/import_real_data.py
+     * et import_upcoming_matches.py, qui traitent les deux circuits comme
+     * deux univers Elo totalement séparés — un joueur ATP et une joueuse WTA
+     * ne s'affrontent jamais). Défaut 'atp' pour rester valide sur les
+     * joueurs déjà en base avant l'ajout de cette colonne.
+     *
+     * NOTE (28/08/2026) : cette propriété manquait entièrement de l'entité
+     * alors que la colonne `tour` existait déjà en base (remplie par les
+     * scripts ml-service via SQL direct) — résultat, Doctrine ignorait
+     * complètement la colonne, l'API ne renvoyait jamais `tour`, et le badge
+     * ATP/WTA du frontend retombait toujours sur "ATP" par défaut, quelle
+     * que soit la vraie valeur en base. Voir aussi PlayerComparisonService.
+     */
+    #[ORM\Column(length: 3)]
+    #[Groups(['player:read', 'match:read'])]
+    private string $tour = 'atp';
+
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $birthDate = null;
 
@@ -223,6 +241,18 @@ class Player
     public function setPhotoUrl(?string $photoUrl): static
     {
         $this->photoUrl = $photoUrl;
+
+        return $this;
+    }
+
+    public function getTour(): string
+    {
+        return $this->tour;
+    }
+
+    public function setTour(string $tour): static
+    {
+        $this->tour = $tour;
 
         return $this;
     }
