@@ -1,0 +1,121 @@
+name: CI
+
+# Lance les tests backend (PHPUnit) et frontend (Vitest) à chaque push et
+# pull request, plus deux jobs Docker (29/08/2026, voir Dockerfile et
+# docker-compose.yml à la racine, qui remplacent WAMP en local) :
+#   - docker-build : construit l'image à chaque push/PR, juste pour détecter
+#     immédiatement si le Dockerfile casse (rien n'est déployé nulle part).
+#   - docker-publish : publie l'image sur GitHub Container Registry (ghcr.io)
+#     à chaque push sur main. C'est un PREMIER PAS vers le CD, pas un vrai
+#     déploiement — l'hébergement en ligne n'est toujours pas décidé (voir
+#     README.md) ; une fois choisi, l'hébergeur n'aura qu'à tirer (pull)
+#     cette image plutôt qu'à rebuild depuis zéro.
+#
+# Pas de composer.lock ni de package-lock.json commités pour l'instant, donc
+# `composer install`/`npm install` (plutôt que `--no-dev`/`ci`) résolvent les
+# versions à chaque run. Une fois que tu auras lancé `composer install` et
+# `npm install` en local avec succès, committe les deux fichiers de lock
+# générés : ça accélère et fiabilise ce workflow (versions figées, plus
+# rapide car `npm ci` peut alors être utilisé).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend — PHPUnit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@v4
+
+      - name: PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: ctype, iconv, pdo_mysql
+          coverage: none
+
+      - name: Installe les dépendances Composer
+        run: composer install --no-progress --prefer-dist
+
+      - name: Lance PHPUnit
+        run: vendor/bin/phpunit
+
+  frontend:
+    name: Frontend — Vitest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@v4
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Installe les dépendances npm
+        run: npm install
+
+      - name: Lance Vitest
+        run: npm test
+
+  docker-build:
+    name: Docker — build de l'image (validation)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@v4
+
+      - name: Build l'image (sans la publier)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+
+  docker-publish:
+    name: Docker — publication sur GHCR
+    # Uniquement sur main, jamais sur une simple pull request (on ne publie
+    # que du code déjà revu/mergé). Ne fait rien tant que l'hébergement n'est
+    # pas branché dessus — voir le commentaire en tête de fichier.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [backend, frontend, docker-build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@v4
+
+      - name: Connexion à GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Nom d'image en minuscules
+        # ghcr.io exige un nom d'image tout en minuscules, alors que
+        # github.repository (owner/repo) peut contenir des majuscules —
+        # sans cette étape, le push échouerait juste à cause de la casse.
+        id: image
+        run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Build et publication de l'image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ steps.image.outputs.name }}:latest
+            ghcr.io/${{ steps.image.outputs.name }}:${{ github.sha }}

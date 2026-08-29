@@ -1,0 +1,14 @@
+# Dépendances Python du ml-service.
+#
+# À la lecture de predict_pair.py, model_inference.py, import_real_data.py et
+# import_upcoming_matches.py (29/08/2026), la SEULE dépendance externe (hors
+# bibliothèque standard : json, csv, urllib, pathlib, datetime, math...) est
+# xgboost — model_inference.py l'importe dans un bloc try/except et bascule
+# proprement sur MODEL_AVAILABLE = False s'il est absent (jamais une erreur
+# bloquante). Numpy est installé automatiquement comme dépendance de xgboost.
+#
+# Si tu ajoutes plus tard un import pandas/scikit-learn/requests dans un de
+# ces scripts (par exemple pour enrichir train_model.py), ajoute-le ici aussi
+# — sinon ça ne sera installé que sur ta machine Windows, pas dans l'image
+# Docker (voir Dockerfile à la racine du projet, et DOCKER.md).
+xgboost>=2.0,<3.0

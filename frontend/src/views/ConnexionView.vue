@@ -81,6 +81,29 @@ async function submitSignup() {
 
 <template>
   <div class="auth-wrap">
+    <!--
+      Panneau de marque, dans le même esprit que le hero de HomeView.vue
+      (eyebrow + accroche + palette --green/--lime) plutôt que le fond de
+      carte neutre qu'avait cette page jusqu'ici — voir README.md, section
+      "reste à faire" du 28/08/2026 : cette page gardait l'ancien style
+      pendant que la page d'accueil et le back-office avaient déjà été
+      alignés sur l'identité Apple/"terre battue" du projet. Purement
+      visuel, aucune logique ici.
+    -->
+    <div class="auth-brand-panel">
+      <div class="eyebrow"><i></i>IA TENNIS · TON COMPTE</div>
+      <h1>Retrouve tes <span class="accent">analyses</span><br />où que tu sois.</h1>
+      <p class="brand-lead">
+        Historique de performance 100 % public, aucune donnée inventée — crée
+        un compte gratuit en une minute.
+      </p>
+      <ul class="brand-points">
+        <li>Analyse IA calibrée sur données réelles ATP + WTA</li>
+        <li>Le compte est gratuit, sans engagement</li>
+        <li>Paiement à la demande, uniquement pour débloquer l'analyse complète d'un match</li>
+      </ul>
+    </div>
+
     <div class="auth-form-panel">
       <div class="auth-card">
         <div class="tabswitch">
@@ -119,10 +142,108 @@ async function submitSignup() {
 
 <style scoped>
 .auth-wrap {
-  display: flex;
-  justify-content: center;
-  padding: 48px 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 40px;
+  padding: 48px 0 60px;
 }
+
+.auth-brand-panel {
+  border-radius: var(--radius-card);
+  padding: 44px 40px;
+  background: linear-gradient(155deg, var(--green) 0%, var(--green2) 100%);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.auth-brand-panel .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.75);
+  margin-bottom: 18px;
+}
+
+.auth-brand-panel .eyebrow i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lime);
+  box-shadow: 0 0 0 3px rgba(199, 255, 60, 0.25);
+}
+
+.auth-brand-panel h1 {
+  font-size: 32px;
+  line-height: 1.2;
+  margin: 0 0 16px;
+}
+
+.auth-brand-panel h1 .accent {
+  color: var(--lime);
+}
+
+.brand-lead {
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0 0 28px;
+  max-width: 38ch;
+}
+
+.brand-points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.brand-points li {
+  position: relative;
+  padding-left: 20px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.brand-points li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--lime);
+}
+
+.auth-form-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 780px) {
+  .auth-wrap {
+    grid-template-columns: 1fr;
+    padding: 24px 0 48px;
+  }
+
+  .auth-brand-panel {
+    padding: 32px 28px;
+  }
+
+  .auth-brand-panel h1 {
+    font-size: 26px;
+  }
+}
+
 .auth-card {
   width: 100%;
   max-width: 420px;

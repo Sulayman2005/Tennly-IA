@@ -1,0 +1,77 @@
+# Remplace WAMP en local : Apache+PHP+Python (image construite depuis le
+# Dockerfile à la racine) + MySQL + phpMyAdmin (pour garder le même confort
+# qu'avec WAMP pour inspecter/corriger la base à la main, comme on l'a fait
+# pour le mot de passe admin).
+#
+# Le frontend Vue (Vite) N'EST PAS ici : il tournait déjà en dehors de WAMP
+# (via `npm run dev`), donc il continue de tourner nativement sur Windows,
+# inchangé — voir DOCKER.md pour le détail des commandes.
+
+services:
+  db:
+    # Le tag exact 8.0.32 matche le serverVersion déclaré dans backend/.env
+    # (DATABASE_URL). Si ce tag précis venait à disparaître de Docker Hub,
+    # remplace par "mysql:8.0" (dernière 8.0.x) sans rien changer d'autre.
+    image: mysql:8.0.32
+    restart: unless-stopped
+    environment:
+      # Mot de passe de DEV uniquement (à ne jamais réutiliser tel quel pour
+      # un vrai déploiement) — remplace le root sans mot de passe de WAMP,
+      # que l'image MySQL officielle n'accepte pas nativement.
+      MYSQL_ROOT_PASSWORD: root_dev_only
+      MYSQL_DATABASE: tennly
+    ports:
+      # Permet de continuer à se connecter depuis un client MySQL / une
+      # extension VS Code sur l'hôte, exactement comme avec WAMP.
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_dev_only"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  phpmyadmin:
+    image: phpmyadmin:5
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: root_dev_only
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Seule variable qu'on a besoin de surcharger par rapport à
+      # backend/.env : l'hôte MySQL, qui n'est plus 127.0.0.1 (WAMP) mais le
+      # nom du service Docker "db" (résolu par le DNS interne de Docker).
+      # Tout le reste (APP_SECRET, JWT_*, STRIPE_*, CORS_ALLOW_ORIGIN,
+      # FRONTEND_BASE_URL...) continue de venir de backend/.env /
+      # backend/.env.local comme avant, sans rien changer.
+      DATABASE_URL: "mysql://root:root_dev_only@db:3306/tennly?serverVersion=8.0.32&charset=utf8mb4"
+    volumes:
+      # Bind mounts (pas de COPY dans l'image) : tu continues d'éditer le
+      # code dans VS Code sur Windows exactement comme avant, les
+      # changements sont pris en compte immédiatement, sans reconstruire
+      # l'image.
+      - ./backend:/var/www/html/backend
+      - ./ml-service:/var/www/html/ml-service
+    ports:
+      # 8000, comme `php -S 127.0.0.1:8000 -t public` avant — aucune
+      # habitude à changer côté frontend (vite.config.js proxy déjà sur
+      # http://127.0.0.1:8000).
+      - "8000:80"
+
+volumes:
+  db_data:

@@ -1,0 +1,17 @@
+# Garde le contexte de build léger et rapide. Ces dossiers sont de toute
+# façon écrasés par les bind mounts de docker-compose.yml au runtime, donc
+# ça ne change rien au comportement — juste un build plus rapide.
+.git
+.github
+
+backend/vendor
+backend/var
+backend/.env.local
+backend/.env.local.php
+backend/config/jwt
+
+frontend/node_modules
+frontend/dist
+
+ml-service/__pycache__
+ml-service/model

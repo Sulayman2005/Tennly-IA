@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Config volontairement minimale : les tests actuels sont des tests
+    unitaires purs (aucun n'a besoin de démarrer le kernel Symfony ni de se
+    connecter à une base de données), donc pas de SymfonyExtension ni de
+    .env.test ici pour l'instant. Le jour où on ajoute des tests
+    fonctionnels (API Platform, KernelTestCase...), il faudra un .env.test
+    (DATABASE_URL vers une base de test dédiée) et probablement
+    l'extension symfony/phpunit-bridge — voir tests/README.md.
+-->
+<phpunit xmlns="https://schema.phpunit.de/11.3/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true"
+         failOnWarning="true"
+         failOnDeprecation="false"
+>
+    <php>
+        <ini name="display_errors" value="1" />
+        <ini name="error_reporting" value="-1" />
+        <server name="APP_ENV" value="test" force="true" />
+        <server name="SHELL_VERBOSITY" value="-1" />
+    </php>
+
+    <testsuites>
+        <testsuite name="Tennly IA — Tests">
+            <directory>tests</directory>
+        </testsuite>
+    </testsuites>
+
+    <source>
+        <include>
+            <directory>src</directory>
+        </include>
+    </source>
+</phpunit>

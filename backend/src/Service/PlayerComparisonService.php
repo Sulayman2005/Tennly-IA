@@ -34,6 +34,17 @@ use Symfony\Component\Process\Process;
  *    sous-processus échoue pour une raison quelconque), on retombe
  *    silencieusement sur la même formule Elo que le reste de l'app —
  *    jamais d'erreur HTTP pour l'utilisateur à cause de ça.
+ *
+ * NOTE (29/08/2026) : `tour_is_wta` fait partie de REQUIRED_KEYS côté
+ * ml-service/predict_pair.py (c'est la dernière feature du modèle entraîné,
+ * voir train_model.py) — tant qu'elle manquait dans le payload envoyé ici,
+ * predict_pair.py renvoyait systématiquement {"model_available": false,
+ * "error": "Clé(s) manquante(s)... tour_is_wta"}, donc le Comparateur
+ * retombait TOUJOURS sur la formule Elo, quels que soient les deux joueurs
+ * choisis — jamais réellement le modèle XGBoost. Ça expliquait aussi
+ * pourquoi le facteur "Classement" affichait toujours "ATP" en dur : le
+ * libellé n'était jamais calculé dynamiquement à partir du circuit réel des
+ * joueurs comparés. Les deux sont corrigés ci-dessous.
  */
 class PlayerComparisonService
 {
@@ -80,6 +91,17 @@ class PlayerComparisonService
         $eloSurfaceA = $this->eloForSurface($playerA, $surface);
         $eloSurfaceB = $this->eloForSurface($playerB, $surface);
 
+        // Le modèle a été entraîné sur ATP+WTA combinés avec le circuit comme
+        // simple feature (voir ml-service/train_model.py, tour_is_wta) — une
+        // info par PAIRE, pas par joueur (les deux joueurs d'un vrai match
+        // sont toujours du même circuit). Le comparateur, lui, ne bloque pas
+        // un choix de deux joueurs de circuits différents : dans ce cas rare
+        // et peu sensé sportivement, l'analyse reste calée sur le circuit du
+        // joueur A uniquement — voir aussi la note "crossTour" côté
+        // frontend (ComparateurView.vue), qui prévient l'utilisateur de ce
+        // cas précis.
+        $tourIsWta = $playerA->getTour() === 'wta' ? 1 : 0;
+
         $serveA = $snapshotA['serve_score'] ?? 60.0;
         $serveB = $snapshotB['serve_score'] ?? 60.0;
         $returnA = $snapshotA['return_score'] ?? 60.0;
@@ -122,6 +144,7 @@ class PlayerComparisonService
             $serveA, $serveB, $returnA, $returnB,
             $momentumA, $momentumB, $formA, $formB, $restA, $restB,
             $h2hA, $h2hB, $handEdgeA, $handEdgeB, $fatigueA, $fatigueB, $upsetA, $upsetB,
+            $tourIsWta,
         );
 
         $isAFav = $probaAWins >= 0.5;
@@ -136,6 +159,7 @@ class PlayerComparisonService
             $h2hA, $h2hB, $serveA, $serveB, $momentumA, $momentumB,
             $handEdgeA, $handEdgeB, $handA, $handB,
             $fatigueA, $fatigueB, $upsetA, $upsetB,
+            $tourIsWta,
         );
 
         $radar = [
@@ -222,7 +246,7 @@ class PlayerComparisonService
         float $serveA, float $serveB, float $returnA, float $returnB,
         ?float $momentumA, ?float $momentumB, ?float $formA, ?float $formB, ?float $restA, ?float $restB,
         int $h2hA, int $h2hB, ?float $handEdgeA, ?float $handEdgeB, ?float $fatigueA, ?float $fatigueB,
-        ?float $upsetA, ?float $upsetB,
+        ?float $upsetA, ?float $upsetB, int $tourIsWta,
     ): array {
         $eloFallback = 1.0 / (1.0 + 10 ** (($eloSurfaceB - $eloSurfaceA) / 400.0));
 
@@ -240,6 +264,12 @@ class PlayerComparisonService
             'fatigue1' => $fatigueA, 'fatigue2' => $fatigueB,
             'indoor1' => null, 'indoor2' => null,
             'upset1' => $upsetA, 'upset2' => $upsetB,
+            // NOTE (29/08/2026) : manquait ici — voir la docstring de classe
+            // en tête de fichier. predict_pair.py exige cette clé
+            // (REQUIRED_KEYS), donc son absence faisait échouer le modèle en
+            // silence à chaque appel, systématiquement, quels que soient les
+            // deux joueurs comparés.
+            'tour_is_wta' => $tourIsWta,
         ];
 
         try {
@@ -305,6 +335,7 @@ class PlayerComparisonService
         ?float $handEdgeA, ?float $handEdgeB, ?string $handA, ?string $handB,
         ?float $fatigueA, ?float $fatigueB,
         ?float $upsetA, ?float $upsetB,
+        int $tourIsWta,
     ): array {
         [$rankFav, $rankDog] = $isAFav ? [$rankA, $rankB] : [$rankB, $rankA];
         [$eloFav, $eloDog] = $isAFav ? [$eloA, $eloB] : [$eloB, $eloA];
@@ -320,7 +351,12 @@ class PlayerComparisonService
 
         if ($rankFav !== null && $rankDog !== null) {
             $factors[] = [
-                'label' => 'Classement ATP',
+                // NOTE (29/08/2026) : "Classement ATP" était écrit en dur ici
+                // auparavant — toujours affiché, même pour deux joueuses WTA
+                // (voir le bug du Comparateur : Elvina Kalieva / Vendula
+                // Valdmannova). Le libellé suit maintenant le vrai circuit,
+                // comme le fait déjà ml-service/import_real_data.py.
+                'label' => $tourIsWta === 1 ? 'Classement WTA' : 'Classement ATP',
                 'favors' => $isAFav ? 'A' : 'B',
                 'impactPoints' => round(abs($rankFav - $rankDog) / 10, 1),
                 'tone' => 'ok',
@@ -389,3 +425,4 @@ class PlayerComparisonService
         return $factors;
     }
 }
+
