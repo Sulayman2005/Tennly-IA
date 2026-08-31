@@ -33,10 +33,17 @@ jobs:
       - name: Récupération du code
         uses: actions/checkout@v4
 
-      - name: PHP 8.2
+      # (31/08/2026) Doit rester alignée sur la version PHP du Dockerfile
+      # (FROM php:8.3-apache) : composer.lock est maintenant committé (voir
+      # commentaire en tête de fichier) et a été généré à l'intérieur de ce
+      # conteneur Docker, donc sous PHP 8.3 — un composer install sous une
+      # version PHP plus ancienne (8.2) échoue ici avec "Your lock file does
+      # not contain a compatible set of packages" dès qu'une dépendance (ex.
+      # lcobucci/clock) exige explicitement PHP 8.3+.
+      - name: PHP 8.3
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.3'
           extensions: ctype, iconv, pdo_mysql
           coverage: none
 
