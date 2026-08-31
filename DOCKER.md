@@ -46,17 +46,20 @@ Puis, toujours dans ce terminal :
 
 ```bash
 # Installe les dépendances PHP (équivalent de ce que tu faisais avec WAMP)
-docker compose exec app composer install
+# -w /var/www/html/backend : composer.json est dans backend/, pas à la
+# racine /var/www/html (WORKDIR par défaut du conteneur) — sans ce -w,
+# Composer répond "could not find a composer.json file in /var/www/html".
+docker compose exec -w /var/www/html/backend app composer install
 
 # Génère les clés JWT — nécessaire une seule fois, elles n'existent pas
 # encore dans ce nouveau conteneur (config/jwt/ est dans .gitignore, comme
-# avant avec WAMP)
-docker compose exec app php bin/console lexik:jwt:generate-keypair
+# avant avec WAMP). Même remarque : -w pour se placer dans backend/.
+docker compose exec -w /var/www/html/backend app php bin/console lexik:jwt:generate-keypair
 
 # Si tu as choisi l'option A ci-dessus (import du .sql), tu n'as PAS besoin
 # de relancer les migrations : la structure vient avec les données importées.
 # Si tu es en option B (base vide), lance les migrations existantes :
-docker compose exec app php bin/console doctrine:migrations:migrate
+docker compose exec -w /var/www/html/backend app php bin/console doctrine:migrations:migrate
 ```
 
 Le backend est maintenant sur `http://127.0.0.1:8000`, exactement comme avec
@@ -75,8 +78,8 @@ npm run dev
 docker compose up -d      # démarrer (silencieux, en arrière-plan)
 docker compose down       # arrêter (les données restent dans le volume db_data)
 docker compose logs -f app   # voir les erreurs PHP en direct (équivalent du terminal WAMP)
-docker compose exec app vendor/bin/phpunit   # lancer les tests PHPUnit
-docker compose exec app php bin/console ...  # n'importe quelle commande Symfony
+docker compose exec -w /var/www/html/backend app vendor/bin/phpunit   # lancer les tests PHPUnit
+docker compose exec -w /var/www/html/backend app php bin/console ...  # n'importe quelle commande Symfony
 ```
 
 `docker compose down -v` supprime aussi le volume MySQL (vraie remise à
@@ -88,12 +91,23 @@ Même procédure que ce qu'on a fait avec WAMP, juste en passant par le
 conteneur :
 
 ```bash
-docker compose exec app php bin/console security:hash-password
+docker compose exec -w /var/www/html/backend app php bin/console security:hash-password
 ```
 
 Puis colle le hash obtenu dans la table `app_user` via phpMyAdmin
 (`http://localhost:8080`), onglet **SQL** (pas le formulaire d'édition en
 ligne, qui avait ajouté un `\r\n` parasite la dernière fois).
+
+## Tâche planifiée Windows (calendrier des matchs à venir)
+
+Si tu as mis en place la tâche planifiée décrite dans
+`ml-service/AUTOMATISATION.md` (import quotidien du calendrier des matchs à
+venir), elle se connectait à la base MySQL de WAMP. Depuis le passage à
+Docker, mets à jour `DATABASE_URL` dans `ml-service/.env.local` avec le
+mot de passe Docker (`root_dev_only` au lieu d'un mot de passe vide) —
+voir le détail dans `ml-service/AUTOMATISATION.md`. Le conteneur `db` doit
+être démarré (`docker compose up -d`) au moment où la tâche s'exécute,
+comme WAMP devait l'être avant.
 
 ## Si un conteneur ne démarre pas
 

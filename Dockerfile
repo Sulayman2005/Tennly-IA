@@ -11,7 +11,14 @@
 # back (Apache+MySQL+PHP), le frontend tournait déjà nativement via
 # `npm run dev` en dehors de WAMP — ça continue de fonctionner à l'identique,
 # voir DOCKER.md.
-FROM php:8.2-apache
+#
+# NOTE (29/08/2026, v2) : composer.json déclare "php": ">=8.2", mais le
+# composer.lock réel (généré par le WAMP local, qui tourne visiblement en PHP
+# 8.3+) verrouille des versions de paquets qui exigent PHP >= 8.3 — le
+# platform_check.php généré par Composer le confirme à l'exécution. PHP 8.2
+# donnait donc une Fatal error au premier chargement. On passe l'image en PHP
+# 8.3 pour matcher le composer.lock existant plutôt que de toucher au lock.
+FROM php:8.3-apache
 
 # --- Extensions PHP ---------------------------------------------------
 # pdo_mysql : nécessaire pour Doctrine (MySQL/MariaDB) — ctype et iconv

@@ -582,10 +582,29 @@ def compute_player_snapshots(existing_by_external_ref, matches_by_player, serve_
     mapping = app_players_with_history(existing_by_external_ref, prefix)
     snapshots = []
     for app_id, source_pid in mapping.items():
+        # (31/08/2026) Un joueur déjà en base (external_ref connu) peut n'avoir
+        # aucun match dans la fenêtre d'historique retéléchargée ici (retraité,
+        # ou simplement inactif depuis HIST_YEARS_BACK) — il est alors absent
+        # de serve_running/return_running (qui ne contiennent que les joueurs
+        # rencontrés dans cette fenêtre, voir simulate_to_present). Toutes les
+        # autres stats ci-dessous (recent_form, days_rest, momentum_for, etc.)
+        # géraient déjà ce cas via .get(pid, ...) -> None ; seules ces deux
+        # lignes indexaient directement le dict et plantaient (KeyError) sur
+        # ce cas précis. Repli sur la même valeur neutre documentée que
+        # hist.DEFAULT_SERVE_RETURN_SCORE, déjà utilisée plus bas (ligne
+        # ~814) pour le même genre de joueur "sans échantillon exploitable".
         snapshots.append({
             "player_id": app_id,
-            "serve_score": hist.serve_score(serve_running[source_pid]),
-            "return_score": hist.return_score(return_running[source_pid]),
+            "serve_score": (
+                hist.serve_score(serve_running[source_pid])
+                if source_pid in serve_running
+                else hist.DEFAULT_SERVE_RETURN_SCORE
+            ),
+            "return_score": (
+                hist.return_score(return_running[source_pid])
+                if source_pid in return_running
+                else hist.DEFAULT_SERVE_RETURN_SCORE
+            ),
             "momentum": momentum_for(elo_history, source_pid),
             "recent_form": recent_form(matches_by_player, source_pid, today_str),
             "days_rest": days_rest(matches_by_player, source_pid, today_str),

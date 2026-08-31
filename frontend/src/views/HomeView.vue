@@ -1,45 +1,99 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { api } from '@/api/client'
 
 const router = useRouter()
 
-// TODO : brancher sur un futur endpoint /api/stats une fois le back-office
-// (section 3.7) capable de calculer ces agrégats en temps réel.
-const stats = [
-  { target: 67.8, decimals: 1, prefix: '', suffix: ' %', label: 'Réussite sur 90 jours', bar: 68 },
-  { target: 12480, decimals: 0, prefix: '', suffix: '', label: 'Matchs analysés', bar: 90 },
-  { target: 4.1, decimals: 1, prefix: '+', suffix: ' %', label: 'Value moyenne vs cote de clôture', bar: 55 },
-  { target: 0.19, decimals: 2, prefix: '', suffix: '', label: 'Brier score (plus bas = meilleur)', bar: 80 },
-]
+// Chiffres réels de GET /api/stats (backend : HomeStatsSummary/HomeStatsProvider)
+// — remplace les valeurs fixes qui étaient codées en dur ici (voir l'ancien
+// TODO). `value: null` = pas encore assez de données (même principe "aucune
+// donnée inventée" que la page Fiabilité du modèle) : on affiche "—" et on
+// n'anime rien, plutôt que d'animer un chiffre inventé. C'est notamment le
+// cas aujourd'hui de "Value moyenne" : aucune cote de marché n'est encore
+// intégrée côté ml-service (voir le docstring de HomeStatsSummary côté back).
+const stats = ref([
+  { key: 'successRate', value: null, decimals: 1, prefix: '', suffix: ' %', label: 'Réussite sur 90 jours' },
+  { key: 'analyzedMatches', value: null, decimals: 0, prefix: '', suffix: '', label: 'Matchs analysés' },
+  { key: 'valueEdge', value: null, decimals: 1, prefix: '+', suffix: ' %', label: 'Value moyenne vs cote de clôture' },
+  { key: 'brier', value: null, decimals: 2, prefix: '', suffix: '', label: 'Brier score (plus bas = meilleur)' },
+])
+const yearsOfHistory = ref(null)
+const loading = ref(true)
+const loadError = ref(false)
 
 // Compteurs et barres animés au chargement (repris du prototype validé) :
 // on part de 0 et on anime vers la vraie valeur, plutôt que d'afficher un
-// nombre figé d'entrée de jeu.
-const statValues = ref(stats.map(() => 0))
-const barWidths = ref(stats.map(() => 0))
+// nombre figé d'entrée de jeu. Une stat sans donnée (value === null) n'est
+// jamais animée : "—" reste affiché tel quel.
+const statValues = ref(stats.value.map(() => 0))
+const barWidths = ref(stats.value.map(() => 0))
 
 function formatStat(i) {
-  const s = stats[i]
+  const s = stats.value[i]
+  if (s.value === null) return '—'
   return s.prefix + statValues.value[i].toFixed(s.decimals) + s.suffix
 }
 
-onMounted(() => {
-  stats.forEach((s, i) => {
+// Largeur de la barre décorative sous chaque chiffre : purement visuelle
+// (pas une donnée affichée en tant que telle), mais dérivée du vrai chiffre
+// quand ça a un sens plutôt que d'être une valeur arbitraire.
+function barWidthFor(s) {
+  if (s.value === null) return 0
+  if (s.key === 'successRate') return Math.round(s.value)
+  if (s.key === 'brier') return Math.round((1 - s.value) * 100) // plus bas = meilleur -> barre plus pleine
+  if (s.key === 'valueEdge') return Math.min(100, Math.round(s.value * 10))
+  return 90
+}
+
+function animateStats() {
+  stats.value.forEach((s, i) => {
+    if (s.value === null) return
     const duration = 900
     const start = performance.now()
     function step(now) {
       const t = Math.min(1, (now - start) / duration)
       const eased = 1 - Math.pow(1 - t, 3)
-      statValues.value[i] = s.target * eased
+      statValues.value[i] = s.value * eased
       if (t < 1) requestAnimationFrame(step)
     }
     requestAnimationFrame(step)
   })
   // Décalé d'une frame pour que la transition CSS width parte bien de 0.
   requestAnimationFrame(() => {
-    barWidths.value = stats.map((s) => s.bar)
+    barWidths.value = stats.value.map((s) => barWidthFor(s))
   })
+}
+
+const heroSuccessRate = computed(() => {
+  const v = stats.value[0].value
+  return v !== null ? v.toFixed(1).replace('.', ',') + ' %' : '—'
+})
+const heroAnalyzedMatches = computed(() => {
+  const v = stats.value[1].value
+  return v !== null ? new Intl.NumberFormat('fr-FR').format(v) : '—'
+})
+const heroYearsOfHistory = computed(() => {
+  const v = yearsOfHistory.value
+  if (v === null) return '—'
+  const rounded = Math.round(v)
+  return rounded + (rounded > 1 ? ' ans' : ' an')
+})
+
+onMounted(async () => {
+  try {
+    const data = await api.get('/api/stats')
+    stats.value[0].value = data.successRateLast90Days
+    stats.value[1].value = data.analyzedMatchesCount
+    stats.value[2].value = data.averageValueEdgePercent
+    stats.value[3].value = data.brierScore
+    yearsOfHistory.value = data.yearsOfHistory
+  } catch (e) {
+    loadError.value = true
+  } finally {
+    loading.value = false
+    animateStats()
+  }
 })
 
 function goToMatches() {
@@ -51,14 +105,14 @@ function goToMatches() {
   <section class="hero">
     <div class="eyebrow"><i></i>IA TENNIS · DONNÉES ATP RÉELLES</div>
     <h1>Prédis chaque <span class="accent">victoire</span><br />avant qu'elle n'ait lieu.</h1>
-    <p>Des pronostics tennis calibrés par IA, expliqués simplement, avec un historique de performance 100 % public.</p>
+    <p>Des analyses tennis calibrées par IA, expliquées simplement, avec un historique de performance 100 % public.</p>
     <button class="cta-main" @click="goToMatches">
-      Voir les pronostics du jour <span class="arrow">→</span>
+      Voir les analyses du jour <span class="arrow">→</span>
     </button>
     <div class="hero-stats">
-      <div class="hs"><b>67,8 %</b> de réussite sur 90 jours</div>
-      <div class="hs"><b>12 480</b> matchs analysés</div>
-      <div class="hs"><b>4 ans</b> d'historique ATP rejoué</div>
+      <div class="hs"><b>{{ heroSuccessRate }}</b> de réussite sur 90 jours</div>
+      <div class="hs"><b>{{ heroAnalyzedMatches }}</b> matchs analysés</div>
+      <div class="hs"><b>{{ heroYearsOfHistory }}</b> d'historique ATP rejoué</div>
     </div>
   </section>
 
@@ -139,6 +193,9 @@ function goToMatches() {
       <div class="bar"><i :style="{ width: barWidths[i] + '%' }"></i></div>
     </div>
   </div>
+  <p v-if="loadError" class="stat-banner-error">
+    Impossible de charger les statistiques pour le moment — réessaie un peu plus tard.
+  </p>
 
   <!-- ================= COUVERTURE (surfaces / tournois) ================= -->
   <div class="section">
@@ -176,7 +233,7 @@ function goToMatches() {
   <div class="section">
     <div class="section-head">
       <div class="eyebrow"><i></i>CONCRÈTEMENT</div>
-      <h2>Voici à quoi ressemble un pronostic Tennly IA</h2>
+      <h2>Voici à quoi ressemble une analyse Tennly IA</h2>
       <p>Une probabilité claire, et surtout les raisons derrière — jamais une boîte noire.</p>
     </div>
     <div class="example-panel">
@@ -320,8 +377,8 @@ function goToMatches() {
         <p>Un système Elo par surface combiné à de vraies statistiques de jeu (service, retour, forme, repos), rejoué sur l'historique ATP réel — pas un modèle opaque qu'on ne peut pas expliquer.</p>
       </div>
       <div class="faq-item">
-        <h4>Est-ce que je peux parier directement depuis l'app ?</h4>
-        <p>Non. Tennly IA est un outil d'aide à la décision, pas une plateforme de paris. Les pronostics ne constituent pas un conseil financier et ne garantissent aucun résultat.</p>
+        <h4>Est-ce que Tennly IA agit à ma place ?</h4>
+        <p>Non. Tennly IA est un outil d'aide à la décision et d'analyse : il ne constitue pas un conseil financier et ne garantit aucun résultat.</p>
       </div>
       <div class="faq-item">
         <h4>Les données sont-elles fiables ?</h4>
@@ -331,15 +388,15 @@ function goToMatches() {
   </div>
 
   <div class="final-cta">
-    <h3>Prêt à voir tes premiers pronostics ?</h3>
+    <h3>Prêt à voir tes premières analyses ?</h3>
     <p>Gratuit à découvrir, sans carte bancaire.</p>
     <button class="cta-main" @click="goToMatches">
-      Voir les pronostics du jour <span class="arrow">→</span>
+      Voir les analyses du jour <span class="arrow">→</span>
     </button>
   </div>
 
   <div class="site-footer">
-    © Tennly IA — Outil d'aide à la décision à titre informatif, ne constitue ni un conseil en pari sportif ni une garantie de résultat.
+    © Tennly IA — Outil d'aide à la décision à titre informatif, ne constitue ni un conseil financier ni une garantie de résultat.
   </div>
 </template>
 
@@ -427,7 +484,6 @@ h3 {
   box-shadow: var(--shadow-soft);
   transition: transform 0.15s;
   animation: fadeUp 0.6s 0.2s ease both;
-  cursor: pointer;
 }
 .cta-main:hover {
   transform: translateY(-2px) scale(1.02);
@@ -584,6 +640,12 @@ h3 {
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   margin: 0 0 60px;
+}
+.stat-banner-error {
+  margin: -44px 0 60px;
+  font-size: 13px;
+  color: var(--grey);
+  text-align: center;
 }
 .stat-card {
   background: var(--card);

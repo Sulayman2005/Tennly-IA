@@ -1,4 +1,34 @@
 ---------------------------------------------- 
 27/08/2026 21:16:11,51 
 ATTENTION : .venv\Scripts\python.exe introuvable, repli sur "python" du PATH. 
-^C
+^C---------------------------------------------- 
+31/08/2026 19:44:56,77 
+1/5 — Lecture de l'état actuel de ta base…
+  260 joueurs déjà en base, 150 matchs à venir déjà importés précédemment (id max joueur=260, match=180, analyse=180)
+2/5 — Retéléchargement et rejeu de l'historique réel, ATP puis WTA (deux circuits totalement indépendants)…
+ Circuit ATP (source : Tennismylife/TML-Database)…
+  2026.csv : 137 matchs récupérés depuis https://raw.githubusercontent.com/Tennismylife/TML-Database/master/2026.csv
+  2025.csv : 2944 matchs récupérés depuis https://raw.githubusercontent.com/Tennismylife/TML-Database/master/2025.csv
+  2024.csv : 3076 matchs récupérés depuis https://raw.githubusercontent.com/Tennismylife/TML-Database/master/2024.csv
+  2023.csv : 2995 matchs récupérés depuis https://raw.githubusercontent.com/Tennismylife/TML-Database/master/2023.csv
+  9151 matchs ATP exploitables
+ Circuit WTA (source : stats.tennismylife.org)…
+  2026_wta.csv : 1968 matchs récupérés depuis https://stats.tennismylife.org/data/2026_wta.csv
+  2025_wta.csv : 2622 matchs récupérés depuis https://stats.tennismylife.org/data/2025_wta.csv
+  2024_wta.csv : 2658 matchs récupérés depuis https://stats.tennismylife.org/data/2024_wta.csv
+  2023_wta.csv : 2810 matchs récupérés depuis https://stats.tennismylife.org/data/2023_wta.csv
+  9984 matchs WTA exploitables
+Mise à jour de l'instantané quotidien des joueurs (comparateur de joueurs), ATP + WTA…
+Traceback (most recent call last):
+  File "C:\Projet_tennly\tennly\tennly\ml-service\import_upcoming_matches.py", line 1159, in <module>
+    main()
+    ~~~~^^
+  File "C:\Projet_tennly\tennly\tennly\ml-service\import_upcoming_matches.py", line 997, in main
+    snapshots = compute_player_snapshots(
+        existing_by_external_ref, state["matches_by_player"], state["serve_running"],
+        state["return_running"], state["elo_history"], today_str, prefix,
+    )
+  File "C:\Projet_tennly\tennly\tennly\ml-service\import_upcoming_matches.py", line 587, in compute_player_snapshots
+    "serve_score": hist.serve_score(serve_running[source_pid]),
+                                    ~~~~~~~~~~~~~^^^^^^^^^^^^
+KeyError: 222017

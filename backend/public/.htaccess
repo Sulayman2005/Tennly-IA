@@ -1,0 +1,53 @@
+# Fichier standard Symfony (recette symfony/apache-pack), absent du projet
+# jusqu'ici — sans lui, Apache n'a aucune règle de réécriture vers index.php.
+# Ça ne posait jamais de problème avant Docker car WAMP faisait tourner le
+# projet via `php -S` (serveur intégré PHP), pas via un vrai Apache — voir
+# DOCKER.md. Avec un vrai Apache dans le conteneur, ce fichier est requis
+# pour que TOUTE route (pas juste "/") atteigne index.php.
+#
+# Utilise le front controller comme fichier index. Sert de solution de
+# repli quand toute autre réécriture/redirection échoue (par exemple dans un
+# environnement aliasé sans mod_rewrite installé).
+DirectoryIndex index.php
+
+<IfModule mod_negotiation.c>
+    Options -MultiViews
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Détermine automatiquement la RewriteBase et la définit comme variable
+    # d'environnement. Fonctionne aussi bien avec ou sans sous-dossier.
+    RewriteCond %{REQUEST_URI}::$0 ^(/.+)/(.*)::\2$
+    RewriteRule ^(.*) - [E=BASE:%1]
+
+    # Restaure l'en-tête HTTP_AUTHORIZATION supprimé par Apache (nécessaire
+    # pour que le token JWT (Authorization: Bearer ...) arrive bien jusqu'à
+    # Symfony/lexik-jwt-authentication-bundle).
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Redirige vers l'URI sans front controller pour éviter le contenu
+    # dupliqué (avec et sans `/index.php`), uniquement sur la réécriture
+    # initiale par Apache (jamais sur les cycles suivants, pour éviter une
+    # boucle de redirection infinie).
+    RewriteCond %{ENV:REDIRECT_STATUS} ^$
+    RewriteRule ^index\.php(?:/(.*)|$) %{ENV:BASE}/$1 [R=308,L]
+
+    # Si le fichier demandé existe réellement, le servir tel quel (fichiers
+    # uniquement, jamais les dossiers).
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # Réécrit toute autre requête vers le front controller.
+    RewriteRule ^ %{ENV:BASE}/index.php [L]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    <IfModule mod_alias.c>
+        # Si mod_rewrite n'est pas disponible, redirection temporaire
+        # explicite de la page d'accueil vers le front controller.
+        RedirectMatch 307 ^/$ /index.php/
+    </IfModule>
+</IfModule>

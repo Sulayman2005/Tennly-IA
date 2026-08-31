@@ -1,19 +1,40 @@
 api_platform:
-  title: 'Tennly IA API'
-  description: "API de l'application Tennly IA (pronostics tennis calibrés par IA) — voir cahier des charges section 4."
-  version: '0.1.0'
-  formats:
-    jsonld: ['application/ld+json']
-    json: ['application/json']
-  docs_formats:
-    jsonld: ['application/ld+json']
-    json: ['application/json']
-    html: ['text/html']
-  defaults:
-    pagination_client_items_per_page: true
-    pagination_maximum_items_per_page: 50
-    route_prefix: /api
-  mapping:
-    paths:
-      - '%kernel.project_dir%/src/Entity'
-      - '%kernel.project_dir%/src/Dto'
+    title: 'Tennly IA API'
+    description: "API de l'application Tennly IA (analyses tennis calibrées par IA) — voir cahier des charges section 4."
+    version: '0.1.0'
+    formats:
+        jsonld: ['application/ld+json']
+        json: ['application/json']
+    docs_formats:
+        jsonld: ['application/ld+json']
+        json: ['application/json']
+        html: ['text/html']
+    defaults:
+        pagination_client_items_per_page: true
+        pagination_maximum_items_per_page: 50
+    # (31/08/2026) TennisMatch::class n'a pas de uriTemplate explicite, donc
+    # API Platform génère son chemin automatiquement à partir du nom de la
+    # classe — et le générateur PAR DÉFAUT produit du kebab-case
+    # ("tennis-matches", avec un tiret), alors que TOUT le frontend appelle
+    # "/api/tennis_matches" (avec un underscore, voir MatchesView.vue,
+    # MatchDetailView.vue, AdminMatchesView.vue, AdminMatchAnalysisView.vue,
+    # AdminDashboardView.vue). Ce décalage existait déjà avant Docker, mais
+    # n'avait jamais été détecté : c'est la première fois que tout le stack
+    # (frontend + backend + vraie base MySQL) tourne réellement ensemble en
+    # même temps. On bascule le générateur sur underscore pour matcher ce que
+    # le frontend appelle déjà partout, plutôt que de renommer 5 fichiers
+    # frontend. Sans effet sur les ressources à uriTemplate explicite
+    # (/stats, /model-reliability, /admin/dashboard, /checkout-sessions...) :
+    # elles gardent leur chemin tel quel, ce réglage ne s'applique qu'à la
+    # génération automatique.
+    path_segment_name_generator: api_platform.path_segment_name_generator.underscore
+    # (31/08/2026) Cette liste ne contenait que src/Entity — donc les
+    # ressources API qui vivent dans src/Dto (AdminDashboardSummary,
+    # ModelReliabilitySummary, HomeStatsSummary : toutes les trois sans
+    # entité Doctrine derrière, juste un Provider qui calcule à la volée)
+    # n'étaient jamais scannées ni enregistrées comme routes. Ajout de
+    # src/Dto pour qu'elles soient bien prises en compte.
+    mapping:
+        paths:
+            - '%kernel.project_dir%/src/Entity'
+            - '%kernel.project_dir%/src/Dto'
