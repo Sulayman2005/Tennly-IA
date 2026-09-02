@@ -731,4 +731,41 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
 .cal-n.today .cal-dot {
   background: #fff;
 }
+
+@media (max-width: 980px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .welcome {
+    font-size: 21px;
+  }
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .span2 {
+    grid-column: span 1;
+  }
+  .card.perf-hero {
+    min-height: 0;
+  }
+  .perf-hero .big {
+    font-size: 32px;
+  }
+  .accounts-body {
+    flex-wrap: wrap;
+  }
+  .donut-wrap {
+    flex-wrap: wrap;
+  }
+  .mrr-bar-row {
+    grid-template-columns: 68px 1fr 20px;
+    font-size: 11px;
+  }
+  .mr-meta {
+    display: none;
+  }
+}
 </style>

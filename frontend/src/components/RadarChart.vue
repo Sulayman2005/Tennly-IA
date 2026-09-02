@@ -96,6 +96,11 @@ const axisLines = computed(() => axes.value.map((axis, i) => ({ ...axis, end: ax
   flex-direction: column;
   align-items: center;
   gap: 10px;
+  max-width: 100%;
+}
+.radar-wrap svg {
+  max-width: 100%;
+  height: auto;
 }
 .legend {
   display: flex;

@@ -122,4 +122,13 @@ section p {
   color: var(--ink);
   margin: 0 0 10px;
 }
+
+@media (max-width: 480px) {
+  .legal {
+    padding: 32px 0 60px;
+  }
+  h1 {
+    font-size: 23px;
+  }
+}
 </style>

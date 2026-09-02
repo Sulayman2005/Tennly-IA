@@ -21,7 +21,10 @@ const confidenceLabel = {
         <TourBadge :tour="match.playerA.tour" on-dark />
         {{ match.tournamentName }} · {{ match.round }}
       </span>
-      <span class="mc-time">{{ new Date(match.scheduledAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) }}</span>
+      <span class="mc-time">
+        {{ new Date(match.scheduledAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) }}
+        · <span class="mc-status" :class="{ done: match.status !== 'scheduled' }">{{ match.status === 'scheduled' ? 'À venir' : 'Terminé' }}</span>
+      </span>
     </div>
     <div class="mc-body">
       <div class="mc-player">
@@ -63,6 +66,8 @@ const confidenceLabel = {
 .mc-top {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
   font-size: 11px;
   opacity: 0.75;
   margin-bottom: 14px;
@@ -110,9 +115,18 @@ const confidenceLabel = {
   opacity: 0.6;
   font-style: italic;
 }
+.mc-status {
+  font-weight: 700;
+  opacity: 0.9;
+}
+.mc-status.done {
+  opacity: 0.65;
+}
 .mc-bottom {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-top: 16px;
   padding-top: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.14);
@@ -120,5 +134,25 @@ const confidenceLabel = {
 }
 .mc-proba {
   font-weight: 700;
+}
+
+@media (max-width: 480px) {
+  .match-card {
+    padding: 16px 18px;
+  }
+  .mc-body {
+    gap: 8px;
+  }
+  .mc-photo {
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
+  }
+  .mc-name {
+    font-size: 13px;
+  }
+  .mc-vs {
+    font-size: 10px;
+  }
 }
 </style>

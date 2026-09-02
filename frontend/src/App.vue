@@ -1,11 +1,32 @@
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterView, RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+
+// Menu mobile (hamburger) : la nav + les actions du header étaient une
+// simple <nav> à plat, sans jamais s'adapter en dessous d'un certain seuil
+// de largeur — sur téléphone, elle débordait purement et simplement du
+// header. On la cache en CSS sous 860px et on la remplace par ce panneau
+// déroulant, qui reprend les mêmes liens/conditions (auth.isAdmin, etc.).
+// Fermé automatiquement à chaque changement de route pour ne jamais rester
+// ouvert par-dessus la page suivante.
+const mobileMenuOpen = ref(false)
+function toggleMobileMenu() {
+  mobileMenuOpen.value = !mobileMenuOpen.value
+}
+function closeMobileMenu() {
+  mobileMenuOpen.value = false
+}
+watch(
+  () => route.fullPath,
+  () => {
+    mobileMenuOpen.value = false
+  },
+)
 
 // Le lien "Se connecter" du header emporte la page courante en ?redirect=
 // (voir ConnexionView.vue) pour qu'un utilisateur qui cliquait sur un match
@@ -50,7 +71,7 @@ onMounted(() => {
       </span>
       Tennly IA
     </RouterLink>
-    <nav>
+    <nav class="nav-desktop">
       <RouterLink to="/matchs">Analyse</RouterLink>
       <!-- Comparateur réservé à l'admin + aux abonnés (voir router/index.js,
            requiresSubscriptionOrAdmin) — masqué ici pour le reste des
@@ -83,6 +104,41 @@ onMounted(() => {
       </div>
       <RouterLink v-else :to="loginTarget" class="cta-mini">Se connecter</RouterLink>
     </div>
+
+    <!-- Bouton hamburger : caché en desktop, seul visible sous 860px (voir
+         média-requête). -->
+    <button
+      type="button"
+      class="menu-toggle"
+      :class="{ open: mobileMenuOpen }"
+      :aria-expanded="mobileMenuOpen"
+      aria-label="Ouvrir le menu"
+      @click="toggleMobileMenu"
+    >
+      <span></span><span></span><span></span>
+    </button>
+
+    <!-- Panneau mobile : même contenu que nav-desktop + header-actions,
+         affiché uniquement quand le hamburger est ouvert (et seulement sous
+         860px, où nav-desktop/header-actions sont masqués en CSS). -->
+    <Transition name="mobile-nav">
+      <nav v-if="mobileMenuOpen" class="mobile-nav">
+        <RouterLink to="/matchs" @click="closeMobileMenu">Analyse</RouterLink>
+        <RouterLink v-if="auth.isAdmin || auth.hasActiveSubscription" to="/comparateur" @click="closeMobileMenu">Comparateur</RouterLink>
+        <RouterLink to="/fiabilite" @click="closeMobileMenu">Fiabilité</RouterLink>
+        <RouterLink v-if="auth.isAdmin" to="/admin" class="mobile-dashboard" @click="closeMobileMenu">
+          Dashboard admin
+        </RouterLink>
+
+        <div class="mobile-divider"></div>
+
+        <div v-if="auth.isAuthenticated" class="mobile-account">
+          <span class="account-email">{{ auth.user?.email }}</span>
+          <button type="button" class="logout-btn" @click="handleLogout">Se déconnecter</button>
+        </div>
+        <RouterLink v-else :to="loginTarget" class="cta-mini mobile-login" @click="closeMobileMenu">Se connecter</RouterLink>
+      </nav>
+    </Transition>
   </header>
 
   <main>
@@ -184,5 +240,134 @@ main {
   max-width: 1120px;
   margin: 0 auto;
   padding: 0 32px;
+}
+
+/* -- Menu mobile (hamburger) -- */
+.menu-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 38px;
+  height: 38px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  flex: none;
+}
+.menu-toggle span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--ink);
+  transition:
+    transform 0.25s ease,
+    opacity 0.2s ease;
+}
+.menu-toggle.open span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+.menu-toggle.open span:nth-child(2) {
+  opacity: 0;
+}
+.menu-toggle.open span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+.mobile-nav {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .topbar {
+    padding: 16px 20px;
+  }
+  .nav-desktop,
+  .header-actions {
+    display: none;
+  }
+  .menu-toggle {
+    display: flex;
+  }
+  .mobile-nav {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.08);
+    padding: 10px 20px 18px;
+  }
+  .mobile-nav a {
+    padding: 13px 4px;
+    font-size: 15px;
+    color: var(--ink);
+    border-bottom: 1px solid var(--line);
+  }
+  .mobile-nav .mobile-dashboard {
+    color: var(--green);
+    font-weight: 700;
+  }
+  .mobile-divider {
+    display: none;
+  }
+  .mobile-account {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 4px 4px;
+  }
+  .mobile-account .account-email {
+    font-size: 13px;
+    color: var(--grey);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* Sélecteur ".mobile-nav a" (class + balise) ci-dessus est plus spécifique
+     qu'un simple ".mobile-login" : son "color: var(--ink)" gagnait toujours
+     sur le "color: #fff" voulu ici, et --ink vaut la même couleur presque
+     noire que le fond --btn du bouton -> texte invisible sur fond sombre.
+     On répète "a.mobile-login" pour égaler/dépasser cette spécificité. */
+  .mobile-nav a.mobile-login {
+    display: block;
+    text-align: center;
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 999px;
+    background: var(--btn);
+    color: #fff;
+  }
+  main {
+    padding: 0 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo {
+    font-size: 17px;
+  }
+  main {
+    padding: 0 16px;
+  }
+}
+
+.mobile-nav-enter-active,
+.mobile-nav-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+.mobile-nav-enter-from,
+.mobile-nav-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 </style>

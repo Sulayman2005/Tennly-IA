@@ -41,6 +41,11 @@ const percent = computed(() => Math.round(props.probability * 100))
   position: relative;
   width: 140px;
   height: 140px;
+  max-width: 100%;
+}
+.gauge svg {
+  max-width: 100%;
+  height: auto;
 }
 .gauge svg circle {
   transition: stroke-dashoffset 0.8s ease;

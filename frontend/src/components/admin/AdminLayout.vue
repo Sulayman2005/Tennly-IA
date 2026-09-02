@@ -80,7 +80,7 @@ const NAV = [
             <input v-model="searchTerm" type="text" placeholder="Rechercher un tournoi…" />
           </form>
           <RouterLink to="/matchs" class="site-link">
-            Voir le site
+            <span>Voir le site</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
               <path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
@@ -242,6 +242,35 @@ main :deep(.card) {
 @media (max-width: 900px) {
   .search {
     display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .wrap {
+    padding: 16px 14px 48px;
+  }
+  .topnav {
+    flex-wrap: wrap;
+    padding: 12px;
+    gap: 10px;
+  }
+  .tabs {
+    order: 3;
+    width: 100%;
+    gap: 6px;
+  }
+  .site-link span {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .brand {
+    font-size: 0;
+    gap: 0;
+  }
+  .site-link {
+    padding: 9px 10px;
   }
 }
 </style>

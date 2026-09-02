@@ -416,4 +416,58 @@ function scheduledLabel(iso) {
   background: #fdecea;
   color: #b3261e;
 }
+
+@media (max-width: 980px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .match-head {
+    padding: 22px 20px;
+  }
+  .mh-left h1 {
+    font-size: 19px;
+  }
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .span2 {
+    grid-column: span 1;
+  }
+  .trow {
+    grid-template-columns: 100px 1fr 42px;
+    gap: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .match-head {
+    padding: 18px 16px;
+  }
+  .mh-meta span {
+    font-size: 11px;
+  }
+  .tabswitch {
+    width: 100%;
+  }
+  .tabswitch button {
+    flex: 1;
+    padding: 8px 10px;
+  }
+  .trow {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .tval {
+    text-align: left;
+  }
+  .compare-line {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
+}
 </style>

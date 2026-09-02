@@ -363,4 +363,39 @@ onMounted(async () => {
   font-style: italic;
   font-size: 12px;
 }
+
+@media (max-width: 720px) {
+  .reliability {
+    padding: 32px 0 60px;
+  }
+  .hero h1 {
+    font-size: 26px;
+  }
+  .kpis {
+    grid-template-columns: 1fr 1fr;
+  }
+  .block {
+    padding: 22px 18px;
+  }
+  .calibration-head {
+    display: none;
+  }
+  .calibration-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 16px 0;
+  }
+  .sample {
+    text-align: left;
+  }
+}
+
+@media (max-width: 480px) {
+  .kpis {
+    grid-template-columns: 1fr;
+  }
+  .kpi {
+    padding: 20px;
+  }
+}
 </style>

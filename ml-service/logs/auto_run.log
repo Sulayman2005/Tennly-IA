@@ -32,3 +32,29 @@ Traceback (most recent call last):
     "serve_score": hist.serve_score(serve_running[source_pid]),
                                     ~~~~~~~~~~~~~^^^^^^^^^^^^
 KeyError: 222017
+---------------------------------------------- 
+01/09/2026 19:57:52,91 
+1/5 — Lecture de l'état actuel de ta base…
+  36 joueurs déjà en base, 0 matchs à venir déjà importés précédemment (id max joueur=36, match=30, analyse=30)
+2/5 — Retéléchargement et rejeu de l'historique réel, ATP puis WTA (deux circuits totalement indépendants)…
+ Circuit ATP (source : Tennismylife/TML-Database)…
+  2026.csv : 137 matchs récupérés depuis https://raw.githubusercontent.com/Tennismylife/TML-Database/master/2026.csv
+  2025.csv : 2944 matchs récupérés depuis https://raw.githubusercontent.com/Tennismylife/TML-Database/master/2025.csv
+  2024.csv : 3076 matchs récupérés depuis https://raw.githubusercontent.com/Tennismylife/TML-Database/master/2024.csv
+  2023.csv : 2995 matchs récupérés depuis https://raw.githubusercontent.com/Tennismylife/TML-Database/master/2023.csv
+  9151 matchs ATP exploitables
+ Circuit WTA (source : stats.tennismylife.org)…
+  2026_wta.csv : 1968 matchs récupérés depuis https://stats.tennismylife.org/data/2026_wta.csv
+  2025_wta.csv : 2622 matchs récupérés depuis https://stats.tennismylife.org/data/2025_wta.csv
+  2024_wta.csv : 2658 matchs récupérés depuis https://stats.tennismylife.org/data/2024_wta.csv
+  2023_wta.csv : 2810 matchs récupérés depuis https://stats.tennismylife.org/data/2023_wta.csv
+  9984 matchs WTA exploitables
+Mise à jour de l'instantané quotidien des joueurs (comparateur de joueurs), ATP + WTA…
+  17 joueur(s)/joueuse(s) et 0 paire(s) face-à-face mis à jour (ATP + WTA).
+3/5 — Récupération des matchs simple à venir sur LiveTennisAPI, ATP + WTA (2026-09-01 -> 2026-09-15)…
+  ATP : 39 matchs renvoyés par l'API, 31 genuinement à venir (8 écartés), dont 0 déjà importés précédemment -> 31 VRAIMENT nouveau(x)
+  WTA : 38 matchs renvoyés par l'API, 30 genuinement à venir (8 écartés), dont 0 déjà importés précédemment -> 30 VRAIMENT nouveau(x)
+4/5 — Écriture en base…
+
+5/5 — Terminé : 96 nouveaux joueurs/joueuses, 20 joueurs existants avec Elo et/ou circuit (tour) rafraîchi, 61 matchs à venir écrits DIRECTEMENT en base (ATP + WTA).
+Journal de cette exécution : C:\Projet_tennly\tennly\tennly\ml-service\logs\import_upcoming_matches_20260901_195806.sql

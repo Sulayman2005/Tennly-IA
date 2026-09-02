@@ -143,4 +143,16 @@ section p {
   color: var(--grey);
   font-style: italic;
 }
+
+@media (max-width: 480px) {
+  .legal {
+    padding: 32px 0 60px;
+  }
+  h1 {
+    font-size: 23px;
+  }
+  .warning {
+    padding: 12px 14px;
+  }
+}
 </style>

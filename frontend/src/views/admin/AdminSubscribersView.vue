@@ -63,10 +63,17 @@ function dateLabel(iso) {
 
     <div v-for="s in filtered" :key="s.id" class="card sub-row">
       <div class="who">
-        <div class="avatar">{{ (s.user.firstName?.[0] ?? '') + (s.user.lastName?.[0] ?? '') }}</div>
+        <div class="avatar">{{ s.user ? (s.user.firstName?.[0] ?? '') + (s.user.lastName?.[0] ?? '') : '?' }}</div>
         <div>
-          <div class="name">{{ s.user.firstName }} {{ s.user.lastName }}</div>
-          <div class="email">{{ s.user.email }}</div>
+          <!-- s.user peut être absent si le compte associé a été supprimé
+               entre-temps (ou n'a jamais été correctement lié) — on l'affiche
+               explicitement plutôt que de laisser planter tout le rendu de la
+               liste sur un seul abonnement orphelin. -->
+          <template v-if="s.user">
+            <div class="name">{{ s.user.firstName }} {{ s.user.lastName }}</div>
+            <div class="email">{{ s.user.email }}</div>
+          </template>
+          <div v-else class="name orphan">Compte supprimé (abonnement #{{ s.id }})</div>
         </div>
       </div>
       <div class="plan">
@@ -98,6 +105,11 @@ h1 {
 }
 .err {
   color: var(--red);
+}
+.name.orphan {
+  color: var(--grey);
+  font-style: italic;
+  font-weight: 600;
 }
 .empty {
   color: var(--grey);
@@ -200,5 +212,33 @@ h1 {
   font-size: 12px;
   color: var(--grey);
   margin-left: auto;
+}
+
+@media (max-width: 640px) {
+  .filters select {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .sub-row {
+    gap: 12px;
+    padding: 16px 18px;
+  }
+  .period {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 21px;
+  }
+  .who {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+  .plan {
+    min-width: 0;
+  }
 }
 </style>

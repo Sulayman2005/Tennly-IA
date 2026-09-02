@@ -204,4 +204,35 @@ h1 {
   background: #fdecea;
   color: #b3261e;
 }
+
+@media (max-width: 640px) {
+  .filters {
+    gap: 12px;
+  }
+  .filters label {
+    flex: 1 1 100%;
+  }
+  .filters select,
+  .filters input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 21px;
+  }
+  .match-row {
+    padding: 16px 18px;
+    gap: 8px;
+  }
+  .mr-players {
+    font-size: 13px;
+  }
+  .mr-meta {
+    gap: 8px;
+  }
+}
 </style>

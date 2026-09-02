@@ -76,9 +76,11 @@ async function choosePlan(code) {
       <div class="plans">
         <div v-for="plan in plans" :key="plan.code" class="plan" :class="{ reco: plan.reco }">
           <span v-if="plan.reco" class="badge">LE PLUS CHOISI</span>
-          <div class="p">{{ plan.name }}</div>
-          <div class="price">{{ plan.price }}</div>
-          <div class="per">{{ plan.per }}</div>
+          <div class="plan-info">
+            <div class="p">{{ plan.name }}</div>
+            <div class="price">{{ plan.price }}</div>
+            <div class="per">{{ plan.per }}</div>
+          </div>
           <button
             :disabled="Boolean(startingCheckout) || !withdrawalWaiverAccepted"
             @click="choosePlan(plan.code)"
@@ -107,7 +109,10 @@ async function choosePlan(code) {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
   z-index: 50;
+  box-sizing: border-box;
 }
 .modal {
   background: #fff;
@@ -115,7 +120,11 @@ async function choosePlan(code) {
   padding: 32px;
   max-width: 520px;
   width: 100%;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
   position: relative;
+  box-sizing: border-box;
+  margin: auto;
 }
 .close {
   position: absolute;
@@ -223,5 +232,51 @@ async function choosePlan(code) {
 .plan button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+@media (max-width: 560px) {
+  .modal {
+    padding: 24px 20px;
+    border-radius: 20px;
+  }
+  .plans {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin: 16px 0;
+  }
+  .plan {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 16px;
+    text-align: left;
+  }
+  .plan.reco {
+    order: -1;
+  }
+  .plan-info {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .plan-info .price {
+    margin: 0;
+  }
+  .plan-info .per {
+    margin: 0;
+  }
+  .badge {
+    position: absolute;
+    top: -9px;
+    left: 16px;
+    transform: none;
+  }
+  .plan button {
+    width: auto;
+    flex: none;
+    padding: 10px 18px;
+  }
 }
 </style>

@@ -153,6 +153,11 @@ const polygonPoints = computed(() => vertices.value.map((v) => `${v.x},${v.y}`).
   flex-direction: column;
   align-items: center;
   gap: 6px;
+  max-width: 100%;
+}
+.radar-wrap svg {
+  max-width: 100%;
+  height: auto;
 }
 .radar-legend {
   width: 100%;
