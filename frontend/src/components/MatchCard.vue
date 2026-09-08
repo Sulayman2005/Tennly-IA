@@ -239,6 +239,13 @@ function isFavorite(player) {
 .mc-status.done {
   opacity: 0.65;
 }
+.mc-status {
+  font-weight: 700;
+  opacity: 0.9;
+}
+.mc-status.done {
+  opacity: 0.65;
+}
 .mc-bottom {
   position: relative;
   z-index: 2;
@@ -246,8 +253,8 @@ function isFavorite(player) {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 18px;
+  gap: 6px;
+  margin-top: 16px;
   padding-top: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.14);
   font-size: 12px;
@@ -289,6 +296,26 @@ function isFavorite(player) {
     width: 28px;
     height: 28px;
     font-size: 9px;
+  }
+}
+
+@media (max-width: 480px) {
+  .match-card {
+    padding: 16px 18px;
+  }
+  .mc-body {
+    gap: 8px;
+  }
+  .mc-photo {
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
+  }
+  .mc-name {
+    font-size: 13px;
+  }
+  .mc-vs {
+    font-size: 10px;
   }
 }
 </style>
