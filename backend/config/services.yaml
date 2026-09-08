@@ -15,6 +15,7 @@ services:
             $stripeSecretKey: '%env(STRIPE_SECRET_KEY)%'
             $frontendBaseUrl: '%frontend_base_url%'
     App\Controller\StripeWebhookController:
+        public: true
         arguments:
             $stripeWebhookSecret: '%env(STRIPE_WEBHOOK_SECRET)%'
     # Décore le context builder de sérialisation d'API Platform pour ajouter

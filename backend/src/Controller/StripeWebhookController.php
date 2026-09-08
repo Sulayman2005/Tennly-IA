@@ -44,7 +44,9 @@ final class StripeWebhookController
 
         if ('checkout.session.completed' === $event->type) {
             $session = $event->data->object;
-            $user = $this->userRepository->find($session->client_reference_id);
+            $user = null !== $session->client_reference_id
+                ? $this->userRepository->find($session->client_reference_id)
+                : null;
 
             if (null !== $user) {
                 $subscription = new Subscription();
