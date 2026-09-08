@@ -38,7 +38,7 @@ const ICONS = {
 
 const NAV = [
   { name: 'admin-dashboard', to: '/admin', label: 'Tableau de bord', match: ['admin-dashboard'] },
-  { name: 'admin-matches', to: '/admin/matchs', label: 'Modèle IA', match: ['admin-matches', 'admin-match-analysis'] },
+  { name: 'admin-matches', to: '/admin/matchs', label: 'Modèle', match: ['admin-matches', 'admin-match-analysis'] },
   { name: 'admin-subscribers', to: '/admin/abonnes', label: 'Abonnés', match: ['admin-subscribers'] },
 ]
 </script>
@@ -55,7 +55,7 @@ const NAV = [
               <path d="M18.6 6C15.7 8.5 15.7 15.5 18.6 18" stroke="#fff" stroke-width="1.7" stroke-linecap="round" />
             </svg>
           </span>
-          Tennly IA
+          Tennly
         </RouterLink>
 
         <nav class="tabs">
@@ -80,7 +80,7 @@ const NAV = [
             <input v-model="searchTerm" type="text" placeholder="Rechercher un tournoi…" />
           </form>
           <RouterLink to="/matchs" class="site-link">
-            Voir le site
+            <span>Voir le site</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
               <path d="M7 17L17 7M9 7h8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
@@ -242,6 +242,35 @@ main :deep(.card) {
 @media (max-width: 900px) {
   .search {
     display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .wrap {
+    padding: 16px 14px 48px;
+  }
+  .topnav {
+    flex-wrap: wrap;
+    padding: 12px;
+    gap: 10px;
+  }
+  .tabs {
+    order: 3;
+    width: 100%;
+    gap: 6px;
+  }
+  .site-link span {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .brand {
+    font-size: 0;
+    gap: 0;
+  }
+  .site-link {
+    padding: 9px 10px;
   }
 }
 </style>

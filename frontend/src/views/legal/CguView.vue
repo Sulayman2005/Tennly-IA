@@ -14,18 +14,18 @@ import { RouterLink } from 'vue-router'
     <section>
       <h2>1. Objet</h2>
       <p>
-        Les présentes conditions régissent l'accès et l'utilisation du site Tennly IA, accessible à l'adresse
+        Les présentes conditions régissent l'accès et l'utilisation du site Tennly, accessible à l'adresse
         [nom de domaine — à compléter]. En créant un compte ou en utilisant le site, tu acceptes ces conditions dans
         leur intégralité.
       </p>
     </section>
 
     <section>
-      <h2>2. Nature du service — ce que Tennly IA n'est pas</h2>
+      <h2>2. Nature du service — ce que Tennly n'est pas</h2>
       <p>
-        Tennly IA propose des analyses statistiques de matchs de tennis, calculées à partir de données réelles
+        Tennly propose des analyses statistiques de matchs de tennis, calculées à partir de données réelles
         (historique ATP, Elo par surface, statistiques de service/retour). Ces analyses sont fournies à titre
-        <b>informatif et pédagogique</b>. Tennly IA n'est ni un opérateur de paris sportifs, ni un service de
+        <b>informatif et pédagogique</b>. Tennly n'est ni un opérateur de paris sportifs, ni un service de
         pronostics garantissant un résultat : aucune analyse, aussi fiable soit-elle statistiquement (voir notre
         <RouterLink to="/fiabilite">page de fiabilité du modèle</RouterLink>), ne prédit avec certitude l'issue d'un
         match individuel. Si tu paries sur la base de ces analyses ailleurs que sur notre site, tu le fais sous ta
@@ -41,7 +41,7 @@ import { RouterLink } from 'vue-router'
         depuis ton compte.
       </p>
       <p>
-        Tennly IA est réservé aux personnes majeures, ou mineures avec l'autorisation de leur représentant légal.
+        Tennly est réservé aux personnes majeures, ou mineures avec l'autorisation de leur représentant légal.
       </p>
     </section>
 
@@ -65,7 +65,7 @@ import { RouterLink } from 'vue-router'
     <section>
       <h2>6. Responsabilité</h2>
       <p>
-        Tennly IA met tout en œuvre pour la fiabilité de ses analyses, mais ne garantit ni leur exactitude absolue ni
+        Tennly met tout en œuvre pour la fiabilité de ses analyses, mais ne garantit ni leur exactitude absolue ni
         un quelconque résultat. L'éditeur ne saurait être tenu responsable des décisions prises par un utilisateur sur
         la base des analyses fournies, y compris en cas de perte financière résultant d'un pari effectué ailleurs.
       </p>
@@ -74,7 +74,7 @@ import { RouterLink } from 'vue-router'
     <section>
       <h2>7. Suspension et résiliation</h2>
       <p>
-        Tennly IA se réserve le droit de suspendre ou clôturer un compte en cas d'usage frauduleux, de non-respect
+        Tennly se réserve le droit de suspendre ou clôturer un compte en cas d'usage frauduleux, de non-respect
         des présentes conditions, ou de tentative de contournement du service.
       </p>
     </section>
@@ -121,5 +121,14 @@ section p {
   line-height: 1.7;
   color: var(--ink);
   margin: 0 0 10px;
+}
+
+@media (max-width: 480px) {
+  .legal {
+    padding: 32px 0 60px;
+  }
+  h1 {
+    font-size: 23px;
+  }
 }
 </style>

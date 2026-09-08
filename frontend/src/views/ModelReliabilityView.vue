@@ -32,7 +32,7 @@ onMounted(async () => {
   <div class="reliability">
     <section class="hero">
       <div class="eyebrow">Fiabilité du modèle</div>
-      <h1>Une IA qu'on peut vérifier, pas une boîte noire</h1>
+      <h1>Un modèle qu'on peut vérifier, pas une boîte noire</h1>
       <p class="lead">
         Chaque chiffre de cette page vient de la comparaison réelle entre ce que notre modèle a annoncé et ce qui
         s'est effectivement passé, sur les matchs déjà terminés. Pas d'exemple choisi, pas de moyenne habillée : soit
@@ -362,5 +362,40 @@ onMounted(async () => {
 .disclaimer {
   font-style: italic;
   font-size: 12px;
+}
+
+@media (max-width: 720px) {
+  .reliability {
+    padding: 32px 0 60px;
+  }
+  .hero h1 {
+    font-size: 26px;
+  }
+  .kpis {
+    grid-template-columns: 1fr 1fr;
+  }
+  .block {
+    padding: 22px 18px;
+  }
+  .calibration-head {
+    display: none;
+  }
+  .calibration-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 16px 0;
+  }
+  .sample {
+    text-align: left;
+  }
+}
+
+@media (max-width: 480px) {
+  .kpis {
+    grid-template-columns: 1fr;
+  }
+  .kpi {
+    padding: 20px;
+  }
 }
 </style>

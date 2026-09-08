@@ -30,8 +30,26 @@ use Symfony\Component\Serializer\Annotation\Groups;
 #[ApiResource(
     operations: [new GetCollection(), new Get()],
     normalizationContext: ['groups' => ['match:read']],
-    order: ['scheduledAt' => 'ASC'],
+    // 'id' en second critère : de nombreux matchs partagent exactement le même
+    // scheduledAt (plusieurs courts au même horaire), donc trier uniquement
+    // sur scheduledAt ne garantit pas un ordre stable d'une page à l'autre —
+    // MySQL peut alors renvoyer un même match sur deux pages (doublon visible
+    // dans MatchesView.vue) ou en sauter un. 'id' ASC départage les égalités
+    // de façon déterministe sans changer l'ordre chronologique voulu.
+    order: ['scheduledAt' => 'ASC', 'id' => 'ASC'],
     paginationItemsPerPage: 20,
+    // Le plafond global (config/packages/api_platform.yaml,
+    // pagination_maximum_items_per_page) est fixé à 50 pour toute l'API — trop
+    // bas pour cette ressource : dès qu'il y a plus de 50 matchs, le frontend
+    // (MatchesView.vue, fetchAllPages) redemande des pages avec un
+    // itemsPerPage croissant pour tout récupérer en un minimum de requêtes,
+    // mais se heurtait à ce plafond silencieux (une requête à
+    // itemsPerPage=61 ne renvoyait que 50 résultats) : combiné à un ORDER BY
+    // non totalement déterministe à l'époque, ça faisait apparaître des
+    // matchs en double ou disparus d'une page à l'autre. On lève le plafond
+    // ici, spécifiquement pour cette ressource, sans toucher au réglage
+    // global des autres ressources de l'API.
+    paginationMaximumItemsPerPage: 500,
 )]
 #[ApiFilter(SearchFilter::class, properties: ['surface' => 'exact', 'status' => 'exact', 'tournamentName' => 'partial'])]
 // Nécessaire pour le calendrier des matchs à venir (frontend/src/views/MatchesView.vue) :
@@ -39,7 +57,10 @@ use Symfony\Component\Serializer\Annotation\Groups;
 // l'onglet "Résultats récents" a besoin du sens inverse (le plus récent
 // d'abord) — order[scheduledAt]=desc — sans changer l'ordre par défaut
 // pour tout le reste de l'API qui ne le demande pas explicitement.
-#[ApiFilter(OrderFilter::class, properties: ['scheduledAt'])]
+// 'id' enregistré aussi : permet à un futur appel explicite
+// order[id]=asc de fonctionner (départage déterministe des égalités de
+// scheduledAt), en plus de l'ordre par défaut ci-dessus qui s'en charge déjà.
+#[ApiFilter(OrderFilter::class, properties: ['scheduledAt', 'id'])]
 // Un match "scheduled" reste "scheduled" en base tant que personne n'a
 // relancé l'import (voir ml-service/import_upcoming_matches.py) — sans
 // filtre de date, un match programmé dont l'heure est déjà passée resterait
@@ -94,6 +115,24 @@ class TennisMatch
     #[Groups(['match:read'])]
     private ?Player $winner = null;
 
+    // Reste dans 'match:read' (donc toujours présent, même pour un visiteur
+    // non connecté) : MatchDetailView.vue (loadMatch()) a besoin de l'id de
+    // la prédiction pour savoir s'il doit tenter GET /api/predictions/{id}
+    // et afficher la carte "Débloquer l'analyse complète" en cas de 401/403
+    // — si ce champ disparaissait entièrement pour les non-abonnés, cet
+    // appel ne serait plus jamais tenté et la popup paywall n'apparaîtrait
+    // plus du tout (régression constatée le 02/09/2026 : la mise en place
+    // initiale de la restriction masquait $prediction en entier ici).
+    //
+    // La restriction du pronostic léger (favori + probabilité, décision
+    // produit du 02/09/2026) se fait plus finement, directement sur les
+    // propriétés de Prediction::class (voir $favoritePlayer,
+    // $probabilityFavorite, $confidenceLevel, groupe
+    // 'match:read:prediction' ajouté conditionnellement par
+    // Serializer/TennisMatchContextBuilder.php) : seul $id de Prediction
+    // reste dans 'match:read', donc un non-abonné reçoit bien un objet
+    // "prediction" mais réduit à { id: ... } — jamais le favori ni la
+    // probabilité, tout en gardant l'id nécessaire au paywall.
     #[ORM\OneToOne(targetEntity: Prediction::class, mappedBy: 'match', cascade: ['persist', 'remove'])]
     #[Groups(['match:read'])]
     private ?Prediction $prediction = null;

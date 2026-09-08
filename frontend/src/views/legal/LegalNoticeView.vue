@@ -17,7 +17,7 @@ import { RouterLink } from 'vue-router'
     <section>
       <h2>Éditeur du site</h2>
       <p>
-        Le site Tennly IA est édité par [nom commercial / raison sociale — à compléter], [forme juridique — à
+        Le site Tennly est édité par [nom commercial / raison sociale — à compléter], [forme juridique — à
         compléter : auto-entrepreneur, SASU, EURL...], immatriculé(e) sous le numéro SIRET [SIRET — à compléter],
         dont le siège est situé [adresse du siège — à compléter].
       </p>
@@ -61,7 +61,7 @@ import { RouterLink } from 'vue-router'
     <section>
       <h2>Nature du service</h2>
       <p>
-        Tennly IA propose des analyses statistiques et des estimations de probabilité à visée informative et
+        Tennly propose des analyses statistiques et des estimations de probabilité à visée informative et
         pédagogique sur des rencontres de tennis. Ce n'est ni un service de paris sportifs, ni un service de
         pronostics garantissant un résultat ou un gain — voir nos
         <RouterLink to="/cgu">conditions générales d'utilisation</RouterLink>.
@@ -108,5 +108,14 @@ section p {
   font-size: 12px;
   color: var(--grey);
   font-style: italic;
+}
+
+@media (max-width: 480px) {
+  .legal {
+    padding: 32px 0 60px;
+  }
+  h1 {
+    font-size: 23px;
+  }
 }
 </style>

@@ -1,23 +1,29 @@
 parameters:
     frontend_base_url: '%env(default::FRONTEND_BASE_URL)%'
-
 services:
     _defaults:
         autowire: true
         autoconfigure: true
-
     App\:
         resource: '../src/'
         exclude:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
-
     App\Service\StripeCheckoutService:
         arguments:
             $stripeSecretKey: '%env(STRIPE_SECRET_KEY)%'
             $frontendBaseUrl: '%frontend_base_url%'
-
     App\Controller\StripeWebhookController:
         arguments:
             $stripeWebhookSecret: '%env(STRIPE_WEBHOOK_SECRET)%'
+    # Décore le context builder de sérialisation d'API Platform pour ajouter
+    # conditionnellement le groupe 'match:read:prediction' (voir
+    # src/Serializer/TennisMatchContextBuilder.php et TennisMatch::$prediction) :
+    # réservé aux comptes ROLE_ADMIN et aux abonnés actifs (décision produit du
+    # 02/09/2026). $security s'autowire automatiquement grâce à _defaults
+    # ci-dessus, seul $decorated doit être précisé explicitement.
+    App\Serializer\TennisMatchContextBuilder:
+        decorates: 'api_platform.serializer.context_builder'
+        arguments:
+            $decorated: '@App\Serializer\TennisMatchContextBuilder.inner'

@@ -15,7 +15,7 @@ const loading = ref(true)
 const error = ref(null)
 
 // Un match terminé peut toujours être consulté sous son angle "avant match"
-// (l'analyse IA ne change pas rétroactivement) — le tableau ci-dessous ne
+// (l'analyse ne change pas rétroactivement) — le tableau ci-dessous ne
 // s'affiche que si le match est réellement terminé, pas de bascule vers un
 // écran "après match" vide pour un match à venir.
 const tab = ref('pre')
@@ -86,7 +86,7 @@ function scheduledLabel(iso) {
         <button :class="{ active: tab === 'post' }" @click="tab = 'post'">Après le match</button>
       </div>
 
-      <p v-if="!prediction" class="card empty">Aucune analyse IA calculée pour ce match.</p>
+      <p v-if="!prediction" class="card empty">Aucune analyse calculée pour ce match.</p>
 
       <div v-else-if="tab === 'pre'" class="grid">
         <div class="card">
@@ -154,7 +154,7 @@ function scheduledLabel(iso) {
         </div>
 
         <div class="card">
-          <h3>Analyse IA vs réalité</h3>
+          <h3>Analyse vs réalité</h3>
           <div class="sub">Probabilité annoncée avant match</div>
           <div class="compare-line">
             <b>{{ prediction.favoritePlayer.fullName }}</b>
@@ -415,5 +415,59 @@ function scheduledLabel(iso) {
 .result-badge.bad {
   background: #fdecea;
   color: #b3261e;
+}
+
+@media (max-width: 980px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .match-head {
+    padding: 22px 20px;
+  }
+  .mh-left h1 {
+    font-size: 19px;
+  }
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .span2 {
+    grid-column: span 1;
+  }
+  .trow {
+    grid-template-columns: 100px 1fr 42px;
+    gap: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .match-head {
+    padding: 18px 16px;
+  }
+  .mh-meta span {
+    font-size: 11px;
+  }
+  .tabswitch {
+    width: 100%;
+  }
+  .tabswitch button {
+    flex: 1;
+    padding: 8px 10px;
+  }
+  .trow {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .tval {
+    text-align: left;
+  }
+  .compare-line {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
 }
 </style>

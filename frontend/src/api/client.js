@@ -120,17 +120,40 @@ export const api = {
   },
 
   /**
-   * POST /api/checkout-sessions — démarre un paiement Stripe pour
-   * l'utilisateur courant (déjà connecté) et une formule donnée.
-   * `redirectPath` est le chemin du match qui a déclenché le paiement (voir
-   * PaywallModal.vue) : Stripe y renvoie l'utilisateur une fois le paiement
-   * confirmé, au lieu d'une page générique.
+   * POST /api/checkout-sessions — démarre un paiement Stripe pour la formule
+   * choisie. Décision produit du 03/09/2026 : fonctionne désormais aussi
+   * sans être connecté (voir CheckoutSessionController côté backend) —
+   * `auth: true` par défaut n'empêche rien, un visiteur anonyme n'a
+   * simplement pas de token à envoyer. `redirectPath` est le chemin du match
+   * qui a déclenché le paiement (voir PaywallModal.vue) : Stripe y renvoie
+   * l'utilisateur une fois le paiement confirmé, au lieu d'une page générique.
    */
   async createCheckoutSession(planCode, redirectPath, withdrawalWaiverAccepted) {
     return request('/api/checkout-sessions', {
       method: 'POST',
       body: { planCode, redirectPath, withdrawalWaiverAccepted },
     })
+  },
+
+  /**
+   * GET /api/checkout-sessions/{sessionId} — statut d'un paiement Stripe
+   * (public). Utilisé au retour de Checkout par un visiteur qui n'était pas
+   * encore connecté avant de payer (voir PostPaymentModal.vue) : indique si
+   * le paiement est confirmé, l'email utilisé sur Stripe et si un compte
+   * existe déjà pour cet email.
+   */
+  async getCheckoutSessionStatus(sessionId) {
+    return request(`/api/checkout-sessions/${encodeURIComponent(sessionId)}`, { auth: false })
+  },
+
+  /**
+   * POST /api/checkout-sessions/{sessionId}/link — relie un paiement Stripe
+   * déjà confirmé au compte qui vient de se connecter/s'inscrire (voir
+   * PostPaymentModal.vue). Nécessite d'être authentifié (le token vient
+   * d'être obtenu juste avant via login()/register()+login()).
+   */
+  async linkCheckoutSession(sessionId) {
+    return request(`/api/checkout-sessions/${encodeURIComponent(sessionId)}/link`, { method: 'POST' })
   },
 
   logout() {

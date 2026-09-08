@@ -14,13 +14,26 @@ use Symfony\Component\Serializer\Annotation\Groups;
  * Pronostic du modèle pour un match donné.
  *
  * Le découpage des groupes de sérialisation est ce qui implémente le paywall
- * décrit en section 3.2.1 du cahier des charges :
- *  - les champs tagués "match:read" sont l'aperçu gratuit, visibles quand la
- *    prédiction est embarquée dans la réponse GET /api/tennis_matches
- *    (tableau des matchs, accès public) ;
- *  - les champs tagués uniquement "prediction:read:detail" ne sortent que sur
- *    GET /api/predictions/{id}, une opération dont la sécurité exige un
- *    abonnement actif (fiche "player vs player", section 3.3).
+ * décrit en section 3.2.1 du cahier des charges — trois niveaux, du plus au
+ * moins ouvert :
+ *  - "match:read" (uniquement $id) : toujours visible dès que la prédiction
+ *    est embarquée dans GET /api/tennis_matches, y compris pour un visiteur
+ *    non connecté — sert uniquement à ce que le frontend sache qu'une
+ *    prédiction existe et puisse tenter GET /api/predictions/{id} (voir
+ *    MatchDetailView.vue, loadMatch()), pour afficher la carte paywall en
+ *    cas de 401/403 ;
+ *  - "match:read:prediction" ($favoritePlayer, $probabilityFavorite,
+ *    $confidenceLevel) : l'aperçu gratuit proprement dit (favori + niveau de
+ *    confiance), réservé aux comptes ROLE_ADMIN et aux abonnés actifs
+ *    (décision produit du 02/09/2026) — voir
+ *    Serializer/TennisMatchContextBuilder.php, qui ajoute ce groupe
+ *    uniquement pour ces utilisateurs quand TennisMatch est sérialisé ;
+ *  - "prediction:read:detail" : l'analyse complète (radar, facteurs
+ *    d'explication, cote de marché), qui ne sort que sur
+ *    GET /api/predictions/{id} ci-dessous, une opération dont la sécurité
+ *    exige déjà un abonnement actif (fiche "player vs player", section 3.3)
+ *    — d'où l'ajout de 'match:read:prediction' dans son normalizationContext :
+ *    quiconque atteint cet endpoint a de toute façon déjà les droits.
  *
  * Écrite uniquement par le service data/ML (voir section 4.2.1 / 4.3),
  * jamais depuis l'application Symfony elle-même.
@@ -32,7 +45,7 @@ use Symfony\Component\Serializer\Annotation\Groups;
         new Get(
             security: "is_granted('ROLE_ADMIN') or (is_granted('ROLE_USER') and user.hasActiveSubscription())",
             securityMessage: "Analyse complète réservée aux abonnés — voir la popup paywall (section 3.2.1).",
-            normalizationContext: ['groups' => ['match:read', 'prediction:read:detail']],
+            normalizationContext: ['groups' => ['match:read', 'match:read:prediction', 'prediction:read:detail']],
         ),
     ],
 )]
@@ -50,16 +63,16 @@ class Prediction
 
     #[ORM\ManyToOne(targetEntity: Player::class)]
     #[ORM\JoinColumn(nullable: false)]
-    #[Groups(['match:read'])]
+    #[Groups(['match:read:prediction'])]
     private Player $favoritePlayer;
 
     /** Probabilité de victoire du favori, entre 0 et 1. */
     #[ORM\Column]
-    #[Groups(['match:read'])]
+    #[Groups(['match:read:prediction'])]
     private float $probabilityFavorite;
 
     #[ORM\Column(enumType: ConfidenceLevel::class)]
-    #[Groups(['match:read'])]
+    #[Groups(['match:read:prediction'])]
     private ConfidenceLevel $confidenceLevel;
 
     #[ORM\Column(length: 30)]

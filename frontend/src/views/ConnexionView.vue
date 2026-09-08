@@ -91,14 +91,14 @@ async function submitSignup() {
       visuel, aucune logique ici.
     -->
     <div class="auth-brand-panel">
-      <div class="eyebrow"><i></i>IA TENNIS · TON COMPTE</div>
+      <div class="eyebrow"><i></i>TENNIS · TON COMPTE</div>
       <h1>Retrouve tes <span class="accent">analyses</span><br />où que tu sois.</h1>
       <p class="brand-lead">
         Historique de performance 100 % public, aucune donnée inventée — crée
         un compte gratuit en une minute.
       </p>
       <ul class="brand-points">
-        <li>Analyse IA calibrée sur données réelles ATP + WTA</li>
+        <li>Analyse calibrée sur données réelles ATP + WTA</li>
         <li>Le compte est gratuit, sans engagement</li>
         <li>Paiement à la demande, uniquement pour débloquer l'analyse complète d'un match</li>
       </ul>

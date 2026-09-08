@@ -51,7 +51,7 @@ const SURFACE_LABELS = { dur: 'dur', terre_battue: 'terre battue', gazon: 'gazon
 <template>
   <AdminLayout>
     <div class="head">
-      <h1>Modèle IA — matchs</h1>
+      <h1>Modèle — matchs</h1>
       <p class="sub">{{ matches.length }} match(s) affiché(s)</p>
     </div>
 
@@ -203,5 +203,36 @@ h1 {
 .badge.live {
   background: #fdecea;
   color: #b3261e;
+}
+
+@media (max-width: 640px) {
+  .filters {
+    gap: 12px;
+  }
+  .filters label {
+    flex: 1 1 100%;
+  }
+  .filters select,
+  .filters input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 21px;
+  }
+  .match-row {
+    padding: 16px 18px;
+    gap: 8px;
+  }
+  .mr-players {
+    font-size: 13px;
+  }
+  .mr-meta {
+    gap: 8px;
+  }
 }
 </style>

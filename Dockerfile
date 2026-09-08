@@ -26,6 +26,44 @@ FROM php:8.3-apache
 # officielle, rien à installer pour elles.
 RUN docker-php-ext-install pdo_mysql
 
+# --- OPcache : activé même en dev (01/09/2026) ---------------------------
+# L'image php:apache officielle inclut l'extension opcache mais la laisse
+# ÉTEINTE par défaut : sans elle, PHP reparse et recompile TOUT le code
+# (Symfony + Doctrine + vendor/, plusieurs milliers de fichiers) à CHAQUE
+# requête, depuis zéro. Combiné au bind mount Windows de ./backend (voir
+# docker-compose.yml) — notoirement lent pour les accès fichier par fichier
+# sous Docker Desktop (WSL2/Hyper-V) — ça suffit à expliquer, à soi seul,
+# des requêtes de plusieurs secondes même sur un simple GET par id (constaté :
+# 12s sur GET /api/tennis_matches/{id}, sans aucun rapport avec le nombre de
+# requêtes SQL). validate_timestamps=1 (pas 0, le réglage "prod") garde le
+# rechargement à chaud : une modif enregistrée dans VS Code reste prise en
+# compte à la requête suivante, sans rebuild ni redémarrage du conteneur —
+# seul le temps de RECOMPILATION répétée à chaque requête disparaît.
+# realpath_cache_size/_ttl : même logique pour les résolutions de chemin
+# (autoload Composer, require Symfony) sur ce même bind mount lent.
+#
+# (01/09/2026, v2) Premier essai insuffisant : écrire seulement les réglages
+# opcache.* ci-dessous NE SUFFIT PAS à activer l'extension — le module
+# opcache.so de l'image officielle est présent mais jamais CHARGÉ tant
+# qu'aucune ligne "zend_extension=opcache" n'existe dans un fichier ini.
+# Sans ça, PHP ignore silencieusement des directives pour un module non
+# chargé (aucune erreur), ce qui explique qu'aucun gain n'ait été mesuré
+# après le premier rebuild (18s, identique à avant). `docker-php-ext-enable`
+# (fourni par l'image officielle) écrit cette ligne pour nous, avec le bon
+# chemin vers le .so pour ce build précis.
+RUN docker-php-ext-enable opcache
+
+RUN { \
+        echo 'opcache.enable=1'; \
+        echo 'opcache.validate_timestamps=1'; \
+        echo 'opcache.revalidate_freq=0'; \
+        echo 'opcache.memory_consumption=256'; \
+        echo 'opcache.interned_strings_buffer=16'; \
+        echo 'opcache.max_accelerated_files=20000'; \
+        echo 'realpath_cache_size=4096K'; \
+        echo 'realpath_cache_ttl=600'; \
+    } > /usr/local/etc/php/conf.d/opcache-dev.ini
+
 # --- Composer -----------------------------------------------------------
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 

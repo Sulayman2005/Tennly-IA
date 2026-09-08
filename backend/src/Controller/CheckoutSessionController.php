@@ -10,24 +10,21 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
- * POST /api/checkout-sessions — démarre un paiement Stripe pour l'utilisateur
- * COURANT (jamais à l'inscription, voir UserRegistrationProcessor). Ce
- * endpoint est appelé au moment précis où un utilisateur déjà connecté choisit
- * une formule depuis la popup paywall d'un match (voir PaywallModal.vue) :
- * un compte peut donc exister durablement sans jamais payer, et le paiement
- * n'arrive que lorsque l'utilisateur veut réellement débloquer l'analyse
- * complète d'un match précis — jamais avant, jamais automatiquement.
+ * POST /api/checkout-sessions — démarre un paiement Stripe pour la formule
+ * choisie depuis la popup paywall d'un match (voir PaywallModal.vue).
  *
- * `#[IsGranted('ROLE_USER')]` (et non un access_control) pour rester cohérent
- * avec le reste de l'API : chaque action gère sa propre règle de sécurité
- * plutôt que de s'appuyer sur des règles globales dans security.yaml (voir
- * AdminDashboardProvider pour le même principe côté ressources API Platform).
+ * Décision produit du 03/09/2026 : le paiement se déclenche désormais
+ * immédiatement au clic sur une formule, QUE l'utilisateur soit déjà
+ * connecté ou non — donc plus de `#[IsGranted('ROLE_USER')]` ici. Un compte
+ * déjà connecté garde l'ancien comportement (activation via le webhook,
+ * StripeWebhookController). Un visiteur anonyme paie d'abord ; le compte est
+ * créé (ou l'utilisateur se connecte, si l'email a déjà un compte) juste
+ * après un retour de paiement confirmé, voir CheckoutSessionStatusController
+ * et CheckoutSessionLinkController — jamais avant.
  */
 #[Route('/api/checkout-sessions', name: 'checkout_session_create', methods: ['POST'])]
-#[IsGranted('ROLE_USER')]
 final class CheckoutSessionController extends AbstractController
 {
     public function __construct(
@@ -49,7 +46,8 @@ final class CheckoutSessionController extends AbstractController
         // CGV article 4 : renonciation obligatoire au droit de rétractation pour
         // un accès immédiat (art. L221-28 13° du Code de la consommation). On
         // revalide ici même si le frontend a déjà la case à cocher : un appel
-        // direct à cette API ne doit jamais pouvoir la contourner.
+        // direct à cette API ne doit jamais pouvoir la contourner — y compris
+        // pour un visiteur anonyme.
         if (true !== ($payload['withdrawalWaiverAccepted'] ?? null)) {
             return $this->json([
                 'detail' => 'Tu dois confirmer renoncer à ton droit de rétractation pour un accès immédiat avant de continuer.',
@@ -65,7 +63,7 @@ final class CheckoutSessionController extends AbstractController
             ? $redirectPath
             : '/matchs';
 
-        /** @var User $user */
+        /** @var User|null $user */
         $user = $this->getUser();
 
         $checkoutUrl = $this->stripeCheckoutService->createCheckoutSessionUrl(

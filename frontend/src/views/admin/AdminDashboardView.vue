@@ -165,7 +165,7 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
         </svg>
         <div class="rowtop">
           <div>
-            <div class="eyebrow">Modèle IA — vue d'ensemble</div>
+            <div class="eyebrow">Modèle — vue d'ensemble</div>
             <div class="big">{{ summary.modelAccuracyOverall !== null ? summary.modelAccuracyOverall + ' %' : '—' }}</div>
             <div class="lbl">Taux de réussite — sur {{ summary.finishedMatchesWithPredictionCount }} match(s) terminé(s)</div>
           </div>
@@ -174,7 +174,7 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
           </span>
         </div>
         <p v-if="summary.modelAccuracyOverall === null" class="empty-note">
-          Pas encore de match terminé avec analyse IA associée : ce taux apparaîtra dès le premier résultat enregistré.
+          Pas encore de match terminé avec analyse associée : ce taux apparaîtra dès le premier résultat enregistré.
         </p>
         <div class="perf-mini">
           <div class="chip"><b>{{ summary.predictionsCount }}</b><span>Analyses calculées</span></div>
@@ -194,7 +194,7 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
       <div class="card insight">
         <div class="insight-head">
           <span class="insight-icon">✦</span>
-          <h3>Insight IA</h3>
+          <h3>Insight</h3>
         </div>
         <p v-if="!bestSurface">
           Pas encore assez de matchs terminés sur plusieurs surfaces différentes pour comparer la précision du modèle
@@ -296,7 +296,7 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
       <!-- PROCHAINS MATCHS -->
       <div class="card span2">
         <h3>Prochains matchs</h3>
-        <div class="sub">Cliquer pour ouvrir l'analyse détaillée (Modèle IA)</div>
+        <div class="sub">Cliquer pour ouvrir l'analyse détaillée (Modèle)</div>
         <div v-if="upcomingMatches.length === 0" class="empty-note">Aucun match en base pour l'instant.</div>
         <RouterLink
           v-for="m in upcomingMatches"
@@ -730,5 +730,42 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
 }
 .cal-n.today .cal-dot {
   background: #fff;
+}
+
+@media (max-width: 980px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .welcome {
+    font-size: 21px;
+  }
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .span2 {
+    grid-column: span 1;
+  }
+  .card.perf-hero {
+    min-height: 0;
+  }
+  .perf-hero .big {
+    font-size: 32px;
+  }
+  .accounts-body {
+    flex-wrap: wrap;
+  }
+  .donut-wrap {
+    flex-wrap: wrap;
+  }
+  .mrr-bar-row {
+    grid-template-columns: 68px 1fr 20px;
+    font-size: 11px;
+  }
+  .mr-meta {
+    display: none;
+  }
 }
 </style>

@@ -23,7 +23,7 @@ import { RouterLink } from 'vue-router'
     <section>
       <h2>1. Objet et formules</h2>
       <p>
-        Les présentes CGV s'appliquent à la souscription d'un abonnement Tennly IA, quelle que soit la formule
+        Les présentes CGV s'appliquent à la souscription d'un abonnement Tennly, quelle que soit la formule
         choisie (Classique, VIP, VIP annuel). Le prix et la périodicité exacts de chaque formule sont ceux affichés
         sur la page d'abonnement au moment de la souscription — ils ne sont pas reproduits ici pour éviter tout écart
         avec le tarif réellement appliqué.
@@ -33,7 +33,7 @@ import { RouterLink } from 'vue-router'
     <section>
       <h2>2. Paiement</h2>
       <p>
-        Le paiement est traité par Stripe, prestataire de paiement tiers. Tennly IA ne stocke jamais tes coordonnées
+        Le paiement est traité par Stripe, prestataire de paiement tiers. Tennly ne stocke jamais tes coordonnées
         bancaires. L'abonnement est prélevé automatiquement à chaque échéance (mensuelle, trimestrielle ou annuelle
         selon la formule) jusqu'à résiliation.
       </p>
@@ -142,5 +142,17 @@ section p {
   font-size: 12px;
   color: var(--grey);
   font-style: italic;
+}
+
+@media (max-width: 480px) {
+  .legal {
+    padding: 32px 0 60px;
+  }
+  h1 {
+    font-size: 23px;
+  }
+  .warning {
+    padding: 12px 14px;
+  }
 }
 </style>

@@ -9,6 +9,10 @@ import AdminMatchesView from '@/views/admin/AdminMatchesView.vue'
 import AdminMatchAnalysisView from '@/views/admin/AdminMatchAnalysisView.vue'
 import AdminSubscribersView from '@/views/admin/AdminSubscribersView.vue'
 import ModelReliabilityView from '@/views/ModelReliabilityView.vue'
+import CguView from '@/views/legal/CguView.vue'
+import CgvView from '@/views/legal/CgvView.vue'
+import LegalNoticeView from '@/views/legal/LegalNoticeView.vue'
+import PrivacyView from '@/views/legal/PrivacyView.vue'
 
 // Correspondance directe avec le parcours principal décrit en section 5.2.1
 // du cahier des charges.
@@ -23,12 +27,22 @@ const router = createRouter({
     { path: '/fiabilite', name: 'model-reliability', component: ModelReliabilityView },
     // Comparateur de joueurs : compare deux joueurs (classement, Elo global
     // + par surface, main dominante) hors contexte d'un match précis, et
-    // propose une analyse IA complète à la demande — voir ComparateurView.vue.
+    // propose une analyse complète à la demande — voir ComparateurView.vue.
     // Réservé à l'admin + aux abonnés (même règle que l'analyse complète
     // d'un match, voir le garde ci-dessous et Prediction.php côté backend).
     { path: '/comparateur', name: 'comparateur', component: ComparateurView, meta: { requiresSubscriptionOrAdmin: true } },
     { path: '/inscription', name: 'inscription', component: ConnexionView },
     { path: '/profil', name: 'profil', component: ConnexionView },
+
+    // Pages légales (CGV, CGU, mentions légales, politique de confidentialité) :
+    // les fichiers existaient déjà dans src/views/legal/ mais n'étaient
+    // enregistrés sur aucune route — /cgv, /cgu, etc. renvoyaient une page
+    // totalement blanche (aucune route ne matchait), et le lien "voir les
+    // CGV" de PaywallModal.vue pointait donc dans le vide. Corrigé ici.
+    { path: '/cgv', name: 'cgv', component: CgvView },
+    { path: '/cgu', name: 'cgu', component: CguView },
+    { path: '/mentions-legales', name: 'legal-notice', component: LegalNoticeView },
+    { path: '/confidentialite', name: 'privacy', component: PrivacyView },
 
     // Back-office (section 3.7) — réservé ROLE_ADMIN, voir le garde ci-dessous.
     // Les noms de route (admin-dashboard / admin-matches / admin-match-analysis /
@@ -70,7 +84,7 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   if (!to.meta.requiresAdmin && !to.meta.requiresSubscriptionOrAdmin) return true
 
-  const { useAuthStore } = await import('@/stores/auth')
+  const { useAuthStore } = await import('@/stores/auth.js')
   const auth = useAuthStore()
 
   if (!auth.isAuthenticated) {

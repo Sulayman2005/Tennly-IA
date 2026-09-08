@@ -8,16 +8,25 @@ use Stripe\Checkout\Session;
 use Stripe\StripeClient;
 
 /**
- * Encapsule la création d'une session Stripe Checkout pour un couple
- * (utilisateur, formule) — cahier des charges section 3.6 "Paiement et abonnement".
+ * Encapsule la création (et désormais la relecture) d'une session Stripe
+ * Checkout pour une formule — cahier des charges section 3.6 "Paiement et
+ * abonnement".
  *
- * Déclenchée depuis CheckoutSessionController, lui-même appelé au moment où
- * un utilisateur DÉJÀ connecté choisit une formule depuis la popup paywall
- * d'un match précis (voir PaywallModal.vue) — plus jamais automatiquement à
- * l'inscription (voir UserRegistrationProcessor, qui ne fait plus que créer
- * le compte). `$returnPath` est le chemin du match qui a déclenché le
- * paiement, pour renvoyer l'utilisateur exactement là où il voulait aller une
- * fois le paiement confirmé plutôt que sur une page d'accueil générique.
+ * Déclenchée depuis CheckoutSessionController au moment où un utilisateur
+ * choisit une formule depuis la popup paywall d'un match précis (voir
+ * PaywallModal.vue). Décision produit du 03/09/2026 : le paiement se
+ * déclenche désormais AVANT toute connexion — `$user` peut donc être `null`
+ * (visiteur pas encore connecté). Dans ce cas Stripe Checkout collecte
+ * lui-même l'email du payeur, et la création du compte / le rattachement de
+ * l'abonnement se fait après coup, une fois le paiement confirmé (voir
+ * CheckoutSessionStatusController et CheckoutSessionLinkController). Un
+ * utilisateur déjà connecté garde exactement l'ancien comportement
+ * (customer_email / client_reference_id préremplis, activation via le
+ * webhook StripeWebhookController).
+ *
+ * `$returnPath` est le chemin du match qui a déclenché le paiement, pour
+ * renvoyer l'utilisateur exactement là où il voulait aller une fois le
+ * paiement confirmé plutôt que sur une page d'accueil générique.
  */
 class StripeCheckoutService
 {
@@ -31,7 +40,7 @@ class StripeCheckoutService
     }
 
     public function createCheckoutSessionUrl(
-        User $user,
+        ?User $user,
         Plan $plan,
         string $returnPath = '/matchs',
         ?\DateTimeImmutable $withdrawalWaiverAcceptedAt = null,
@@ -48,11 +57,8 @@ class StripeCheckoutService
             'withdrawal_waiver_accepted_at' => $withdrawalWaiverAcceptedAt->format(DATE_ATOM),
         ] : [];
 
-        /** @var Session $session */
-        $session = $this->stripe->checkout->sessions->create([
+        $params = [
             'mode' => 'subscription',
-            'customer_email' => $user->getEmail(),
-            'client_reference_id' => $user->getId(),
             'line_items' => [[
                 'price' => $plan->getStripePriceId(),
                 'quantity' => 1,
@@ -66,8 +72,34 @@ class StripeCheckoutService
             ],
             'success_url' => $base.$separator.'paiement=reussi&session_id={CHECKOUT_SESSION_ID}',
             'cancel_url' => $base,
-        ]);
+        ];
+
+        // Utilisateur déjà connecté au moment du clic : on préremplit son
+        // email et on garde le lien direct client_reference_id -> User pour
+        // que le webhook active l'abonnement sans étape supplémentaire (voir
+        // StripeWebhookController). Visiteur anonyme : on laisse Stripe
+        // Checkout demander lui-même l'email, il n'y a pas encore de compte
+        // auquel le relier.
+        if (null !== $user) {
+            $params['customer_email'] = $user->getEmail();
+            $params['client_reference_id'] = $user->getId();
+        }
+
+        /** @var Session $session */
+        $session = $this->stripe->checkout->sessions->create($params);
 
         return $session->url;
+    }
+
+    /**
+     * Relit une session Stripe Checkout après coup (voir
+     * CheckoutSessionStatusController / CheckoutSessionLinkController) —
+     * utilisé uniquement pour le parcours "paiement avant connexion" : on ne
+     * fait jamais confiance à ce que le frontend affirme sur un paiement,
+     * uniquement à ce que Stripe renvoie ici, server-side.
+     */
+    public function retrieveSession(string $sessionId): Session
+    {
+        return $this->stripe->checkout->sessions->retrieve($sessionId);
     }
 }

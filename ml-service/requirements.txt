@@ -7,8 +7,19 @@
 # proprement sur MODEL_AVAILABLE = False s'il est absent (jamais une erreur
 # bloquante). Numpy est installé automatiquement comme dépendance de xgboost.
 #
-# Si tu ajoutes plus tard un import pandas/scikit-learn/requests dans un de
-# ces scripts (par exemple pour enrichir train_model.py), ajoute-le ici aussi
-# — sinon ça ne sera installé que sur ta machine Windows, pas dans l'image
-# Docker (voir Dockerfile à la racine du projet, et DOCKER.md).
+# (31/08/2026) Correction : ce n'est plus tout à fait vrai avec les versions
+# récentes de xgboost (>=2.0) — leur API "sklearn" (xgb.XGBClassifier, utilisée
+# par train_model.py) exige scikit-learn en plus. model_inference.py, lui,
+# n'utilise que l'API bas niveau (xgb.Booster/xgb.DMatrix, voir predict_probability),
+# qui n'en a pas besoin — donc scikit-learn n'est nécessaire que pour ENTRAÎNER
+# le modèle (train_model.py), jamais pour l'inférence en production
+# (predict_pair.py, import_upcoming_matches.py). On le liste quand même ici
+# systématiquement, plutôt que de le rendre optionnel, pour que
+# `pip install -r requirements.txt` suffise dans tous les cas sans avoir à se
+# souvenir de cette distinction.
+#
+# Si tu ajoutes plus tard un import pandas/requests dans un de ces scripts,
+# ajoute-le ici aussi — sinon ça ne sera installé que sur ta machine Windows,
+# pas dans l'image Docker (voir Dockerfile à la racine du projet, et DOCKER.md).
 xgboost>=2.0,<3.0
+scikit-learn>=1.3,<2.0

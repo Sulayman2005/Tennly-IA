@@ -7,7 +7,7 @@ import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 
 // Cahier des charges section 4.5 : Vue 3 + Vite, consomme l'API Symfony
-// (API Platform) exposée par défaut sur http://127.0.0.1:8000.
+// (API Platform) exposée par défaut sur http://localhost:8000.
 export default defineConfig({
   plugins: [vue()],
   resolve: {
@@ -19,7 +19,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
     },

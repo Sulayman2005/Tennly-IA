@@ -15,7 +15,7 @@ import { RouterLink } from 'vue-router'
     <section>
       <h2>Responsable du traitement</h2>
       <p>
-        [Nom commercial / raison sociale — à compléter], éditeur du site Tennly IA — voir les
+        [Nom commercial / raison sociale — à compléter], éditeur du site Tennly — voir les
         <RouterLink to="/mentions-legales">mentions légales</RouterLink> pour l'identité complète. Contact pour toute
         question relative à vos données : [email de contact — à compléter].
       </p>
@@ -175,5 +175,14 @@ section p {
   border-bottom: 1px solid var(--line);
   vertical-align: top;
   line-height: 1.5;
+}
+
+@media (max-width: 480px) {
+  .legal {
+    padding: 32px 0 60px;
+  }
+  h1 {
+    font-size: 23px;
+  }
 }
 </style>

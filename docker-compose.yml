@@ -60,6 +60,16 @@ services:
       # FRONTEND_BASE_URL...) continue de venir de backend/.env /
       # backend/.env.local comme avant, sans rien changer.
       DATABASE_URL: "mysql://root:root_dev_only@db:3306/tennly?serverVersion=8.0.32&charset=utf8mb4"
+      # (31/08/2026) PlayerComparisonService::predict() lance "python" par
+      # défaut (ML_SERVICE_PYTHON_BIN, voir ce fichier) pour appeler
+      # ml-service/predict_pair.py — ça fonctionnait sous WAMP (Windows nomme
+      # son exécutable "python"), mais ce conteneur Debian n'installe que
+      # "python3" (voir Dockerfile : apt-get install python3 python3-pip),
+      # sans alias "python". Sans cette variable, le sous-processus échoue à
+      # démarrer et le Comparateur retombe TOUJOURS silencieusement sur la
+      # formule Elo, même une fois le modèle entraîné (voir train_model.py) —
+      # jamais d'erreur visible, donc facile à manquer.
+      ML_SERVICE_PYTHON_BIN: "python3"
     volumes:
       # Bind mounts (pas de COPY dans l'image) : tu continues d'éditer le
       # code dans VS Code sur Windows exactement comme avant, les
@@ -75,3 +85,6 @@ services:
 
 volumes:
   db_data:
+
+
+  
