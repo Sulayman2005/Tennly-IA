@@ -1,0 +1,6 @@
+.env.local
+.env.prod
+ml-service/.env.local
+ml-service/__pycache__/
+ml-service/logs/
+*.pyc
