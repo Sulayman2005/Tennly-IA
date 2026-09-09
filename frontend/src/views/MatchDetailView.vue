@@ -440,18 +440,16 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Carte "résultat" (11/09/2026, agrandie le 11/09/2026 sur demande
-           explicite — "meilleur design, fond avec un terrain de tennis sur
-           toute la page") : bannière plein format affichée UNIQUEMENT une
-           fois le match réellement terminé (jamais pour 'scheduled'/'live')
-           — voir matchLoser/resultSets dans le script. Le "terrain" est un
-           schéma SVG dessiné à la main (lignes de court réelles : lignes de
-           fond, couloirs, ligne de service, ligne médiane, filet) plutôt
-           qu'une photo — pas de souci de droits, aucun poids d'image
-           supplémentaire, et ça reste net à n'importe quelle taille d'écran.
-           Coloré selon la VRAIE surface du match (surfaceCardVars, déjà
-           utilisé sur le face-off juste au-dessus) : un match sur terre
-           battue a un terrain ocre, un match sur dur un terrain bleu, etc. -->
+      <!-- Carte "résultat" (11/09/2026, redessinée le 11/09/2026 — "améliore
+           le design") : la photo du vainqueur devient l'élément principal,
+           en plein fond, fondue dans le sombre plutôt qu'encadrée dans une
+           case — comme une vraie affiche, pas une carte de données. Police
+           d'affichage (Anton, voir index.html) réservée au nom du vainqueur
+           et à l'accroche, pour un vrai contraste "titre de poster" avec le
+           reste du site qui reste en police système. Le "terrain" (schéma
+           SVG, voir plus bas) reste en filigrane derrière le texte. Affichée
+           UNIQUEMENT une fois le match réellement terminé — voir
+           matchLoser/resultSets dans le script. -->
       <div v-if="match.status !== 'scheduled' && match.winner" class="card result-showcase" :style="surfaceCardVars(match.surface)">
         <svg class="result-court" viewBox="0 0 400 200" preserveAspectRatio="none" aria-hidden="true">
           <rect x="20" y="20" width="360" height="160" fill="none" stroke="currentColor" stroke-width="2.4" />
@@ -465,29 +463,29 @@ onMounted(async () => {
           <line x1="380" y1="94" x2="380" y2="106" stroke="currentColor" stroke-width="2.4" />
         </svg>
 
-        <div class="result-inner">
-          <div class="result-photo-wrap">
-            <img
-              v-if="showPhoto(match.winner)"
-              :src="match.winner.photoUrl"
-              class="result-photo"
-              alt=""
-              loading="lazy"
-              @error="onPhotoError(match.winner.id)"
-            />
-            <div v-else class="result-photo result-photo-fallback" :style="avatarGradient(match.winner.fullName)">
-              <span class="result-initials">{{ initials(match.winner.fullName) }}</span>
-            </div>
-            <img
-              v-if="flagUrl(match.winner.countryCode)"
-              :src="flagUrl(match.winner.countryCode)"
-              class="result-flag"
-              alt=""
-              loading="lazy"
-              @error="$event.target.style.display = 'none'"
-            />
+        <div class="result-photo-frame">
+          <img
+            v-if="showPhoto(match.winner)"
+            :src="match.winner.photoUrl"
+            class="result-photo"
+            alt=""
+            loading="lazy"
+            @error="onPhotoError(match.winner.id)"
+          />
+          <div v-else class="result-photo result-photo-fallback" :style="avatarGradient(match.winner.fullName)">
+            <span class="result-initials">{{ initials(match.winner.fullName) }}</span>
           </div>
+          <img
+            v-if="flagUrl(match.winner.countryCode)"
+            :src="flagUrl(match.winner.countryCode)"
+            class="result-flag"
+            alt=""
+            loading="lazy"
+            @error="$event.target.style.display = 'none'"
+          />
+        </div>
 
+        <div class="result-inner">
           <div class="result-body">
             <span class="result-eyebrow">{{ match.status === 'walkover' ? 'Victoire par forfait' : 'Match terminé' }}</span>
             <h2 class="result-winner">{{ match.winner.fullName }}</h2>
@@ -845,71 +843,64 @@ onMounted(async () => {
   color: #fff;
 }
 
-/* Carte "résultat" (11/09/2026, agrandie sur demande explicite le
-   11/09/2026 — "meilleur design, fond avec un terrain de tennis") :
-   bannière plein format, hauteur généreuse, fond coloré par la vraie
-   surface du match (--surface-from/to, voir surfaceCardVars) assombri par
-   un voile sombre pour que le texte blanc reste lisible — même logique que
-   .face-off juste au-dessus, poussée beaucoup plus loin ici puisque cette
-   carte doit se lire comme une affiche, pas comme une carte de données. */
+/* Carte "résultat" (11/09/2026, redessinée le 11/09/2026 — "améliore le
+   design") : la photo du vainqueur est désormais un vrai fond plein cadre
+   (pas une vignette encadrée), fondue dans le sombre via un mask-image —
+   .result-photo-frame occupe tout le bord gauche de la carte en desktop
+   (le haut, en mobile) et le texte vient respirer dans la zone où le
+   fondu est déjà terminé. Fond de carte toujours coloré par la vraie
+   surface du match (--surface-from/to, voir surfaceCardVars), assombri
+   pour que le texte blanc reste lisible — même logique que .face-off
+   juste au-dessus, poussée beaucoup plus loin ici. Empilement en z-index
+   explicite (0 à 3) pour ne pas dépendre de l'ordre implicite ::after vs
+   enfants positionnés, qui varie selon les navigateurs. */
 .result-showcase {
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  min-height: 300px;
-  display: flex;
-  align-items: center;
-  padding: 44px 48px;
+  min-height: 380px;
   background:
     linear-gradient(160deg, rgba(6, 10, 8, 0.93) 0%, rgba(6, 10, 8, 0.86) 45%, rgba(6, 10, 8, 0.94) 100%),
     linear-gradient(135deg, var(--surface-from), var(--surface-to));
   color: #fff;
 }
-/* Halo lime en surimpression, comme .face-off::after, mais plus marqué
-   puisqu'il n'y a pas d'autre source de couleur ici que le fond. */
 .result-showcase::after {
   content: '';
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: radial-gradient(90% 120% at 82% 8%, var(--surface-glow) 0%, transparent 60%);
+  background: radial-gradient(90% 120% at 88% 6%, var(--surface-glow) 0%, transparent 60%);
   pointer-events: none;
 }
-/* Le "terrain" : schéma de court dessiné en SVG (voir le template), posé en
-   fond plein format, très discret (les lignes ne doivent jamais rivaliser
-   avec le vainqueur/le score par-dessus) et légèrement zoomé/décentré pour
-   un effet "plan large" plutôt qu'un diagramme scolaire centré. */
+/* Le "terrain" : schéma de court dessiné en SVG (voir le template), en
+   filigrane derrière le texte — très discret, il ne doit jamais rivaliser
+   avec le vainqueur/le score par-dessus. */
 .result-court {
   position: absolute;
-  z-index: 0;
+  z-index: 1;
   top: 50%;
   left: 50%;
   width: 145%;
   height: 145%;
   transform: translate(-50%, -50%) rotate(-4deg);
-  color: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.14);
   pointer-events: none;
 }
-.result-inner {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 36px;
-  width: 100%;
-}
-.result-photo-wrap {
-  position: relative;
-  flex: none;
+.result-photo-frame {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 44%;
 }
 .result-photo {
-  width: 176px;
-  height: 176px;
-  border-radius: 32px;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  box-shadow:
-    0 0 0 3px var(--lime),
-    0 22px 48px -10px rgba(0, 0, 0, 0.55);
+  object-position: top center;
+  mask-image: linear-gradient(to right, black 45%, transparent 92%);
+  -webkit-mask-image: linear-gradient(to right, black 45%, transparent 92%);
 }
 .result-photo-fallback {
   display: flex;
@@ -917,21 +908,30 @@ onMounted(async () => {
   justify-content: center;
 }
 .result-initials {
-  font-size: 56px;
+  font-size: 76px;
   font-weight: 800;
   color: #fff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 .result-flag {
   position: absolute;
-  bottom: -8px;
-  right: -8px;
-  width: 42px;
-  height: 42px;
+  z-index: 1;
+  top: 18px;
+  left: 18px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: #fff;
   object-fit: cover;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+.result-inner {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  min-height: 380px;
+  padding: 40px 48px 40px 46%;
 }
 .result-body {
   min-width: 0;
@@ -939,13 +939,14 @@ onMounted(async () => {
 .result-eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
+  gap: 8px;
+  font-family: 'Anton', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--lime);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 .result-eyebrow::before {
   content: '';
@@ -957,14 +958,16 @@ onMounted(async () => {
 }
 .result-winner {
   margin: 0;
-  font-size: clamp(28px, 4vw, 44px);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.08;
+  font-family: 'Anton', sans-serif;
+  font-weight: 400;
+  font-size: clamp(34px, 5vw, 58px);
+  letter-spacing: 0.01em;
+  line-height: 0.98;
+  text-transform: uppercase;
   text-wrap: balance;
 }
 .result-sub {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   font-size: 16px;
   color: rgba(255, 255, 255, 0.68);
 }
@@ -972,7 +975,7 @@ onMounted(async () => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 20px;
+  margin-top: 22px;
 }
 .result-set-pill {
   padding: 6px 15px;
@@ -991,36 +994,47 @@ onMounted(async () => {
   border-color: rgba(199, 255, 60, 0.5);
 }
 .result-meta {
-  margin-top: 18px;
+  margin-top: 20px;
   font-size: 13px;
   letter-spacing: 0.01em;
   color: rgba(255, 255, 255, 0.55);
 }
 .result-brand {
   position: absolute;
-  z-index: 1;
+  z-index: 3;
   top: 24px;
   right: 28px;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
+  font-family: 'Anton', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
   color: rgba(255, 255, 255, 0.45);
 }
 
 @media (max-width: 640px) {
   .result-showcase {
     min-height: 0;
-    padding: 32px 22px;
   }
-  .result-inner {
-    flex-direction: column;
-    text-align: center;
-    gap: 18px;
+  .result-photo-frame {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    height: 220px;
+    top: auto;
+    bottom: auto;
+    left: auto;
   }
   .result-photo {
-    width: 120px;
-    height: 120px;
-    border-radius: 26px;
+    object-position: top center;
+    mask-image: linear-gradient(to bottom, black 45%, transparent 92%);
+    -webkit-mask-image: linear-gradient(to bottom, black 45%, transparent 92%);
+  }
+  .result-inner {
+    min-height: 0;
+    flex-direction: column;
+    text-align: center;
+    padding: 0 22px 30px;
+    margin-top: -64px;
   }
   .result-sets {
     justify-content: center;

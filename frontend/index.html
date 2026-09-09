@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tennly</title>
+    <!-- Police d'affichage "Anton" (11/09/2026) : réservée à la carte
+         résultat d'un match terminé (MatchDetailView.vue, .result-winner/
+         .result-eyebrow) pour un vrai effet "titre d'affiche" — jamais
+         utilisée ailleurs sur le site, qui reste sur la police système
+         (voir tokens.css). Chargée globalement ici plutôt qu'en @import
+         dans le composant : une seule requête, mise en cache pour tout le
+         site si d'autres écrans en ont besoin plus tard. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="app"></div>
