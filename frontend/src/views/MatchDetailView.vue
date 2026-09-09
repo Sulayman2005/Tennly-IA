@@ -441,27 +441,47 @@ onMounted(async () => {
       </div>
 
       <!-- Carte "résultat" (11/09/2026, redessinée le 11/09/2026 — "améliore
-           le design") : la photo du vainqueur devient l'élément principal,
-           en plein fond, fondue dans le sombre plutôt qu'encadrée dans une
-           case — comme une vraie affiche, pas une carte de données. Police
-           d'affichage (Anton, voir index.html) réservée au nom du vainqueur
-           et à l'accroche, pour un vrai contraste "titre de poster" avec le
-           reste du site qui reste en police système. Le "terrain" (schéma
-           SVG, voir plus bas) reste en filigrane derrière le texte. Affichée
-           UNIQUEMENT une fois le match réellement terminé — voir
+           le design", puis le 11/09/2026 — "une vraie image de terrain,
+           enlève ce fond bleu qui fait vieux"). Pas d'accès à une vraie
+           photo de court dans cet environnement (et une photo trouvée sur
+           le web poserait un problème de droits) : le terrain est un
+           rendu SVG "deux tons" qui imite un vrai court photographié —
+           zone de jeu plus claire, dégagements (apron) plus sombres autour,
+           même principe que les vrais courts durs/terre battue/gazon —
+           plutôt qu'un simple dégradé plat uni comme avant. Toujours
+           coloré selon la VRAIE surface du match (surfaceCardVars). Un
+           voile sombre (.result-scrim) est posé par-dessus, côté texte
+           uniquement, pour que le nom reste lisible quelle que soit la
+           clarté du terrain. La photo du vainqueur reste l'élément
+           principal, fondue dans le sombre à gauche (le haut, en mobile).
+           Affichée UNIQUEMENT une fois le match réellement terminé — voir
            matchLoser/resultSets dans le script. -->
       <div v-if="match.status !== 'scheduled' && match.winner" class="card result-showcase" :style="surfaceCardVars(match.surface)">
         <svg class="result-court" viewBox="0 0 400 200" preserveAspectRatio="none" aria-hidden="true">
-          <rect x="20" y="20" width="360" height="160" fill="none" stroke="currentColor" stroke-width="2.4" />
-          <line x1="20" y1="42" x2="380" y2="42" stroke="currentColor" stroke-width="1.6" />
-          <line x1="20" y1="158" x2="380" y2="158" stroke="currentColor" stroke-width="1.6" />
-          <line x1="200" y1="12" x2="200" y2="188" stroke="currentColor" stroke-width="3" />
-          <line x1="106" y1="42" x2="106" y2="158" stroke="currentColor" stroke-width="1.6" />
-          <line x1="294" y1="42" x2="294" y2="158" stroke="currentColor" stroke-width="1.6" />
-          <line x1="106" y1="100" x2="294" y2="100" stroke="currentColor" stroke-width="1.6" />
-          <line x1="20" y1="94" x2="20" y2="106" stroke="currentColor" stroke-width="2.4" />
-          <line x1="380" y1="94" x2="380" y2="106" stroke="currentColor" stroke-width="2.4" />
+          <defs>
+            <radialGradient id="courtLight" cx="72%" cy="8%" r="75%">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.4" />
+              <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+            </radialGradient>
+          </defs>
+          <!-- Dégagements (apron) : ton sombre de la surface, sur toute la carte -->
+          <rect class="court-apron" x="0" y="0" width="400" height="200" />
+          <!-- Zone de jeu : ton clair de la surface, translucide pour rester feutré -->
+          <rect class="court-inbounds" x="20" y="20" width="360" height="160" />
+          <!-- Lumière de stade -->
+          <rect x="0" y="0" width="400" height="200" fill="url(#courtLight)" />
+          <!-- Lignes réelles : fond, couloirs, filet, ligne de service, ligne médiane -->
+          <rect class="court-line" x="20" y="20" width="360" height="160" fill="none" stroke-width="2.4" />
+          <line class="court-line" x1="20" y1="42" x2="380" y2="42" stroke-width="1.6" />
+          <line class="court-line" x1="20" y1="158" x2="380" y2="158" stroke-width="1.6" />
+          <line class="court-line" x1="200" y1="12" x2="200" y2="188" stroke-width="3" />
+          <line class="court-line" x1="106" y1="42" x2="106" y2="158" stroke-width="1.6" />
+          <line class="court-line" x1="294" y1="42" x2="294" y2="158" stroke-width="1.6" />
+          <line class="court-line" x1="106" y1="100" x2="294" y2="100" stroke-width="1.6" />
+          <line class="court-line" x1="20" y1="94" x2="20" y2="106" stroke-width="2.4" />
+          <line class="court-line" x1="380" y1="94" x2="380" y2="106" stroke-width="2.4" />
         </svg>
+        <div class="result-scrim"></div>
 
         <div class="result-photo-frame">
           <img
@@ -859,9 +879,10 @@ onMounted(async () => {
   overflow: hidden;
   isolation: isolate;
   min-height: 380px;
-  background:
-    linear-gradient(160deg, rgba(6, 10, 8, 0.93) 0%, rgba(6, 10, 8, 0.86) 45%, rgba(6, 10, 8, 0.94) 100%),
-    linear-gradient(135deg, var(--surface-from), var(--surface-to));
+  /* Base de secours sombre, visible seulement aux quatre coins que le SVG
+     du terrain (tourné et surdimensionné) ne recouvre pas — teintée du ton
+     sombre de la surface pour ne jamais créer de rupture de couleur. */
+  background: linear-gradient(160deg, var(--surface-from) 0%, #05070a 65%);
   color: #fff;
 }
 .result-showcase::after {
@@ -872,23 +893,48 @@ onMounted(async () => {
   background: radial-gradient(90% 120% at 88% 6%, var(--surface-glow) 0%, transparent 60%);
   pointer-events: none;
 }
-/* Le "terrain" : schéma de court dessiné en SVG (voir le template), en
-   filigrane derrière le texte — très discret, il ne doit jamais rivaliser
-   avec le vainqueur/le score par-dessus. */
+/* Le "terrain" : rendu SVG "deux tons" façon vrai court photographié (zone
+   de jeu plus claire entourée d'un dégagement plus sombre — voir
+   .court-apron/.court-inbounds ci-dessous), légèrement zoomé/décentré pour
+   un effet "plan large" plutôt qu'un diagramme scolaire centré. C'est
+   maintenant un vrai élément visuel (pas juste un filigree en fond) : les
+   lignes et tons doivent se voir clairement, sans pour autant écraser le
+   vainqueur/le score qui restent par-dessus (voir .result-scrim). */
 .result-court {
   position: absolute;
   z-index: 1;
   top: 50%;
   left: 50%;
-  width: 145%;
-  height: 145%;
-  transform: translate(-50%, -50%) rotate(-4deg);
-  color: rgba(255, 255, 255, 0.14);
+  width: 148%;
+  height: 148%;
+  transform: translate(-50%, -50%) rotate(-3deg);
+  pointer-events: none;
+}
+.court-apron {
+  fill: var(--surface-from);
+}
+.court-inbounds {
+  fill: var(--surface-to);
+  opacity: 0.6;
+}
+.court-line {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.55);
+}
+/* Voile de lisibilité : assombrit uniquement le côté texte (la carte se lit
+   de gauche — photo — à droite — texte), pour que le blanc reste lisible
+   quelle que soit la clarté du terrain en dessous, sans pour autant noyer
+   sa couleur comme le faisait l'ancien fond plat. */
+.result-scrim {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 28%, rgba(4, 7, 9, 0.62) 58%, rgba(4, 7, 9, 0.82) 100%);
   pointer-events: none;
 }
 .result-photo-frame {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
   top: 0;
   bottom: 0;
   left: 0;
@@ -927,7 +973,7 @@ onMounted(async () => {
 }
 .result-inner {
   position: relative;
-  z-index: 3;
+  z-index: 4;
   display: flex;
   align-items: center;
   min-height: 380px;
@@ -1001,7 +1047,7 @@ onMounted(async () => {
 }
 .result-brand {
   position: absolute;
-  z-index: 3;
+  z-index: 4;
   top: 24px;
   right: 28px;
   font-family: 'Anton', sans-serif;
@@ -1015,9 +1061,13 @@ onMounted(async () => {
   .result-showcase {
     min-height: 0;
   }
+  /* Voile vertical (photo en haut, texte en bas) plutôt qu'horizontal. */
+  .result-scrim {
+    background: linear-gradient(180deg, transparent 32%, rgba(4, 7, 9, 0.68) 62%, rgba(4, 7, 9, 0.88) 100%);
+  }
   .result-photo-frame {
     position: relative;
-    z-index: 2;
+    z-index: 3;
     width: 100%;
     height: 220px;
     top: auto;
