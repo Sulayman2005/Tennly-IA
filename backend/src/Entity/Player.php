@@ -47,27 +47,38 @@ class Player
     #[Groups(['player:read', 'match:read'])]
     private ?int $atpWtaRank = null;
 
+    // Groups (09/09/2026) : ajout de 'match:read' sur les quatre Elo. Comme
+    // pour photoUrl plus haut, TennisMatch::class normalise avec le seul
+    // groupe 'match:read' (propagé tel quel aux entités imbriquées
+    // playerA/playerB) — sans ce groupe, l'Elo restait invisible sur GET
+    // /api/tennis_matches malgré sa présence en base et son usage déjà
+    // affiché sur le Comparateur (GET /api/players). Nécessaire pour la
+    // puce "Elo <surface du match>" de la carte face-off (voir
+    // eloForSurface() dans utils/playerVisuals.js).
     #[ORM\Column]
-    #[Groups(['player:read'])]
+    #[Groups(['player:read', 'match:read'])]
     private float $eloOverall = 1500.0;
 
     #[ORM\Column]
-    #[Groups(['player:read'])]
+    #[Groups(['player:read', 'match:read'])]
     private float $eloHard = 1500.0;
 
     #[ORM\Column]
-    #[Groups(['player:read'])]
+    #[Groups(['player:read', 'match:read'])]
     private float $eloClay = 1500.0;
 
     #[ORM\Column]
-    #[Groups(['player:read'])]
+    #[Groups(['player:read', 'match:read'])]
     private float $eloGrass = 1500.0;
 
     // Exposé côté API (Groups) pour le comparateur de joueurs — déjà utilisé
     // en interne par les scripts d'import (facteur "habitude du jeu face à
-    // un gaucher/droitier"), jamais affiché côté frontend avant maintenant.
+    // un gaucher/droitier"). Groups (09/09/2026) : ajout de 'match:read',
+    // même raison que pour les Elo ci-dessus — nécessaire pour afficher la
+    // puce "Droitier"/"Gaucher" sur la vraie fiche match, pas seulement sur
+    // le Comparateur.
     #[ORM\Column(length: 1, nullable: true)]
-    #[Groups(['player:read'])]
+    #[Groups(['player:read', 'match:read'])]
     private ?string $dominantHand = null;
 
     /**

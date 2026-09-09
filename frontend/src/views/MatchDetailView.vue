@@ -8,7 +8,7 @@ import PaywallModal from '@/components/PaywallModal.vue'
 import PostPaymentModal from '@/components/PostPaymentModal.vue'
 import TourBadge from '@/components/TourBadge.vue'
 import ProbabilityGauge from '@/components/ProbabilityGauge.vue'
-import { initials, avatarGradient, flagUrl, surfaceCardVars, hasPhoto, surfaceLabel } from '@/utils/playerVisuals'
+import { initials, avatarGradient, flagUrl, surfaceCardVars, hasPhoto, surfaceLabel, eloForSurface, handLabel } from '@/utils/playerVisuals'
 
 const props = defineProps({ id: { type: [String, Number], required: true } })
 const route = useRoute()
@@ -324,6 +324,10 @@ onMounted(async () => {
           </div>
           <div class="name">{{ match.playerA.fullName }}</div>
           <div class="rank">N°{{ match.playerA.atpWtaRank }} mondial</div>
+          <div class="chips">
+            <span v-if="eloForSurface(match.playerA, match.surface) != null" class="chip">Elo {{ Math.round(eloForSurface(match.playerA, match.surface)) }}</span>
+            <span v-if="handLabel(match.playerA.dominantHand)" class="chip">{{ handLabel(match.playerA.dominantHand) }}</span>
+          </div>
         </div>
 
         <div class="mid">
@@ -359,6 +363,10 @@ onMounted(async () => {
           </div>
           <div class="name">{{ match.playerB.fullName }}</div>
           <div class="rank">N°{{ match.playerB.atpWtaRank }} mondial</div>
+          <div class="chips">
+            <span v-if="eloForSurface(match.playerB, match.surface) != null" class="chip">Elo {{ Math.round(eloForSurface(match.playerB, match.surface)) }}</span>
+            <span v-if="handLabel(match.playerB.dominantHand)" class="chip">{{ handLabel(match.playerB.dominantHand) }}</span>
+          </div>
         </div>
       </div>
 
@@ -623,6 +631,23 @@ onMounted(async () => {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.7);
   margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.chips {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.chip {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.14);
+  padding: 3px 9px;
+  border-radius: 999px;
   font-variant-numeric: tabular-nums;
 }
 

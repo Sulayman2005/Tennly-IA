@@ -127,6 +127,28 @@ export function surfaceLabel(surface) {
   return SURFACE_LABELS[surface] ?? 'Surface'
 }
 
+// Elo du joueur SUR LA SURFACE DE CE MATCH précis (voir Player::$eloHard/
+// eloClay/eloGrass, et PlayerComparisonService::eloForSurface côté backend,
+// dont on reprend ici la même logique de repli) — plus pertinent à afficher
+// que l'Elo global sur une carte déjà colorée par surface. Pas de colonne
+// Elo dédiée pour l'indoor : on retombe sur l'Elo dur, comme le backend.
+export function eloForSurface(player, surface) {
+  if (!player) return null
+  if (surface === 'terre_battue') return player.eloClay ?? null
+  if (surface === 'gazon') return player.eloGrass ?? null
+  return player.eloHard ?? null // 'dur' et 'indoor'
+}
+
+// Main dominante (Player::$dominantHand, 'L'/'R') — déjà affichée sur le
+// Comparateur, jamais sur une vraie fiche match jusqu'ici. null (pas de
+// chip du tout) plutôt qu'un libellé "Inconnue" quand la main n'est pas
+// connue : plus adapté à une puce compacte qu'à une ligne de tableau.
+export function handLabel(hand) {
+  if (hand === 'L') return 'Gaucher'
+  if (hand === 'R') return 'Droitier'
+  return null
+}
+
 function hexToRgba(hex, alpha) {
   const n = parseInt(hex.slice(1), 16)
   const r = (n >> 16) & 255
