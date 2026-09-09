@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref, onMounted } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, ApiError } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
@@ -41,6 +41,109 @@ const forbidden = ref(false)
 const paywallOpen = ref(false)
 const postPaymentOpen = ref(false)
 
+// Palmarès carrière (table player_career_stats, cf.
+// PlayerCareerStatsController) : réservé aux abonnés comme prediction, donc
+// chargé juste après elle dans loadMatch(). Certains joueurs n'ont pas de
+// ligne (import LiveTennisAPI encore partiel) — fetchCareerStats renvoie
+// alors null sans lever d'erreur, et careerRows masque la carte entière si
+// aucun des deux joueurs n'a la moindre donnée.
+const careerStatsA = ref(null)
+const careerStatsB = ref(null)
+
+// L'endpoint renvoie du JSON brut via Doctrine DBAL (fetchAssociative), donc
+// des clés snake_case telles quelles en base (wins_hard, first_in_pct, …) —
+// pas de camelCase ici, contrairement aux entités normalisées par API Platform.
+async function fetchCareerStats(playerId) {
+  try {
+    return await api.get(`/api/players/${playerId}/career-stats`)
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null
+    console.error(e)
+    return null
+  }
+}
+
+// Association surface du match → colonnes bilan carrière correspondantes.
+// 'indoor' est rapproché de carpet faute d'une colonne indoor dédiée dans
+// player_career_stats (hard/clay/grass/carpet seulement).
+const SURFACE_CAREER_FIELD = {
+  dur: { wins: 'wins_hard', losses: 'losses_hard', label: 'sur dur' },
+  terre_battue: { wins: 'wins_clay', losses: 'losses_clay', label: 'sur terre battue' },
+  gazon: { wins: 'wins_grass', losses: 'losses_grass', label: 'sur gazon' },
+  indoor: { wins: 'wins_carpet', losses: 'losses_carpet', label: 'en indoor' },
+}
+
+function winPct(wins, losses) {
+  const total = (wins ?? 0) + (losses ?? 0)
+  if (!total) return null
+  return Math.round((wins / total) * 1000) / 10
+}
+
+function recordRow(label, statsA, statsB, winsKey, lossesKey) {
+  const wA = statsA?.[winsKey]
+  const lA = statsA?.[lossesKey]
+  const wB = statsB?.[winsKey]
+  const lB = statsB?.[lossesKey]
+  const pctA = wA != null && lA != null ? winPct(wA, lA) : null
+  const pctB = wB != null && lB != null ? winPct(wB, lB) : null
+  if (pctA == null && pctB == null) return null
+  return {
+    label,
+    valueA: pctA != null ? `${wA}V-${lA}D (${pctA}%)` : '—',
+    valueB: pctB != null ? `${wB}V-${lB}D (${pctB}%)` : '—',
+    rawA: pctA,
+    rawB: pctB,
+    higher: true,
+  }
+}
+
+function statRow(label, statsA, statsB, key, { suffix = '', higher = true } = {}) {
+  const rawA = statsA?.[key] ?? null
+  const rawB = statsB?.[key] ?? null
+  if (rawA == null && rawB == null) return null
+  return {
+    label,
+    valueA: rawA != null ? `${rawA}${suffix}` : '—',
+    valueB: rawB != null ? `${rawB}${suffix}` : '—',
+    rawA,
+    rawB,
+    higher,
+  }
+}
+
+const careerRows = computed(() => {
+  if (!careerStatsA.value && !careerStatsB.value) return []
+  const a = careerStatsA.value
+  const b = careerStatsB.value
+  const rows = [recordRow('Bilan carrière', a, b, 'wins', 'losses')]
+
+  const surfaceField = SURFACE_CAREER_FIELD[match.value?.surface]
+  if (surfaceField) {
+    rows.push(recordRow(`Bilan ${surfaceField.label}`, a, b, surfaceField.wins, surfaceField.losses))
+  }
+
+  rows.push(
+    statRow('Titres', a, b, 'titles'),
+    statRow('Aces / match', a, b, 'aces_per_match'),
+    statRow('Doubles fautes', a, b, 'double_faults', { higher: false }),
+    statRow('1ères balles in', a, b, 'first_in_pct', { suffix: '%' }),
+    statRow('Pts gagnés en 1ère balle', a, b, 'first_won_pct', { suffix: '%' }),
+    statRow('Pts gagnés en 2e balle', a, b, 'second_won_pct', { suffix: '%' }),
+    statRow('Balles de break sauvées', a, b, 'bp_saved_pct', { suffix: '%' }),
+  )
+
+  return rows.filter(Boolean)
+})
+
+function winsA(row) {
+  if (row.rawA == null || row.rawB == null) return false
+  return row.higher ? row.rawA > row.rawB : row.rawA < row.rawB
+}
+function winsB(row) {
+  if (row.rawA == null || row.rawB == null) return false
+  return row.higher ? row.rawB > row.rawA : row.rawB < row.rawA
+}
+
 const justPaid = ref(route.query.paiement === 'reussi')
 const checkoutSessionId = ref(typeof route.query.session_id === 'string' ? route.query.session_id : '')
 const activating = ref(false)
@@ -58,6 +161,13 @@ async function loadMatch() {
 
     if (match.value.prediction) {
       prediction.value = await api.get(`/api/predictions/${match.value.prediction.id}`)
+
+      const [statsA, statsB] = await Promise.all([
+        fetchCareerStats(match.value.playerA.id),
+        fetchCareerStats(match.value.playerB.id),
+      ])
+      careerStatsA.value = statsA
+      careerStatsB.value = statsB
     }
   } catch (e) {
     if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
@@ -173,6 +283,28 @@ onMounted(async () => {
         <div class="card">
           <h3>Profil comparatif</h3>
           <RadarChart :profile="prediction.radarProfile" :label-a="match.playerA.fullName" :label-b="match.playerB.fullName" />
+        </div>
+
+        <div v-if="careerRows.length" class="card career-card">
+          <h3>Palmarès carrière</h3>
+          <div class="stats-table-wrap">
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th class="th-a">{{ match.playerA.fullName.split(' ').at(-1) }}</th>
+                  <th></th>
+                  <th class="th-b">{{ match.playerB.fullName.split(' ').at(-1) }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in careerRows" :key="row.label">
+                  <td :class="{ win: winsA(row) }">{{ row.valueA }}</td>
+                  <td class="label">{{ row.label }}</td>
+                  <td :class="{ win: winsB(row) }">{{ row.valueB }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div class="card why">
@@ -378,6 +510,54 @@ onMounted(async () => {
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--line);
+}
+
+/* Palmarès carrière — même schéma visuel que le tableau comparatif de
+   ComparateurView.vue (en-têtes vert/bleu par joueur, colonne label au
+   centre, valeur la plus favorable en vert gras). Dupliqué ici plutôt que
+   partagé : les styles scoped de Vue ne traversent pas les composants. */
+.stats-table-wrap {
+  overflow-x: auto;
+}
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.stats-table th {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding-bottom: 10px;
+}
+.stats-table th.th-a {
+  color: var(--green);
+  text-align: left;
+}
+.stats-table th.th-b {
+  color: var(--blue);
+  text-align: right;
+}
+.stats-table td {
+  padding: 9px 4px;
+  text-align: center;
+  border-top: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+.stats-table td:first-child {
+  text-align: left;
+}
+.stats-table td:last-child {
+  text-align: right;
+}
+.stats-table td.label {
+  color: var(--grey);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.stats-table td.win {
+  font-weight: 700;
+  color: var(--green);
 }
 
 .locked {
