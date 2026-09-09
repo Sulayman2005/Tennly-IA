@@ -73,10 +73,11 @@ onMounted(() => {
     </RouterLink>
     <nav class="nav-desktop">
       <RouterLink to="/matchs">Analyse</RouterLink>
-      <!-- Comparateur réservé à l'admin + aux abonnés (voir router/index.js,
-           requiresSubscriptionOrAdmin) — masqué ici pour le reste des
-           utilisateurs, même s'ils sont connectés. -->
-      <RouterLink v-if="auth.isAdmin || auth.hasActiveSubscription" to="/comparateur">Comparateur</RouterLink>
+      <!-- Comparateur retiré du menu le 09/09/2026 (décision produit : pas
+           d'utilité claire identifiée, design pas à niveau avec le reste du
+           site après sa refonte). La route /comparateur, son contrôleur et
+           ses données restent tous intacts — seul le lien de navigation
+           disparaît, décision facilement réversible si besoin. -->
       <RouterLink to="/fiabilite">Fiabilité</RouterLink>
 
     </nav>
@@ -124,7 +125,8 @@ onMounted(() => {
     <Transition name="mobile-nav">
       <nav v-if="mobileMenuOpen" class="mobile-nav">
         <RouterLink to="/matchs" @click="closeMobileMenu">Analyse</RouterLink>
-        <RouterLink v-if="auth.isAdmin || auth.hasActiveSubscription" to="/comparateur" @click="closeMobileMenu">Comparateur</RouterLink>
+        <!-- Comparateur retiré du menu (voir le même commentaire dans
+             nav-desktop ci-dessus). -->
         <RouterLink to="/fiabilite" @click="closeMobileMenu">Fiabilité</RouterLink>
         <RouterLink v-if="auth.isAdmin" to="/admin" class="mobile-dashboard" @click="closeMobileMenu">
           Dashboard admin
