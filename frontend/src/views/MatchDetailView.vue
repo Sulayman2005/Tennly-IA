@@ -41,6 +41,39 @@ const forbidden = ref(false)
 const paywallOpen = ref(false)
 const postPaymentOpen = ref(false)
 
+// Carte "résultat" (11/09/2026) : visuel dédié affiché uniquement une fois
+// le match terminé (status 'finished'/'walkover' avec un winner connu — un
+// match 'live', par ex., n'a pas encore de vainqueur et ne doit rien
+// afficher ici). `winner` est une vraie relation Player (Groups
+// 'match:read' déjà présent sur TennisMatch::$winner), donc match.winner
+// porte les mêmes champs que playerA/playerB (photoUrl, countryCode, etc.).
+const matchLoser = computed(() => {
+  const m = match.value
+  if (!m?.winner) return null
+  return m.winner.id === m.playerA.id ? m.playerB : m.playerA
+})
+
+// Découpe "6-7, 6-1, 6-3, 1-6, 7-6" (voir build_score_text() dans
+// update_match_results.py) en sets individuels, avec le camp gagnant de
+// CHAQUE set déduit du nombre de jeux le plus élevé — le premier nombre de
+// chaque paire est TOUJOURS celui de playerA (voir le commentaire sur le
+// mapping p1/p2 -> player_a_id/player_b_id dans import_upcoming_matches.py,
+// respecté à l'identique par le script de clôture). Purement indicatif
+// (mise en valeur visuelle set par set) : en cas de nombres égaux ou
+// illisibles, le set est affiché sans mise en valeur plutôt que de deviner.
+const resultSets = computed(() => {
+  const m = match.value
+  if (!m?.scoreText) return []
+  return m.scoreText.split(',').map((part) => {
+    const text = part.trim()
+    const [a, b] = text.split('-').map((n) => parseInt(n.trim(), 10))
+    if (Number.isNaN(a) || Number.isNaN(b) || a === b) return { text, wonByWinner: null }
+    const aWonSet = a > b
+    const winnerIsPlayerA = m.winner?.id === m.playerA.id
+    return { text, wonByWinner: aWonSet === winnerIsPlayerA }
+  })
+})
+
 // Palmarès carrière (table player_career_stats, cf.
 // PlayerCareerStatsController) : réservé aux abonnés comme prediction, donc
 // chargé juste après elle dans loadMatch(). Certains joueurs n'ont pas de
@@ -401,6 +434,56 @@ onMounted(async () => {
         </div>
       </div>
 
+      <!-- Carte "résultat" (11/09/2026) : visuel dédié type "carte de
+           résultat" partageable, affiché UNIQUEMENT une fois le match
+           réellement terminé (jamais pour 'scheduled'/'live') — voir
+           matchLoser/resultSets dans le script. Palette reprise de
+           l'identité Tennly (fond sombre + accent lime déjà utilisés
+           partout ailleurs sur le site), pas un template copié d'ailleurs. -->
+      <div v-if="match.status !== 'scheduled' && match.winner" class="card result-showcase">
+        <div class="result-photo-wrap">
+          <img
+            v-if="showPhoto(match.winner)"
+            :src="match.winner.photoUrl"
+            class="result-photo"
+            alt=""
+            loading="lazy"
+            @error="onPhotoError(match.winner.id)"
+          />
+          <div v-else class="result-photo result-photo-fallback" :style="avatarGradient(match.winner.fullName)">
+            <span class="result-initials">{{ initials(match.winner.fullName) }}</span>
+          </div>
+          <img
+            v-if="flagUrl(match.winner.countryCode)"
+            :src="flagUrl(match.winner.countryCode)"
+            class="result-flag"
+            alt=""
+            loading="lazy"
+            @error="$event.target.style.display = 'none'"
+          />
+        </div>
+
+        <div class="result-body">
+          <span class="result-eyebrow">{{ match.status === 'walkover' ? 'Victoire par forfait' : 'Match terminé' }}</span>
+          <h2 class="result-winner">{{ match.winner.fullName }}</h2>
+          <p v-if="matchLoser" class="result-sub">bat {{ matchLoser.fullName }}</p>
+
+          <div v-if="resultSets.length" class="result-sets">
+            <span
+              v-for="(s, i) in resultSets"
+              :key="i"
+              class="result-set-pill"
+              :class="{ won: s.wonByWinner === true, lost: s.wonByWinner === false }"
+            >{{ s.text }}</span>
+          </div>
+          <p v-else-if="match.scoreText" class="result-sub">{{ match.scoreText }}</p>
+
+          <div class="result-meta">{{ match.tournamentName }} · {{ match.round }} · {{ surfaceLabel(match.surface) }}</div>
+        </div>
+
+        <span class="result-brand">TENNLY</span>
+      </div>
+
       <div v-if="forbidden" class="card locked">
         <template v-if="activating">
           <div class="lock-icon">⏳</div>
@@ -734,6 +817,146 @@ onMounted(async () => {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: #fff;
+}
+
+/* Carte "résultat" (11/09/2026) — visuel type "carte de match" affiché une
+   fois le match terminé : fond très sombre + accent lime (repris de
+   --btn/--lime, déjà l'identité "toujours sombre" de Tennly ailleurs sur le
+   site, voir tokens.css) plutôt qu'un fond clair comme les autres .card —
+   volontairement plus "affiche" que les cartes de données classiques
+   juste en dessous (palmarès, forme du moment…). */
+.result-showcase {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 32px 36px;
+  background: linear-gradient(160deg, #101012 0%, var(--btn) 55%, #08110d 100%);
+  color: #fff;
+}
+.result-showcase::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.5;
+  background: radial-gradient(120% 140% at 8% -10%, rgba(199, 255, 60, 0.16) 0%, transparent 55%);
+  pointer-events: none;
+}
+.result-photo-wrap {
+  position: relative;
+  z-index: 1;
+  flex: none;
+}
+.result-photo {
+  width: 128px;
+  height: 128px;
+  border-radius: 26px;
+  object-fit: cover;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.14),
+    0 14px 30px rgba(0, 0, 0, 0.4);
+}
+.result-photo-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.result-initials {
+  font-size: 40px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.result-flag {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #fff;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+.result-body {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+.result-eyebrow {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lime);
+  margin-bottom: 6px;
+}
+.result-winner {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.result-sub {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.65);
+}
+.result-sets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 16px;
+}
+.result-set-pill {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.result-set-pill.won {
+  background: rgba(199, 255, 60, 0.16);
+  color: var(--lime);
+  border-color: rgba(199, 255, 60, 0.4);
+}
+.result-meta {
+  margin-top: 16px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+.result-brand {
+  position: absolute;
+  z-index: 1;
+  top: 20px;
+  right: 24px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+@media (max-width: 640px) {
+  .result-showcase {
+    flex-direction: column;
+    text-align: center;
+    padding: 28px 22px;
+  }
+  .result-sets {
+    justify-content: center;
+  }
+  .result-brand {
+    top: 16px;
+    right: 18px;
+  }
 }
 
 /* Face-à-face — décompte brut des confrontations directes, présenté en
