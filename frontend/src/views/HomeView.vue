@@ -296,6 +296,45 @@ function toggleFaq(i) {
 
   <div class="section-divider" aria-hidden="true"><span></span></div>
 
+  <!-- ================= COMMENT ÇA MARCHE (09/09/2026) =================
+       Section ajoutée sur demande explicite (structure inspirée d'un site
+       concurrent) : Tennly n'avait jusqu'ici aucun explicatif "en 3 étapes"
+       avant de plonger directement dans la liste des matchs. Les 3 étapes
+       reprennent des faits déjà vrais ailleurs sur cette page (6 signaux
+       réels — voir .live-ribbon et la section "Sous le capot" plus bas —
+       et le circuit ATP complet — voir .level-row juste en dessous) plutôt
+       que d'inventer un nouveau discours. -->
+  <div class="section">
+    <div class="section-head center" v-reveal>
+      <div class="eyebrow" style="justify-content: center"><i></i>EN 3 ÉTAPES</div>
+      <h2>Comment fonctionne Tennly</h2>
+      <p>Pas besoin de connaître l'Elo par cœur : trois étapes simples entre toi et une analyse claire.</p>
+    </div>
+    <div class="steps-row">
+      <div class="step-card" v-reveal="0">
+        <div class="step-num">1</div>
+        <h4>Choisis un match</h4>
+        <p>Parcours les matchs du jour ou à venir, sur tout le circuit ATP — Grand Chelem, Masters 1000, ATP 500 et 250.</p>
+      </div>
+      <div class="step-arrow" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12h15M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      </div>
+      <div class="step-card" v-reveal="90">
+        <div class="step-num">2</div>
+        <h4>6 signaux réels sont croisés</h4>
+        <p>Elo par surface, service &amp; retour, forme, repos, face-à-face, dynamique du moment — recalculés sur l'historique ATP réel.</p>
+      </div>
+      <div class="step-arrow" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12h15M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      </div>
+      <div class="step-card" v-reveal="180">
+        <div class="step-num">3</div>
+        <h4>Reçois la probabilité expliquée</h4>
+        <p>Un favori, une probabilité claire, et les raisons derrière — jamais une boîte noire.</p>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= COUVERTURE (surfaces / tournois) ================= -->
   <div class="section">
     <div class="section-head center" v-reveal>
@@ -335,7 +374,17 @@ function toggleFaq(i) {
       <h2>Voici à quoi ressemble une analyse Tennly</h2>
       <p>Une probabilité claire, et surtout les raisons derrière — jamais une boîte noire.</p>
     </div>
+    <!-- Restylé en carte sombre le 09/09/2026 (voir .example-panel) : même
+         langage visuel que le hero et la carte résultat plutôt qu'un simple
+         encart gris clair, avec un petit bandeau "Analyse prête" façon
+         aperçu produit. Toujours explicitement présenté comme un exemple
+         (voir le titre de section juste au-dessus, et l'étiquette
+         ci-dessous), jamais comme un vrai match du jour. -->
     <div class="example-panel">
+      <div class="example-tag" v-reveal>
+        <span class="example-match">Roland-Garros · Finale (exemple)</span>
+        <span class="example-ready"><i></i>Analyse prête</span>
+      </div>
       <div class="duel" style="margin-bottom: 0; background: transparent" v-reveal>
         <div class="p-card">
           <div class="av">JS</div>
@@ -360,7 +409,7 @@ function toggleFaq(i) {
           <div class="elo">Elo terre battue 2 041</div>
         </div>
       </div>
-      <div class="why" style="margin: 22px 0 0; box-shadow: none" v-reveal="120">
+      <div class="why" v-reveal="120">
         <ul>
           <li><span class="tag ok">✓</span>Elo terre battue en faveur de Sinner (+77 points), recalculé sur l'historique réel de la surface.</li>
           <li><span class="tag ok">✓</span>Dynamique du moment favorable : Elo en progression sur ses 8 derniers matchs.</li>
@@ -440,27 +489,40 @@ function toggleFaq(i) {
     </div>
   </div>
 
-  <!-- ================= MÉTHODOLOGIE / DONNÉES ================= -->
+  <!-- ================= CHIFFRES CLÉS ================= -->
   <div class="section">
-    <div class="method-band" v-reveal>
-      <!-- Refait le 09/09/2026 : ce bloc affichait auparavant un "X ans/an
-           d'historique ATP" venu de /api/stats (yearsOfHistory) — un chiffre
-           qui dépendait juste de la date de lancement du site (souvent "1
-           an", donc peu impressionnant) et qui, une fois branché sur la
-           vraie donnée, ne collait même plus avec le "plusieurs années" du
-           paragraphe ci-dessous. Remplacé, sur demande explicite, par un
-           fait tout aussi réel mais qui met en avant le vrai travail fait
-           avec les API externes : les 3 synchronisations automatiques qui
-           tournent chaque nuit (voir scripts/import_matches_cron.sh à
-           3h30, update_results_cron.sh à 3h45, import_photos_cron.sh à
-           4h) — un chiffre fixe et vérifiable, pas une estimation. -->
-      <div class="num">3<small>synchronisations automatiques chaque nuit</small></div>
-      <p>
-        <strong style="color: #fff">Aucune donnée figée.</strong> Chaque nuit, Tennly récupère automatiquement les nouveaux matchs à venir, clôture ceux
-        déjà joués avec leur vrai score, et met à jour les photos et statistiques des joueurs — sans intervention manuelle, à partir de résultats ATP
-        réellement joués.
-      </p>
+    <!-- Refait le 09/09/2026 (structure inspirée d'un site concurrent, qui
+         présente 4 grands chiffres en rangée plutôt qu'un seul). Ancien
+         .method-band n'affichait qu'un seul nombre ("3 synchronisations
+         automatiques", lui-même un remplacement d'un "X ans d'historique"
+         qui sonnait faible — voir l'historique de ce fichier). Il devient
+         ici une des 4 cases, aux côtés des deux vrais chiffres déjà utilisés
+         dans le hero (réussite/matchs analysés, voir heroSuccessRate/
+         heroAnalyzedMatches) et du nombre de signaux réels déjà annoncé
+         partout ailleurs sur la page (.live-ribbon, section "Sous le
+         capot") — jamais un chiffre inventé pour l'occasion. -->
+    <div class="stats-band" v-reveal>
+      <div class="stat-cell">
+        <div class="stat-num">{{ heroSuccessRate }}</div>
+        <div class="stat-label">de réussite sur 90 jours</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num">{{ heroAnalyzedMatches }}</div>
+        <div class="stat-label">matchs analysés</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num">6</div>
+        <div class="stat-label">signaux réels croisés par match</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num">3<small>/nuit</small></div>
+        <div class="stat-label">synchronisations automatiques</div>
+      </div>
     </div>
+    <p class="stats-note" v-reveal="100">
+      <strong>Aucune donnée figée.</strong> Chaque nuit, Tennly récupère automatiquement les nouveaux matchs à venir, clôture ceux déjà joués avec leur
+      vrai score, et met à jour les photos et statistiques des joueurs — à partir de résultats ATP réellement joués, jamais estimés.
+    </p>
   </div>
 
   <!-- ================= AVIS (emplacement honnête, pas de faux témoignages) ================= -->
@@ -744,6 +806,9 @@ h3 {
   animation: fadeUp 0.6s 0.55s ease both;
 }
 .cta-main {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -768,6 +833,34 @@ h3 {
   background: var(--lime);
   color: var(--green2);
   animation-delay: 0.75s;
+}
+/* "Animations sur les boutons" (09/09/2026) : un reflet qui balaie le
+   bouton au survol, en plus du soulèvement déjà en place — même idée que
+   .result-shine sur la carte résultat de match, réutilisée ici en boucle
+   courte déclenchée par :hover plutôt qu'une seule fois au chargement. */
+.cta-main::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.35) 48%, transparent 66%);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+.cta-main:hover::after {
+  animation: ctaShine 0.9s var(--ease-premium);
+}
+@keyframes ctaShine {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(120%);
+  }
+}
+.cta-main > * {
+  position: relative;
+  z-index: 2;
 }
 .cta-main:hover {
   transform: translateY(-3px) scale(1.02);
@@ -1117,20 +1210,76 @@ h3 {
   font-weight: 600;
 }
 
-/* -- Exemple concret -- */
+/* -- Exemple concret --
+   Repensé en carte sombre le 09/09/2026 (voir le commentaire dans le
+   <template>) : même langage que le hero et la carte résultat de match,
+   avec un halo décoratif (--lime, jamais la couleur de surface d'un match
+   réel puisqu'il n'y en a pas ici) plutôt qu'un simple encart gris clair. */
 .example-panel {
-  background: var(--card);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(165deg, #10221f 0%, #050a09 78%);
   border-radius: 26px;
-  padding: 8px;
+  padding: 10px;
+  box-shadow: var(--shadow-elevated);
+}
+.example-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(650px 280px at 10% 0%, rgba(199, 255, 60, 0.12), transparent 60%);
+}
+.example-tag {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 18px 24px 6px;
+}
+.example-match {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.58);
+  letter-spacing: 0.01em;
+}
+.example-ready {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--lime);
+}
+.example-ready i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lime);
+  box-shadow: 0 0 0 3px rgba(199, 255, 60, 0.25);
+  animation: gentlePulseDot 1.8s ease-in-out infinite;
+}
+@keyframes gentlePulseDot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 .duel {
   display: grid;
   grid-template-columns: 1fr 200px 1fr;
   gap: 24px;
   align-items: center;
-  background: var(--card);
   border-radius: 26px;
-  padding: 36px;
+  padding: 26px 36px 36px;
+  color: #fff;
 }
 .p-card {
   text-align: center;
@@ -1147,6 +1296,7 @@ h3 {
   font-size: 28px;
   font-weight: 700;
   background: var(--green);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.08);
 }
 .p-card.right .av {
   background: var(--blue);
@@ -1154,27 +1304,30 @@ h3 {
 .p-card .name {
   font-size: 20px;
   font-weight: 700;
+  color: #fff;
 }
 .p-card .rank {
-  color: var(--grey);
+  color: rgba(255, 255, 255, 0.6);
   font-size: 13px;
   margin-top: 4px;
 }
 .p-card .elo {
   margin-top: 10px;
   font-size: 12px;
-  background: #fff;
-  color: var(--btn);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
   display: inline-block;
   padding: 4px 10px;
   border-radius: 999px;
+  font-variant-numeric: tabular-nums;
 }
 .mid {
   text-align: center;
 }
 .mid .vslabel {
   font-size: 12px;
-  color: var(--grey);
+  color: rgba(255, 255, 255, 0.55);
   margin-bottom: 8px;
   letter-spacing: 0.08em;
 }
@@ -1190,10 +1343,10 @@ h3 {
   transform: rotate(-90deg);
 }
 .gauge .ring-bg {
-  stroke: var(--line);
+  stroke: rgba(255, 255, 255, 0.14);
 }
 .gauge .ring-fill {
-  stroke: var(--green);
+  stroke: var(--lime);
   stroke-dasharray: 402;
   stroke-dashoffset: 402;
   stroke-linecap: round;
@@ -1215,16 +1368,19 @@ h3 {
 }
 .gauge .pct b {
   font-size: 26px;
+  color: #fff;
 }
 .gauge .pct span {
   font-size: 11px;
-  color: var(--grey);
+  color: rgba(255, 255, 255, 0.6);
 }
 .why {
-  background: #fff;
-  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 22px;
-  padding: 30px 34px;
+  padding: 26px 32px 30px;
+  margin: 0 10px 10px;
+  backdrop-filter: blur(8px);
 }
 .why ul {
   list-style: none;
@@ -1237,7 +1393,7 @@ h3 {
 .why li {
   display: flex;
   gap: 12px;
-  color: #2a2a2a;
+  color: rgba(255, 255, 255, 0.82);
   font-size: 14px;
   line-height: 1.6;
 }
@@ -1253,12 +1409,12 @@ h3 {
   margin-top: 1px;
 }
 .why .tag.ok {
-  background: #e6f9ea;
-  color: #1f7d33;
+  background: rgba(199, 255, 60, 0.18);
+  color: var(--lime);
 }
 .why .tag.warn {
-  background: #fff3cd;
-  color: #8a6100;
+  background: rgba(255, 159, 10, 0.2);
+  color: var(--amber);
 }
 
 /* -- Fonctionnalités -- */
@@ -1310,37 +1466,114 @@ h3 {
   margin: 0;
 }
 
-/* -- Méthodologie / données -- */
-.method-band {
+/* -- Comment ça marche (09/09/2026) -- */
+.steps-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  gap: 18px;
+  align-items: stretch;
+}
+.step-card {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 28px 24px;
+  transition:
+    transform 0.45s var(--ease-premium),
+    box-shadow 0.45s var(--ease-premium),
+    border-color 0.3s ease;
+}
+.step-card:hover {
+  transform: translateY(-7px);
+  box-shadow: var(--shadow-elevated);
+  border-color: transparent;
+}
+.step-num {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--green), var(--lime));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 18px rgba(15, 61, 62, 0.3);
+}
+.step-card h4 {
+  font-size: 16px;
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+.step-card p {
+  font-size: 13.5px;
+  color: var(--grey);
+  line-height: 1.55;
+  margin: 0;
+}
+.step-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--line);
+}
+
+/* -- Chiffres clés (09/09/2026, remplace l'ancien .method-band à un seul
+   chiffre — voir le commentaire dans le <template>) -- */
+.stats-band {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   background: linear-gradient(120deg, var(--green), var(--green2) 70%, #051616);
   color: #fff;
   border-radius: 28px;
-  padding: 44px 48px;
+  padding: 44px 40px;
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 40px;
-  align-items: center;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 28px;
 }
-.method-band .num {
-  font-size: 46px;
+.stats-band::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(700px 260px at 85% -10%, rgba(199, 255, 60, 0.16), transparent 65%);
+}
+.stat-cell {
+  text-align: center;
+}
+.stat-num {
+  font-size: clamp(28px, 3.2vw, 42px);
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--lime);
-  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
-.method-band .num small {
-  display: block;
-  font-size: 12px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.7);
-  margin-top: 4px;
+.stat-num small {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  margin-left: 1px;
 }
-.method-band p {
-  font-size: 14.5px;
+.stat-label {
+  margin-top: 9px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.4;
+}
+.stats-note {
+  max-width: 720px;
+  margin: 22px auto 0;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--grey);
   line-height: 1.6;
-  opacity: 0.9;
-  margin: 0;
-  max-width: 520px;
+}
+.stats-note strong {
+  color: var(--ink);
 }
 
 /* -- Emplacement avis (placeholder honnête, pas de faux témoignages) -- */
@@ -1552,10 +1785,17 @@ h3 {
   .feature-grid {
     grid-template-columns: 1fr;
   }
-  .method-band {
+  .steps-row {
     grid-template-columns: 1fr;
-    text-align: center;
-    padding: 32px 28px;
+  }
+  .step-arrow {
+    transform: rotate(90deg);
+    padding: 2px 0;
+  }
+  .stats-band {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 26px 16px;
+    padding: 32px 24px;
   }
   .band-inner {
     padding: 0 20px;
@@ -1620,11 +1860,9 @@ h3 {
     width: 120px;
     height: 120px;
   }
-  .method-band {
-    padding: 28px 20px;
-  }
-  .method-band .num {
-    font-size: 36px;
+  .stats-band {
+    grid-template-columns: 1fr 1fr;
+    padding: 28px 18px;
   }
   .proof-placeholder {
     padding: 28px 20px;
