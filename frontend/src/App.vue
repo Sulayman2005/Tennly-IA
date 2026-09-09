@@ -62,11 +62,21 @@ onMounted(() => {
 <template>
   <header class="topbar">
     <RouterLink to="/" class="logo">
+      <!-- Logo refait le 09/09/2026 ("un logo mieux") : l'ancien mark était un
+           simple cercle à deux arcs (une silhouette de balle vue de dessus,
+           assez générique — plusieurs marques sport utilisent ce même
+           motif). Remplacé par une trajectoire ascendante terminée par la
+           balle, qui illustre directement la promesse de l'app ("Prédis
+           chaque victoire avant qu'elle n'ait lieu" — voir HomeView.vue) :
+           une trajectoire qu'on lit avant qu'elle n'arrive à son point
+           d'impact. Le tracé fin en arrière-plan simule une traînée de
+           mouvement, la balle est le seul élément plein pour rester lisible
+           même à la taille d'une icône d'onglet. -->
       <span class="mark">
-        <svg viewBox="0 0 24 24" fill="none" style="width: 62%; height: 62%">
-          <circle cx="12" cy="12" r="8.4" stroke="#fff" stroke-width="1.7" />
-          <path d="M5.4 6C8.3 8.5 8.3 15.5 5.4 18" stroke="#fff" stroke-width="1.7" stroke-linecap="round" />
-          <path d="M18.6 6C15.7 8.5 15.7 15.5 18.6 18" stroke="#fff" stroke-width="1.7" stroke-linecap="round" />
+        <svg viewBox="0 0 24 24" fill="none" style="width: 64%; height: 64%">
+          <path d="M4.3 17C8 16.6 10.4 8.7 16.6 6.1" stroke="#fff" stroke-opacity="0.4" stroke-width="1.5" stroke-linecap="round" />
+          <path d="M4.3 18.4C9 18 11.8 8.9 18.4 6" stroke="#fff" stroke-width="2.1" stroke-linecap="round" />
+          <circle cx="18.6" cy="5.6" r="2.35" fill="#fff" />
         </svg>
       </span>
       Tennly
@@ -171,6 +181,9 @@ onMounted(() => {
 }
 
 .logo .mark {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   width: 30px;
   height: 30px;
   border-radius: 9px;
@@ -178,6 +191,19 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Léger relief façon icône d'app (09/09/2026, "un logo mieux") : un trait
+     de lumière en haut, une ombre douce sous l'icône plutôt qu'un aplat de
+     couleur tout plat. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 3px 8px rgba(15, 61, 62, 0.35);
+}
+.logo .mark::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(120% 100% at 22% 0%, rgba(255, 255, 255, 0.32), transparent 55%);
 }
 
 nav {

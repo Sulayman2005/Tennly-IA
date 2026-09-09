@@ -99,7 +99,6 @@ const stats = ref([
   { key: 'valueEdge', value: null, decimals: 1, prefix: '+', suffix: ' %', label: 'Value moyenne vs cote de clôture' },
   { key: 'brier', value: null, decimals: 2, prefix: '', suffix: '', label: 'Brier score (plus bas = meilleur)' },
 ])
-const yearsOfHistory = ref(null)
 
 // Compteurs animés "premium" (09/09/2026) : une fois le vrai chiffre reçu de
 // /api/stats, il ne s'affiche plus figé d'un coup mais monte en douceur
@@ -130,7 +129,6 @@ function animateTo(targetRef, finalValue, duration = 1300) {
 }
 const animSuccessRate = ref(0)
 const animAnalyzedMatches = ref(0)
-const animYearsOfHistory = ref(0)
 
 const heroSuccessRate = computed(() => {
   if (stats.value[0].value === null) return '—'
@@ -139,11 +137,6 @@ const heroSuccessRate = computed(() => {
 const heroAnalyzedMatches = computed(() => {
   if (stats.value[1].value === null) return '—'
   return new Intl.NumberFormat('fr-FR').format(Math.round(animAnalyzedMatches.value))
-})
-const heroYearsOfHistory = computed(() => {
-  if (yearsOfHistory.value === null) return '—'
-  const rounded = Math.round(animYearsOfHistory.value)
-  return rounded + (rounded > 1 ? ' ans' : ' an')
 })
 
 // Halo qui suit le curseur dans le hero (09/09/2026, passe "rendu premium") :
@@ -167,19 +160,17 @@ onMounted(async () => {
     stats.value[1].value = data.analyzedMatchesCount
     stats.value[2].value = data.averageValueEdgePercent
     stats.value[3].value = data.brierScore
-    yearsOfHistory.value = data.yearsOfHistory
     // Léger décalage pour démarrer le compteur pile quand .hero-stats entre
     // en scène (animation-delay 0.95s côté CSS) plutôt qu'avant, invisible.
     setTimeout(() => {
       animateTo(animSuccessRate, stats.value[0].value)
       animateTo(animAnalyzedMatches, stats.value[1].value, 1600)
-      animateTo(animYearsOfHistory, yearsOfHistory.value, 1300)
     }, 950)
   } catch (e) {
     // Silencieux : le hero affiche "—" via les computed heroSuccessRate/
-    // heroAnalyzedMatches/heroYearsOfHistory tant que value reste null — plus
-    // besoin d'un message d'erreur visible depuis la suppression du ruban de
-    // stats détaillées (voir .live-ribbon dans le template).
+    // heroAnalyzedMatches tant que value reste null — plus besoin d'un
+    // message d'erreur visible depuis la suppression du ruban de stats
+    // détaillées (voir .live-ribbon dans le template).
   }
   scheduleNextSlide()
   setTimeout(() => {
@@ -251,7 +242,15 @@ function toggleFaq(i) {
       <div class="hero-stats">
         <div class="hs"><b>{{ heroSuccessRate }}</b> de réussite sur 90 jours</div>
         <div class="hs"><b>{{ heroAnalyzedMatches }}</b> matchs analysés</div>
-        <div class="hs"><b>{{ heroYearsOfHistory }}</b> d'historique ATP rejoué</div>
+        <!-- Remplace l'ancien "X an(s) d'historique ATP rejoué" (09/09/2026) :
+             ce chiffre venait de /api/stats et affichait parfois "1 an", ce
+             qui sonnait faible à côté des deux stats précédentes — sur
+             demande explicite, remplacé par un fait tout aussi réel mais qui
+             met en valeur le vrai travail d'intégration fait avec les API
+             externes (voir scripts/import_matches_cron.sh,
+             update_results_cron.sh, import_photos_cron.sh) plutôt qu'un
+             chiffre qui dépend juste de la date de lancement du site. -->
+        <div class="hs"><b>Automatique</b> chaque nuit · résultats &amp; stats à jour</div>
       </div>
     </div>
 
@@ -444,16 +443,22 @@ function toggleFaq(i) {
   <!-- ================= MÉTHODOLOGIE / DONNÉES ================= -->
   <div class="section">
     <div class="method-band" v-reveal>
-      <!-- Corrigé le 09/09/2026 (passe "rendu premium") : ce "4 ans" était
-           codé en dur alors que le hero juste au-dessus affiche déjà le
-           vrai historique venu de /api/stats (yearsOfHistory) — écart
-           silencieux avec le principe "aucune donnée inventée" répété
-           partout ailleurs sur cette page. Réutilise maintenant la même
-           donnée réelle (et le même compteur animé) que le hero. -->
-      <div class="num">{{ heroYearsOfHistory }}<small>d'historique ATP réel</small></div>
+      <!-- Refait le 09/09/2026 : ce bloc affichait auparavant un "X ans/an
+           d'historique ATP" venu de /api/stats (yearsOfHistory) — un chiffre
+           qui dépendait juste de la date de lancement du site (souvent "1
+           an", donc peu impressionnant) et qui, une fois branché sur la
+           vraie donnée, ne collait même plus avec le "plusieurs années" du
+           paragraphe ci-dessous. Remplacé, sur demande explicite, par un
+           fait tout aussi réel mais qui met en avant le vrai travail fait
+           avec les API externes : les 3 synchronisations automatiques qui
+           tournent chaque nuit (voir scripts/import_matches_cron.sh à
+           3h30, update_results_cron.sh à 3h45, import_photos_cron.sh à
+           4h) — un chiffre fixe et vérifiable, pas une estimation. -->
+      <div class="num">3<small>synchronisations automatiques chaque nuit</small></div>
       <p>
-        <strong style="color: #fff">Aucune donnée inventée.</strong> Tennly rejoue chronologiquement plusieurs années de résultats ATP réels pour
-        calculer chaque Elo, chaque score de service et chaque tendance — la méthode est documentée, pas cachée derrière une boîte noire marketing.
+        <strong style="color: #fff">Aucune donnée figée.</strong> Chaque nuit, Tennly récupère automatiquement les nouveaux matchs à venir, clôture ceux
+        déjà joués avec leur vrai score, et met à jour les photos et statistiques des joueurs — sans intervention manuelle, à partir de résultats ATP
+        réellement joués.
       </p>
     </div>
   </div>
@@ -1485,10 +1490,10 @@ h3 {
   .hero-carousel {
     /* En dessous de 820px, le bloc de texte (titre + stats) peut devenir plus
        haut que le carrousel avec ses pastilles positionnées en absolu — elles
-       se retrouvaient alors superposées ("1 an d'historique" chevauchait la
-       pastille Terre battue/Gazon/Dur). On repasse en flux normal (colonne)
-       avec les pastilles après le texte, plutôt qu'en position absolue, pour
-       que la hauteur s'adapte toujours au contenu sans jamais se chevaucher. */
+       se retrouvaient alors superposées au texte du hero. On repasse en flux
+       normal (colonne) avec les pastilles après le texte, plutôt qu'en
+       position absolue, pour que la hauteur s'adapte toujours au contenu
+       sans jamais se chevaucher. */
     flex-direction: column;
     min-height: 560px;
     padding-bottom: 28px;
@@ -1496,15 +1501,49 @@ h3 {
   .hero-content {
     padding: 84px 20px 0;
   }
+  /* Refait le 09/09/2026 : en flex-wrap, les 3 pastilles (labels + lieux,
+     assez longs — "US Open · Australian Open") ne tenaient jamais sur une
+     seule ligne en mobile. La 3e retombait sur une 2e ligne à l'intérieur
+     du même conteneur arrondi, qui perdait alors sa forme de pilule (coins
+     visibles au milieu) — c'est ce rendu cassé qui posait problème. Remplacé
+     par une rangée qui défile horizontalement (une seule ligne, jamais de
+     retour à la ligne) avec CHAQUE pastille comme sa propre pilule autonome,
+     plutôt qu'un unique conteneur pilule partagé qui ne peut pas se couper
+     proprement au bord de l'écran. */
   .hero-dots {
     position: static;
     left: auto;
     bottom: auto;
     transform: none;
-    flex-wrap: wrap;
-    max-width: calc(100% - 32px);
-    justify-content: center;
-    margin: 28px auto 0;
+    background: none;
+    border: none;
+    backdrop-filter: none;
+    padding: 0;
+    max-width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    justify-content: flex-start;
+    gap: 10px;
+    margin: 26px 0 0;
+    padding: 2px 20px 6px;
+  }
+  .hero-dots::-webkit-scrollbar {
+    display: none;
+  }
+  .hero-dot {
+    flex: none;
+    scroll-snap-align: start;
+    background: rgba(10, 20, 20, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(10px);
+  }
+  .hero-dot.active {
+    background: #fff;
+    border-color: #fff;
   }
   .hero-scrollcue {
     display: none;
@@ -1548,7 +1587,10 @@ h3 {
     gap: 16px 22px;
   }
   .hero-dots {
-    padding: 5px;
+    /* Même rangée défilante qu'au-dessus (820px) — juste le gouttière
+       latérale réajustée sur le padding de .hero-content à cette largeur
+       (18px au lieu de 20px), pour rester alignée avec le texte. */
+    padding: 2px 18px 6px;
   }
   .hero-dot {
     padding: 7px 12px;
