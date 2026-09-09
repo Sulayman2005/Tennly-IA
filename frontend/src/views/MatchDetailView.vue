@@ -50,12 +50,31 @@ const postPaymentOpen = ref(false)
 const careerStatsA = ref(null)
 const careerStatsB = ref(null)
 
+// Bilan des confrontations directes entre les deux joueurs de CE match
+// précis (table player_head_to_head, cf. PlayerHeadToHeadController) — même
+// donnée que celle qui alimente déjà l'axe "H2H" du radar comparatif, mais
+// ici sous forme du vrai décompte de victoires plutôt qu'un score normalisé.
+// null tant qu'aucune confrontation n'est connue en base (jamais joué l'un
+// contre l'autre, ou historique pas encore importé) — la carte est alors
+// simplement masquée, jamais un "0-0" trompeur.
+const headToHead = ref(null)
+
 // L'endpoint renvoie du JSON brut via Doctrine DBAL (fetchAssociative), donc
 // des clés snake_case telles quelles en base (wins_hard, first_in_pct, …) —
 // pas de camelCase ici, contrairement aux entités normalisées par API Platform.
 async function fetchCareerStats(playerId) {
   try {
     return await api.get(`/api/players/${playerId}/career-stats`)
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null
+    console.error(e)
+    return null
+  }
+}
+
+async function fetchHeadToHead(playerId, opponentId) {
+  try {
+    return await api.get(`/api/players/${playerId}/head-to-head/${opponentId}`)
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) return null
     console.error(e)
@@ -162,12 +181,14 @@ async function loadMatch() {
     if (match.value.prediction) {
       prediction.value = await api.get(`/api/predictions/${match.value.prediction.id}`)
 
-      const [statsA, statsB] = await Promise.all([
+      const [statsA, statsB, h2h] = await Promise.all([
         fetchCareerStats(match.value.playerA.id),
         fetchCareerStats(match.value.playerB.id),
+        fetchHeadToHead(match.value.playerA.id, match.value.playerB.id),
       ])
       careerStatsA.value = statsA
       careerStatsB.value = statsB
+      headToHead.value = h2h
     }
   } catch (e) {
     if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
@@ -283,6 +304,21 @@ onMounted(async () => {
         <div class="card">
           <h3>Profil comparatif</h3>
           <RadarChart :profile="prediction.radarProfile" :label-a="match.playerA.fullName" :label-b="match.playerB.fullName" />
+        </div>
+
+        <div v-if="headToHead && headToHead.wins_player + headToHead.wins_opponent > 0" class="card h2h-card">
+          <h3>Face-à-face</h3>
+          <div class="h2h-row">
+            <div class="h2h-score" :class="{ lead: headToHead.wins_player > headToHead.wins_opponent }">
+              <span class="h2h-number">{{ headToHead.wins_player }}</span>
+              <span class="h2h-name">{{ match.playerA.fullName.split(' ').at(-1) }}</span>
+            </div>
+            <span class="h2h-sep">—</span>
+            <div class="h2h-score" :class="{ lead: headToHead.wins_opponent > headToHead.wins_player }">
+              <span class="h2h-number">{{ headToHead.wins_opponent }}</span>
+              <span class="h2h-name">{{ match.playerB.fullName.split(' ').at(-1) }}</span>
+            </div>
+          </div>
         </div>
 
         <div v-if="careerRows.length" class="card career-card">
@@ -509,6 +545,46 @@ onMounted(async () => {
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.08em;
+  color: var(--line);
+}
+
+/* Face-à-face — décompte brut des confrontations directes, présenté en
+   gros pour être lu d'un coup d'œil (contrairement au tableau détaillé du
+   palmarès carrière juste en dessous). Le joueur actuellement devant
+   ressort en vert ; égalité : aucun des deux n'est mis en avant. */
+.h2h-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+}
+.h2h-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 84px;
+}
+.h2h-number {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.h2h-score.lead .h2h-number {
+  color: var(--green);
+}
+.h2h-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--grey);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.h2h-sep {
+  font-size: 20px;
+  font-weight: 700;
   color: var(--line);
 }
 
