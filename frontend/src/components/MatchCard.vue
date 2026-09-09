@@ -1,6 +1,7 @@
 <script setup>
+import { reactive } from 'vue'
 import TourBadge from '@/components/TourBadge.vue'
-import { initials, avatarGradient, flagUrl, surfaceCardVars } from '@/utils/playerVisuals'
+import { initials, avatarGradient, flagUrl, surfaceCardVars, hasPhoto, surfaceLabel } from '@/utils/playerVisuals'
 
 const props = defineProps({
   match: { type: Object, required: true },
@@ -17,6 +18,18 @@ const confidenceLabel = {
 function isFavorite(player) {
   return props.match.prediction?.favoritePlayer?.id === player.id
 }
+
+// Une URL Wikimedia en base ne garantit pas que l'image charge encore
+// (page renommée, fichier supprimé côté Commons) : si <img> déclenche
+// @error, on bascule sur l'avatar initiales pour CE joueur précis plutôt
+// que de laisser un cadre cassé — voir showPhoto() ci-dessous.
+const photoErrored = reactive(new Set())
+function onPhotoError(playerId) {
+  photoErrored.add(playerId)
+}
+function showPhoto(player) {
+  return hasPhoto(player) && !photoErrored.has(player.id)
+}
 </script>
 
 <template>
@@ -26,6 +39,7 @@ function isFavorite(player) {
         <TourBadge :tour="match.playerA.tour" on-dark />
         {{ match.tournamentName }} · {{ match.round }}
       </span>
+      <span class="mc-surface">{{ surfaceLabel(match.surface) }}</span>
       <span class="mc-time">
         {{ new Date(match.scheduledAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) }}
         · <span class="mc-status" :class="{ done: match.status !== 'scheduled' }">{{ match.status === 'scheduled' ? 'À venir' : 'Terminé' }}</span>
@@ -33,8 +47,16 @@ function isFavorite(player) {
     </div>
     <div class="mc-body">
       <div class="mc-player">
-        <div class="mc-avatar" :class="{ 'is-favorite': isFavorite(match.playerA) }" :style="avatarGradient(match.playerA.fullName)">
-          <span class="mc-initials">{{ initials(match.playerA.fullName) }}</span>
+        <div class="mc-avatar" :class="{ 'is-favorite': isFavorite(match.playerA) }" :style="!showPhoto(match.playerA) ? avatarGradient(match.playerA.fullName) : null">
+          <img
+            v-if="showPhoto(match.playerA)"
+            :src="match.playerA.photoUrl"
+            class="mc-photo"
+            alt=""
+            loading="lazy"
+            @error="onPhotoError(match.playerA.id)"
+          />
+          <span v-else class="mc-initials">{{ initials(match.playerA.fullName) }}</span>
           <img
             v-if="flagUrl(match.playerA.countryCode)"
             :src="flagUrl(match.playerA.countryCode)"
@@ -55,8 +77,16 @@ function isFavorite(player) {
           <div class="mc-name">{{ match.playerB.fullName }}</div>
           <div class="mc-rank">N°{{ match.playerB.atpWtaRank }} mondial</div>
         </div>
-        <div class="mc-avatar" :class="{ 'is-favorite': isFavorite(match.playerB) }" :style="avatarGradient(match.playerB.fullName)">
-          <span class="mc-initials">{{ initials(match.playerB.fullName) }}</span>
+        <div class="mc-avatar" :class="{ 'is-favorite': isFavorite(match.playerB) }" :style="!showPhoto(match.playerB) ? avatarGradient(match.playerB.fullName) : null">
+          <img
+            v-if="showPhoto(match.playerB)"
+            :src="match.playerB.photoUrl"
+            class="mc-photo"
+            alt=""
+            loading="lazy"
+            @error="onPhotoError(match.playerB.id)"
+          />
+          <span v-else class="mc-initials">{{ initials(match.playerB.fullName) }}</span>
           <img
             v-if="flagUrl(match.playerB.countryCode)"
             :src="flagUrl(match.playerB.countryCode)"
@@ -89,15 +119,30 @@ function isFavorite(player) {
   isolation: isolate;
   background:
     radial-gradient(130% 160% at 105% -10%, var(--surface-glow) 0%, transparent 55%),
-    linear-gradient(135deg, var(--green), var(--green2));
+    linear-gradient(135deg, var(--surface-from), var(--surface-to));
   color: #fff;
   border-radius: 20px;
   padding: 20px 24px;
   margin-bottom: 16px;
   cursor: pointer;
   transform: translateY(0) scale(1);
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.5s ease;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16);
+}
+/* Texture "lignes de court" très discrète — donne un peu de matière au
+   dégradé sans jamais gêner la lecture (opacité 6%), plutôt qu'un aplat de
+   couleur totalement plat. */
+.match-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.07;
+  background-image: repeating-linear-gradient(115deg, #fff 0 1.5px, transparent 1.5px 26px);
+  pointer-events: none;
 }
 /* Sweep lumineux au survol : un seul passage, jamais en boucle. */
 .match-card::before {
@@ -130,9 +175,10 @@ function isFavorite(player) {
   position: relative;
   z-index: 2;
   display: flex;
+  align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 6px 10px;
   font-size: 11px;
   opacity: 0.78;
   margin-bottom: 18px;
@@ -141,6 +187,16 @@ function isFavorite(player) {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+.mc-surface {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 10px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  margin-right: auto;
 }
 .mc-body {
   position: relative;
@@ -170,6 +226,7 @@ function isFavorite(player) {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   box-shadow:
     inset 0 0 0 2px rgba(255, 255, 255, 0.22),
     0 6px 16px rgba(0, 0, 0, 0.28);
@@ -183,6 +240,11 @@ function isFavorite(player) {
     inset 0 0 0 2px rgba(255, 255, 255, 0.3),
     0 0 0 3px var(--lime),
     0 6px 18px rgba(199, 255, 60, 0.32);
+}
+.mc-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .mc-initials {
   font-size: 15px;
@@ -231,13 +293,6 @@ function isFavorite(player) {
   font-weight: 800;
   letter-spacing: 0.04em;
   color: rgba(255, 255, 255, 0.8);
-}
-.mc-status {
-  font-weight: 700;
-  opacity: 0.9;
-}
-.mc-status.done {
-  opacity: 0.65;
 }
 .mc-status {
   font-weight: 700;
@@ -297,25 +352,9 @@ function isFavorite(player) {
     height: 28px;
     font-size: 9px;
   }
-}
-
-@media (max-width: 480px) {
-  .match-card {
-    padding: 16px 18px;
-  }
-  .mc-body {
-    gap: 8px;
-  }
-  .mc-photo {
-    width: 30px;
-    height: 30px;
-    font-size: 11px;
-  }
-  .mc-name {
-    font-size: 13px;
-  }
-  .mc-vs {
-    font-size: 10px;
+  .mc-surface {
+    order: 3;
+    margin-right: 0;
   }
 }
 </style>

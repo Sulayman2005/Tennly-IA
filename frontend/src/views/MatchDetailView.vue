@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, ApiError } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
@@ -8,27 +8,30 @@ import PaywallModal from '@/components/PaywallModal.vue'
 import PostPaymentModal from '@/components/PostPaymentModal.vue'
 import TourBadge from '@/components/TourBadge.vue'
 import ProbabilityGauge from '@/components/ProbabilityGauge.vue'
-import { initials, avatarGradient, flagUrl, surfaceCardVars } from '@/utils/playerVisuals'
+import { initials, avatarGradient, flagUrl, surfaceCardVars, hasPhoto, surfaceLabel } from '@/utils/playerVisuals'
 
 const props = defineProps({ id: { type: [String, Number], required: true } })
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
-// Un 403 sur /api/predictions/{id} peut venir de deux cas différents (voir
-// Prediction::class côté backend) : un visiteur non connecté (le plus
-// fréquent), ou un compte déjà connecté mais sans abonnement actif. Seul le
-// premier cas doit proposer "Se connecter" — un utilisateur déjà authentifié
-// n'a pas de compte à retrouver, il lui faut une formule.
 function goToLogin() {
   router.push({ name: 'connexion', query: { redirect: route.fullPath } })
 }
 
-// isFavorite/avatarGradient/flag/surfaceCardVars : voir utils/playerVisuals.js
-// — même traitement visuel que MatchCard.vue (liste /matchs), pour que le
-// joueur retrouve exactement le même avatar entre la liste et la fiche.
 function isFavorite(player) {
   return match.value?.prediction?.favoritePlayer?.id === player.id
+}
+
+// Même repli photo → avatar initiales qu'en liste (MatchCard.vue) : voir
+// son commentaire sur photoErrored/showPhoto pour le pourquoi (URL Wikimedia
+// en base mais image devenue inaccessible).
+const photoErrored = reactive(new Set())
+function onPhotoError(playerId) {
+  photoErrored.add(playerId)
+}
+function showPhoto(player) {
+  return hasPhoto(player) && !photoErrored.has(player.id)
 }
 
 const match = ref(null)
@@ -38,19 +41,10 @@ const forbidden = ref(false)
 const paywallOpen = ref(false)
 const postPaymentOpen = ref(false)
 
-// Retour depuis Stripe Checkout après paiement (voir CheckoutSessionController/
-// StripeCheckoutService côté backend, qui renvoie ici avec ?paiement=reussi).
 const justPaid = ref(route.query.paiement === 'reussi')
 const checkoutSessionId = ref(typeof route.query.session_id === 'string' ? route.query.session_id : '')
 const activating = ref(false)
 
-/**
- * Une fois PostPaymentModal.vue arrivé à créer le compte (ou connecter
- * l'utilisateur) ET relier le paiement (CheckoutSessionLinkController), plus
- * besoin d'attendre un webhook : on recharge directement le match, qui doit
- * maintenant s'afficher débloqué. On nettoie aussi l'URL pour ne pas
- * rouvrir ce panneau à un rechargement de page.
- */
 async function onPostPaymentLinked() {
   postPaymentOpen.value = false
   router.replace({ path: route.path })
@@ -59,34 +53,13 @@ async function onPostPaymentLinked() {
 
 async function loadMatch() {
   try {
-    // GET /api/tennis_matches/{id} : infos publiques du match (aperçu gratuit).
     match.value = await api.get(`/api/tennis_matches/${props.id}`)
     forbidden.value = false
 
-    // match.value.prediction est un objet embarqué (voir Prediction::class
-    // côté backend), mais son contenu dépend des droits de l'utilisateur
-    // (décision produit du 02/09/2026) : tout le monde reçoit au moins
-    // { id }, alors que favoritePlayer/probabilityFavorite/confidenceLevel
-    // (l'aperçu gratuit, section 3.3.1) n'apparaissent que pour un
-    // ROLE_ADMIN ou un abonné actif (groupe 'match:read:prediction', ajouté
-    // par Serializer/TennisMatchContextBuilder.php). On teste ici sur la
-    // seule présence de l'objet (donc sur son id) plutôt que sur
-    // favoritePlayer : même un non-abonné doit déclencher cet appel, pour
-    // que le 401/403 ci-dessous active bien la carte paywall — sans ça, un
-    // visiteur non connecté ne verrait plus jamais "Débloquer l'analyse
-    // complète". La fiche détaillée (section 3.3.2-3.3.4 : radar, facteurs
-    // d'explication, cote de marché) est chargée séparément via cet id, car
-    // l'opération GET /api/predictions/{id} exige déjà un abonnement actif.
     if (match.value.prediction) {
       prediction.value = await api.get(`/api/predictions/${match.value.prediction.id}`)
     }
   } catch (e) {
-    // 403 : compte connecté mais sans abonnement actif (voir Prediction::class
-    // côté backend). 401 "JWT Token not found" : visiteur non connecté du
-    // tout — le firewall Symfony rejette la requête avant même d'évaluer
-    // l'expression de sécurité, donc jamais de 403 dans ce cas précis. Les
-    // deux veulent dire la même chose côté interface : l'analyse complète
-    // n'est pas accessible à cet utilisateur, donc la carte verrouillée.
     if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
       forbidden.value = true
     } else {
@@ -99,35 +72,15 @@ onMounted(async () => {
   await loadMatch()
   loading.value = false
 
-  // Décision produit du 03/09/2026 : le paiement peut désormais démarrer
-  // avant toute connexion (voir choosePlan() dans PaywallModal.vue). Un
-  // retour de paiement sans être connecté veut donc dire qu'aucun compte
-  // n'existe encore pour ce paiement précis — inutile d'attendre le webhook
-  // Stripe, PostPaymentModal.vue crée le compte (ou connecte l'utilisateur)
-  // puis relie ce paiement lui-même (CheckoutSessionLinkController).
   if (justPaid.value && !auth.isAuthenticated) {
     postPaymentOpen.value = true
   } else if (justPaid.value && forbidden.value) {
-    // Utilisateur déjà connecté au moment de payer : le webhook Stripe
-    // (StripeWebhookController) active l'abonnement de façon asynchrone, et
-    // au retour immédiat de Checkout il peut ne pas encore être passé. Un
-    // seul nouvel essai après un court délai suffit dans l'immense majorité
-    // des cas, plutôt que de laisser l'utilisateur sur l'écran verrouillé
-    // alors qu'il vient tout juste de payer.
     activating.value = true
     setTimeout(async () => {
       await loadMatch()
       activating.value = false
     }, 3000)
   } else if (forbidden.value && auth.isAuthenticated) {
-    // Un utilisateur déjà connecté (mais non abonné) a déjà vu la carte
-    // verrouillée par le passé : lui refaire cliquer "Débloquer l'analyse
-    // complète" à chaque fois est une étape en trop, vue et revue (demande
-    // explicite du 03/09/2026). On ouvre donc directement la popup de choix
-    // de formule dès l'arrivée sur la fiche — la carte verrouillée reste
-    // affichée derrière, au cas où l'utilisateur ferme la popup sans payer.
-    // Un visiteur non connecté, lui, garde la carte verrouillée telle
-    // quelle : il doit d'abord choisir "Créer un compte" ou "Se connecter".
     paywallOpen.value = true
   }
 })
@@ -142,9 +95,18 @@ onMounted(async () => {
     <template v-else-if="match">
       <div class="card face-off" :style="surfaceCardVars(match.surface)">
         <TourBadge :tour="match.playerA.tour" on-dark class="circuit-badge" />
+        <span class="surface-badge">{{ surfaceLabel(match.surface) }}</span>
         <div class="player">
-          <div class="avatar" :class="{ 'is-favorite': isFavorite(match.playerA) }" :style="avatarGradient(match.playerA.fullName)">
-            <span class="avatar-initials">{{ initials(match.playerA.fullName) }}</span>
+          <div class="avatar" :class="{ 'is-favorite': isFavorite(match.playerA) }" :style="!showPhoto(match.playerA) ? avatarGradient(match.playerA.fullName) : null">
+            <img
+              v-if="showPhoto(match.playerA)"
+              :src="match.playerA.photoUrl"
+              class="avatar-photo"
+              alt=""
+              loading="lazy"
+              @error="onPhotoError(match.playerA.id)"
+            />
+            <span v-else class="avatar-initials">{{ initials(match.playerA.fullName) }}</span>
             <img
               v-if="flagUrl(match.playerA.countryCode)"
               :src="flagUrl(match.playerA.countryCode)"
@@ -159,13 +121,6 @@ onMounted(async () => {
         </div>
 
         <div class="mid">
-          <!-- match.prediction existe désormais pour tout le monde (au moins
-               { id }, voir TennisMatch::$prediction côté backend) — seul un
-               ROLE_ADMIN ou un abonné actif reçoit aussi favoritePlayer /
-               probabilityFavorite (groupe 'match:read:prediction'). D'où le
-               test sur favoritePlayer et non sur match.prediction seul :
-               sinon la jauge tenterait de s'afficher avec des données
-               absentes pour un non-abonné. -->
           <template v-if="match.prediction?.favoritePlayer">
             <div class="vslabel">PROBABILITÉ</div>
             <ProbabilityGauge
@@ -177,8 +132,16 @@ onMounted(async () => {
         </div>
 
         <div class="player">
-          <div class="avatar" :class="{ 'is-favorite': isFavorite(match.playerB) }" :style="avatarGradient(match.playerB.fullName)">
-            <span class="avatar-initials">{{ initials(match.playerB.fullName) }}</span>
+          <div class="avatar" :class="{ 'is-favorite': isFavorite(match.playerB) }" :style="!showPhoto(match.playerB) ? avatarGradient(match.playerB.fullName) : null">
+            <img
+              v-if="showPhoto(match.playerB)"
+              :src="match.playerB.photoUrl"
+              class="avatar-photo"
+              alt=""
+              loading="lazy"
+              @error="onPhotoError(match.playerB.id)"
+            />
+            <span v-else class="avatar-initials">{{ initials(match.playerB.fullName) }}</span>
             <img
               v-if="flagUrl(match.playerB.countryCode)"
               :src="flagUrl(match.playerB.countryCode)"
@@ -282,14 +245,6 @@ onMounted(async () => {
   animation: fadeUp 0.5s ease both;
 }
 
-/* Fond "wow" cohérent avec MatchCard.vue (liste /matchs) : même dégradé
-   teal + halo coloré selon la surface, plutôt que le fond clair générique
-   hérité de la classe .card partagée avec le reste de l'app — voir
-   utils/playerVisuals.js pour --surface-glow. Les deux règles CSS custom
-   properties ci-dessous (--card, --green) sont redéfinies UNIQUEMENT dans
-   ce sous-arbre : elles pilotent l'anneau de ProbabilityGauge.vue (qui les
-   consomme via var(--card)/var(--green)) sans toucher au composant lui-même
-   — sinon l'anneau se fondrait dans ce nouveau fond sombre. */
 .face-off {
   position: relative;
   overflow: hidden;
@@ -302,10 +257,30 @@ onMounted(async () => {
   color: #fff;
   background:
     radial-gradient(130% 160% at 50% -20%, var(--surface-glow) 0%, transparent 60%),
-    linear-gradient(135deg, var(--green), var(--green2));
+    linear-gradient(135deg, var(--surface-from), var(--surface-to));
   --card: rgba(255, 255, 255, 0.16);
   --green: var(--lime);
   box-shadow: 0 22px 44px -18px var(--surface-shadow);
+  animation: cardIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.face-off::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.07;
+  background-image: repeating-linear-gradient(115deg, #fff 0 1.5px, transparent 1.5px 26px);
+  pointer-events: none;
 }
 .circuit-badge {
   position: absolute;
@@ -313,6 +288,19 @@ onMounted(async () => {
   left: 50%;
   transform: translateX(-50%);
   z-index: 2;
+}
+.surface-badge {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  z-index: 2;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
 }
 .player {
   position: relative;
@@ -327,16 +315,23 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   margin: 0 auto 14px;
   box-shadow:
     inset 0 0 0 2px rgba(255, 255, 255, 0.22),
     0 8px 20px rgba(0, 0, 0, 0.3);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .avatar.is-favorite {
   box-shadow:
     inset 0 0 0 2px rgba(255, 255, 255, 0.3),
     0 0 0 3px var(--lime),
     0 8px 22px rgba(199, 255, 60, 0.32);
+}
+.avatar-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .avatar-initials {
   font-weight: 800;
@@ -451,6 +446,7 @@ h3 {
     grid-template-columns: 1fr;
     text-align: center;
     gap: 20px;
+    padding-top: 44px;
   }
   .circuit-badge {
     position: static;
@@ -458,6 +454,11 @@ h3 {
     justify-self: center;
     width: auto;
     margin-bottom: 8px;
+  }
+  .surface-badge {
+    top: 16px;
+    right: 50%;
+    transform: translateX(50%);
   }
 }
 </style>

@@ -6,26 +6,11 @@ import MatchCard from '@/components/MatchCard.vue'
 
 const router = useRouter()
 
-// Avant : deux onglets "À venir" / "Résultats récents" filtrant chacun sur
-// le statut + une date de coupure — source de confusion (le principe
-// n'était pas clair) et surtout d'un onglet "À venir" vide dès qu'aucun
-// match n'a une date strictement future en base, même quand des matchs
-// existent bel et bien. Remplacé par une liste unique, tous statuts et
-// toutes compétitions confondus, la plus simple à comprendre : "tous les
-// matchs, un point c'est tout" (voir MatchCard, qui indique désormais
-// lui-même "À venir"/"Terminé" par carte plutôt que par onglet).
 const matches = ref([])
 const loading = ref(true)
 const error = ref(null)
 let pollTimer = null
 
-// Une seule requête sans itemsPerPage explicite ne renvoie qu'une page de la
-// taille par défaut d'API Platform (bien en dessous du nombre réel de matchs
-// à venir une fois le calendrier ATP/WTA importé — voir ml-service/
-// import_upcoming_matches.py) : on suivait silencieusement une troncature,
-// jamais un vrai "tous les matchs". On demande donc explicitement le
-// itemsPerPage maximum autorisé par l'API PUIS on parcourt hydra:view/
-// hydra:next tant qu'il y en a, pour ne jamais couper la liste.
 async function fetchAllPages(query) {
   let path = `/api/tennis_matches${query}`
   const all = []
@@ -43,32 +28,6 @@ async function loadMatches({ silent = false } = {}) {
     error.value = null
   }
   try {
-    // Priorité absolue aux matchs "scheduled" (à venir) — c'est là que
-    // l'analyse IA sert vraiment (voir demande explicite : "les matchs finis
-    // on s'en fout un peu, ce qu'on veut c'est analyser les prochains
-    // matchs") — récupérés en intégralité (toutes les pages), triés du plus
-    // imminent au plus lointain. Les matchs déjà joués passent ensuite, en
-    // second plan, une seule page suffit largement pour ceux-là.
-    // order[id]=asc en second critère, explicitement : dès qu'un order[...]
-    // est passé en query string, il remplace entièrement l'attribut order
-    // par défaut de la ressource côté backend (TennisMatch.php) — y compris
-    // son propre tri secondaire sur id. Sans ce second critère ici, deux
-    // matchs partageant le même scheduledAt (plusieurs courts au même
-    // horaire) n'ont plus aucun ordre stable d'une page à l'autre, et
-    // hydra:next peut alors renvoyer un même match deux fois (ou en sauter
-    // un) — c'était la cause du doublon visible sur /matchs.
-    // Correctif du 03/09/2026 (veille de démo) : un match "scheduled" dont la
-    // date est déjà passée (résultat pas encore remonté par
-    // import_real_data.py, qui dépend d'une source historique à J-plusieurs-
-    // jours, alors que import_upcoming_matches.py, lui, avance au jour le
-    // jour via LiveTennisAPI) s'affichait comme "à venir" avec une date dans
-    // le passé — repéré en préparant la démo. Le filtre scheduledAt était
-    // déjà prévu pour ça côté backend (TennisMatch.php, DateFilter, voir son
-    // commentaire) mais jamais branché ici. On ne garde donc que les matchs
-    // dont scheduledAt est strictement postérieur à l'instant du chargement :
-    // un match ainsi masqué reste inchangé en base et réapparaîtra de
-    // lui-même en "Terminé" dès qu'import_real_data.py aura remonté son
-    // vrai résultat.
     const nowIso = new Date().toISOString()
     const [upcoming, finishedData] = await Promise.all([
       fetchAllPages(`?status=scheduled&scheduledAt[strictly_after]=${encodeURIComponent(nowIso)}&order[scheduledAt]=asc&order[id]=asc&itemsPerPage=50`),
@@ -86,20 +45,10 @@ async function loadMatches({ silent = false } = {}) {
 
 onMounted(() => {
   loadMatches()
-  // Rafraîchissement automatique : un match "scheduled" peut passer à
-  // "finished" (résultat réel + nouvelle prédiction) entre deux visites, dès
-  // que le script d'import ml-service tourne à nouveau. On réinterroge
-  // l'API en tâche de fond toutes les 60s (sans état de chargement ni
-  // erreur visible entre-temps, `silent: true`) pour que la page reste à
-  // jour sans que l'utilisateur ait besoin de la recharger lui-même.
   pollTimer = setInterval(() => loadMatches({ silent: true }), 60000)
 })
 onUnmounted(() => clearInterval(pollTimer))
 
-// Un clic sur un match amène toujours à sa fiche détaillée (MatchDetailView.vue),
-// qu'il soit abonné ou non. C'est cette fiche, et elle seule, qui décide si
-// l'aperçu suffit ou si elle affiche la carte verrouillée + le bouton
-// "Débloquer l'analyse complète" ouvrant PaywallModal — jamais cette liste.
 function openMatch(match) {
   router.push({ name: 'match-detail', params: { id: match.id } })
 }
@@ -107,14 +56,21 @@ function openMatch(match) {
 
 <template>
   <section class="matches">
+    <!-- Fond décoratif de l'en-tête : plusieurs taches de couleur (teal,
+         lime, bleu dur, terre battue — les mêmes familles que les surfaces
+         des cartes juste en dessous) qui dérivent très lentement, plutôt
+         qu'un unique aplat vert. Purement décoratif (aria-hidden), toujours
+         derrière le texte (z-index), et neutralisé si l'utilisateur préfère
+         moins de mouvement. -->
+    <div class="hero-glow" aria-hidden="true">
+      <span class="blob blob-a"></span>
+      <span class="blob blob-b"></span>
+      <span class="blob blob-c"></span>
+    </div>
+
     <div class="page-head">
-      <div class="eyebrow"><i></i>IA TENNIS · ANALYSES DU JOUR</div>
+      <div class="eyebrow"><i></i>CIRCUIT ATP & WTA · PROGRAMME DU JOUR</div>
       <h1>Chaque <span class="accent">match</span>, une analyse claire.</h1>
-      <!-- Mis à jour le 02/09/2026 : le favori pressenti + la probabilité
-           n'est plus un aperçu gratuit (voir TennisMatch::$prediction /
-           Prediction::$favoritePlayer côté backend, réservés aux admins et
-           abonnés actifs) — l'ancien texte promettait un aperçu public qui
-           n'existe plus. -->
       <p class="sub">Favori pressenti, probabilité et analyse complète (radar, facteurs, cote de valeur) réservés à nos abonnés — le calendrier des matchs à venir reste consultable par tous.</p>
     </div>
 
@@ -134,6 +90,7 @@ function openMatch(match) {
 
 <style scoped>
 .matches {
+  position: relative;
   padding: 48px 0 60px;
 }
 
@@ -147,13 +104,78 @@ function openMatch(match) {
     transform: translateY(0);
   }
 }
+@keyframes drift {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(var(--drift-x, 24px), var(--drift-y, -18px)) scale(1.08);
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .match-item {
     animation-duration: 0.001ms !important;
   }
+  .blob {
+    animation: none !important;
+  }
+}
+
+.hero-glow {
+  position: absolute;
+  top: -60px;
+  left: -10%;
+  right: -10%;
+  height: 340px;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.35;
+  animation: drift 16s ease-in-out infinite;
+}
+.blob-a {
+  width: 320px;
+  height: 320px;
+  top: -80px;
+  left: 2%;
+  background: radial-gradient(circle, var(--lime), transparent 70%);
+  --drift-x: 30px;
+  --drift-y: 14px;
+}
+.blob-b {
+  width: 280px;
+  height: 280px;
+  top: -40px;
+  left: 32%;
+  background: radial-gradient(circle, var(--blue), transparent 70%);
+  animation-duration: 20s;
+  animation-delay: -4s;
+  --drift-x: -26px;
+  --drift-y: 20px;
+}
+.blob-c {
+  width: 260px;
+  height: 260px;
+  top: 10px;
+  right: 6%;
+  background: radial-gradient(circle, var(--clay), transparent 70%);
+  animation-duration: 18s;
+  animation-delay: -9s;
+  --drift-x: -20px;
+  --drift-y: -16px;
 }
 
 .page-head {
+  position: relative;
+  z-index: 1;
   max-width: 640px;
   margin: 0 0 32px;
 }
@@ -174,6 +196,16 @@ function openMatch(match) {
   border-radius: 50%;
   background: var(--lime);
   box-shadow: 0 0 0 3px rgba(199, 255, 60, 0.25);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgba(199, 255, 60, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(199, 255, 60, 0.12);
+  }
 }
 h1 {
   font-size: 34px;
@@ -197,6 +229,8 @@ h1 .accent {
 }
 
 .state-msg {
+  position: relative;
+  z-index: 1;
   color: var(--grey);
   font-size: 14px;
   padding: 8px 0;
@@ -205,6 +239,8 @@ h1 .accent {
   color: var(--red);
 }
 .state-empty {
+  position: relative;
+  z-index: 1;
   border: 1.5px dashed var(--line);
   border-radius: 22px;
   padding: 52px 20px;
@@ -221,6 +257,8 @@ h1 .accent {
 }
 
 .match-list {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: 2px;

@@ -1,8 +1,8 @@
-// Logique visuelle partagée pour représenter un joueur/une joueuse sans
-// vraie photo (Player.photoUrl reste vide côté backend tant que les droits
-// ne sont pas obtenus — voir Player.php) : avatar en dégradé déterministe +
-// petit drapeau image, et couleur d'ambiance de carte selon la surface du
-// match.
+// Logique visuelle partagée pour représenter un joueur/une joueuse : vraie
+// photo quand elle est connue (Player.photoUrl, voir ml-service/
+// import_player_photos_wikipedia.py), sinon avatar en dégradé déterministe +
+// petit drapeau image ; et identité visuelle (dégradé + accent) selon la
+// surface du match.
 // Utilisé par MatchCard.vue (liste /matchs) et MatchDetailView.vue (fiche
 // détaillée) — factorisé ici pour que les deux restent visuellement
 // identiques sans dupliquer la palette à deux endroits qui finiraient par
@@ -43,6 +43,17 @@ export function avatarGradient(fullName) {
   return { background: `linear-gradient(135deg, ${from}, ${to})` }
 }
 
+// Vraie photo disponible pour ce joueur ? (Player.photoUrl, voir
+// ml-service/import_player_photos_wikipedia.py — reste vide tant qu'aucune
+// photo sous licence libre n'a été trouvée pour ce joueur précis). Un
+// simple champ non-vide suffit ici : le composant appelant est responsable
+// de basculer sur l'avatar initiales en repli si l'image échoue au
+// chargement (URL Wikimedia cassée/renommée) — voir onPhotoError() dans
+// MatchCard.vue / MatchDetailView.vue.
+export function hasPhoto(player) {
+  return typeof player?.photoUrl === 'string' && player.photoUrl.length > 0
+}
+
 // Drapeau à partir du code pays (voir Player.php, countryCode) — codes à 3
 // lettres façon IOC/ITF, casse non fiable ("USA" vs "usa" selon les
 // joueurs), d'où le .toUpperCase(). Volontairement pas de repli par défaut
@@ -76,16 +87,44 @@ export function flagUrl(countryCode) {
   return a2 ? `https://flagcdn.com/48x36/${a2}.png` : null
 }
 
-// Couleur d'ambiance par surface (dur/terre/gazon) : donne à chaque carte
-// une identité propre au premier coup d'oeil, tout en restant dans une
-// famille de teintes cohérente avec le reste de l'app (--blue et --clay
-// existent déjà ailleurs — voir TourBadge.vue et index.html — le vert gazon
-// est nouveau, choisi pour rester dans la même caisse de résonance que
-// --green/--lime plutôt que d'importer une couleur qui jure).
-const SURFACE_ACCENTS = {
-  dur: '#0071e3',
-  terre: '#c1652e',
-  gazon: '#3ea56b',
+// Identité visuelle par surface — chaque surface a désormais SON dégradé de
+// fond (pas seulement un halo par-dessus un fond vert fixe partagé par
+// tous : demande explicite du 09/09/2026, "pas un seul fond vert je sais
+// plus de peps sur la page"). Choix ancrés dans la vraie identité de chaque
+// surface plutôt qu'arbitraires : bleu nuit → bleu dur pour le dur (courts
+// durs à dominante bleue sur le circuit, ex. US Open/Australian Open),
+// terre cuite → ocre pour la terre battue (Roland-Garros), vert profond →
+// vert gazon pour le gazon (Wimbledon, seule surface qui garde le vert
+// historique de la marque), et une variante violette pour l'indoor
+// (éclairage de salle). --terre/--clay existent déjà comme tokens globaux
+// (voir tokens.css, section HomeView) : réutilisés ici tels quels pour la
+// terre battue plutôt que d'inventer une deuxième paire de couleurs terre
+// battue qui finirait par diverger.
+//
+// Correctif du 09/09/2026 : les clés de cette table (et de l'ancienne
+// SURFACE_ACCENTS qu'elle remplace) étaient 'dur' / 'terre' / 'gazon', alors
+// que Surface::TERRE_BATTUE (voir backend/src/Entity/Enum/Surface.php) se
+// sérialise en 'terre_battue' — la clé 'terre' ne correspondait donc à
+// AUCUN match réel. Tous les matchs sur terre battue (et sur indoor, absent
+// de la table) retombaient silencieusement sur l'accent gazon par défaut,
+// ce qui explique une bonne partie du "tout est vert" repéré : pas
+// seulement un choix de design daté, un vrai bug d'accord de clé.
+const SURFACE_GRADIENTS = {
+  dur: ['#04213f', '#0071e3'],
+  terre_battue: ['#6e3618', '#c1652e'],
+  gazon: ['#0f3d3e', '#3ea56b'],
+  indoor: ['#241b3d', '#6b3fa0'],
+}
+
+const SURFACE_LABELS = {
+  dur: 'Dur',
+  terre_battue: 'Terre battue',
+  gazon: 'Gazon',
+  indoor: 'Indoor',
+}
+
+export function surfaceLabel(surface) {
+  return SURFACE_LABELS[surface] ?? 'Surface'
 }
 
 function hexToRgba(hex, alpha) {
@@ -96,14 +135,19 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
-// Variables CSS à poser en :style sur le conteneur (fond dégradé teal +
-// halo coloré selon la surface) — voir .match-card (MatchCard.vue) et
-// .face-off (MatchDetailView.vue), qui consomment ces variables.
+// Variables CSS à poser en :style sur le conteneur — fond dégradé propre à
+// la surface (--surface-from/--surface-to) + halo et ombre assortis
+// (--surface-glow/--surface-shadow/--surface-tint) — voir .match-card
+// (MatchCard.vue) et .face-off (MatchDetailView.vue), qui consomment ces
+// variables.
 export function surfaceCardVars(surface) {
-  const accent = SURFACE_ACCENTS[surface] ?? SURFACE_ACCENTS.gazon
+  const [from, to] = SURFACE_GRADIENTS[surface] ?? SURFACE_GRADIENTS.dur
+  const accent = to
   return {
-    '--surface-glow': hexToRgba(accent, 0.32),
+    '--surface-from': from,
+    '--surface-to': to,
+    '--surface-glow': hexToRgba(accent, 0.4),
     '--surface-shadow': hexToRgba(accent, 0.38),
-    '--surface-tint': hexToRgba(accent, 0.16),
+    '--surface-tint': hexToRgba(accent, 0.18),
   }
 }

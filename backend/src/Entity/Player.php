@@ -100,12 +100,22 @@ class Player
     private ?string $externalRef = null;
 
     /**
-     * Chemin/URL du visuel officiel du joueur, une fois les droits obtenus.
-     * Tant que ce champ est vide, le frontend affiche le cadre photo
-     * générique (voir prototype.html, .mc-photo) — jamais une image générée.
+     * URL de la photo officielle du joueur (Wikipedia/Wikimedia, licence
+     * libre — voir ml-service/import_player_photos_wikipedia.py). Tant que
+     * ce champ est vide pour un joueur donné, le frontend affiche l'avatar
+     * générique (initiales + dégradé, voir utils/playerVisuals.js) —
+     * jamais une image générée à sa place.
+     *
+     * Groups (09/09/2026) : ajout de 'match:read' en plus de 'player:read'.
+     * TennisMatch::class normalise avec le seul groupe 'match:read'
+     * (context propagé tel quel aux entités imbriquées playerA/playerB) —
+     * sans ce groupe ici, photoUrl restait invisible sur GET
+     * /api/tennis_matches malgré une valeur en base, alors qu'il était bien
+     * renvoyé sur GET /api/players. Nécessaire pour afficher la photo dans
+     * MatchCard.vue et la carte face-off de MatchDetailView.vue.
      */
-    #[ORM\Column(length: 255, nullable: true)]
-    #[Groups(['player:read'])]
+    #[ORM\Column(length: 500, nullable: true)]
+    #[Groups(['player:read', 'match:read'])]
     private ?string $photoUrl = null;
 
     public function getId(): ?int
