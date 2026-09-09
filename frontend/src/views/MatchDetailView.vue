@@ -341,7 +341,13 @@ onMounted(async () => {
            au-dessus n'a pas cette contrainte. -->
       <p class="match-meta">{{ match.tournamentName }} · {{ match.round }}</p>
 
-      <div class="card face-off" :style="surfaceCardVars(match.surface)">
+      <!-- Face-off (11/09/2026) : masqué une fois le match terminé, sur
+           demande explicite — "enlève ce qui est en bleu en haut quand le
+           match est terminé, garde juste l'image du joueur qui a gagné".
+           Reste affiché pour 'scheduled'/'live' (avant/pendant le match,
+           la confrontation des deux joueurs a du sens), remplacé par
+           .result-showcase juste en dessous une fois 'finished'/'walkover'. -->
+      <div v-if="match.status === 'scheduled' || match.status === 'live'" class="card face-off" :style="surfaceCardVars(match.surface)">
         <TourBadge :tour="match.playerA.tour" on-dark class="circuit-badge" />
         <span class="surface-badge">{{ surfaceLabel(match.surface) }}</span>
         <div class="player">
