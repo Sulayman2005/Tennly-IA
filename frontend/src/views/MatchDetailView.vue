@@ -82,6 +82,77 @@ async function fetchHeadToHead(playerId, opponentId) {
   }
 }
 
+// "Forme du moment" (table player_snapshot, cf. PlayerSnapshotController) :
+// les mêmes chiffres qui alimentent déjà EN INTERNE les axes "Service",
+// "Retour", "Forme" et "Repos" du radar comparatif (normalisés 1-99 côté
+// backend) — ici sous leur vraie valeur (jours, minutes, %, delta Elo), qui
+// n'était jusqu'ici visible nulle part.
+const snapshotA = ref(null)
+const snapshotB = ref(null)
+
+async function fetchSnapshot(playerId) {
+  try {
+    return await api.get(`/api/players/${playerId}/snapshot`)
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null
+    console.error(e)
+    return null
+  }
+}
+
+function pctRow(label, statsA, statsB, key, { higher = true } = {}) {
+  const rawA = statsA?.[key]
+  const rawB = statsB?.[key]
+  const a = rawA != null ? Math.round(rawA * 1000) / 10 : null
+  const b = rawB != null ? Math.round(rawB * 1000) / 10 : null
+  if (a == null && b == null) return null
+  return {
+    label,
+    valueA: a != null ? `${a}%` : '—',
+    valueB: b != null ? `${b}%` : '—',
+    rawA: a,
+    rawB: b,
+    higher,
+  }
+}
+
+function numberRow(label, statsA, statsB, key, { suffix = '', higher = true, compare = true, signed = false } = {}) {
+  const rawA = statsA?.[key] ?? null
+  const rawB = statsB?.[key] ?? null
+  if (rawA == null && rawB == null) return null
+  const fmt = (v) => {
+    if (v == null) return '—'
+    const n = Math.round(v)
+    return signed && n > 0 ? `+${n}${suffix}` : `${n}${suffix}`
+  }
+  return {
+    label,
+    valueA: fmt(rawA),
+    valueB: fmt(rawB),
+    rawA: compare ? rawA : null,
+    rawB: compare ? rawB : null,
+    higher,
+  }
+}
+
+const snapshotRows = computed(() => {
+  if (!snapshotA.value && !snapshotB.value) return []
+  const a = snapshotA.value
+  const b = snapshotB.value
+
+  return [
+    pctRow('Forme récente (victoires)', a, b, 'recent_form'),
+    numberRow('Dynamique (Elo, 8 derniers matchs)', a, b, 'momentum', { signed: true }),
+    numberRow('Repos avant ce match', a, b, 'days_rest', { suffix: ' j', compare: false }),
+    numberRow('Minutes jouées (10 derniers jours)', a, b, 'fatigue_minutes', { suffix: ' min', higher: false }),
+    pctRow("Taux d'exploit (vs mieux classé)", a, b, 'upset_rate'),
+    pctRow('Efficacité vs gauchers', a, b, 'winrate_vs_left'),
+    pctRow('Efficacité vs droitiers', a, b, 'winrate_vs_right'),
+    numberRow('Indice de service', a, b, 'serve_score'),
+    numberRow('Indice de retour', a, b, 'return_score'),
+  ].filter(Boolean)
+})
+
 // Association surface du match → colonnes bilan carrière correspondantes.
 // 'indoor' est rapproché de carpet faute d'une colonne indoor dédiée dans
 // player_career_stats (hard/clay/grass/carpet seulement).
@@ -181,14 +252,18 @@ async function loadMatch() {
     if (match.value.prediction) {
       prediction.value = await api.get(`/api/predictions/${match.value.prediction.id}`)
 
-      const [statsA, statsB, h2h] = await Promise.all([
+      const [statsA, statsB, h2h, snapA, snapB] = await Promise.all([
         fetchCareerStats(match.value.playerA.id),
         fetchCareerStats(match.value.playerB.id),
         fetchHeadToHead(match.value.playerA.id, match.value.playerB.id),
+        fetchSnapshot(match.value.playerA.id),
+        fetchSnapshot(match.value.playerB.id),
       ])
       careerStatsA.value = statsA
       careerStatsB.value = statsB
       headToHead.value = h2h
+      snapshotA.value = snapA
+      snapshotB.value = snapB
     }
   } catch (e) {
     if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
@@ -304,6 +379,28 @@ onMounted(async () => {
         <div class="card">
           <h3>Profil comparatif</h3>
           <RadarChart :profile="prediction.radarProfile" :label-a="match.playerA.fullName" :label-b="match.playerB.fullName" />
+        </div>
+
+        <div v-if="snapshotRows.length" class="card">
+          <h3>Forme du moment</h3>
+          <div class="stats-table-wrap">
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th class="th-a">{{ match.playerA.fullName.split(' ').at(-1) }}</th>
+                  <th></th>
+                  <th class="th-b">{{ match.playerB.fullName.split(' ').at(-1) }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in snapshotRows" :key="row.label">
+                  <td :class="{ win: winsA(row) }">{{ row.valueA }}</td>
+                  <td class="label">{{ row.label }}</td>
+                  <td :class="{ win: winsB(row) }">{{ row.valueB }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div v-if="headToHead && headToHead.wins_player + headToHead.wins_opponent > 0" class="card h2h-card">
