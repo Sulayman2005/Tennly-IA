@@ -434,51 +434,71 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Carte "résultat" (11/09/2026) : visuel dédié type "carte de
-           résultat" partageable, affiché UNIQUEMENT une fois le match
-           réellement terminé (jamais pour 'scheduled'/'live') — voir
-           matchLoser/resultSets dans le script. Palette reprise de
-           l'identité Tennly (fond sombre + accent lime déjà utilisés
-           partout ailleurs sur le site), pas un template copié d'ailleurs. -->
-      <div v-if="match.status !== 'scheduled' && match.winner" class="card result-showcase">
-        <div class="result-photo-wrap">
-          <img
-            v-if="showPhoto(match.winner)"
-            :src="match.winner.photoUrl"
-            class="result-photo"
-            alt=""
-            loading="lazy"
-            @error="onPhotoError(match.winner.id)"
-          />
-          <div v-else class="result-photo result-photo-fallback" :style="avatarGradient(match.winner.fullName)">
-            <span class="result-initials">{{ initials(match.winner.fullName) }}</span>
+      <!-- Carte "résultat" (11/09/2026, agrandie le 11/09/2026 sur demande
+           explicite — "meilleur design, fond avec un terrain de tennis sur
+           toute la page") : bannière plein format affichée UNIQUEMENT une
+           fois le match réellement terminé (jamais pour 'scheduled'/'live')
+           — voir matchLoser/resultSets dans le script. Le "terrain" est un
+           schéma SVG dessiné à la main (lignes de court réelles : lignes de
+           fond, couloirs, ligne de service, ligne médiane, filet) plutôt
+           qu'une photo — pas de souci de droits, aucun poids d'image
+           supplémentaire, et ça reste net à n'importe quelle taille d'écran.
+           Coloré selon la VRAIE surface du match (surfaceCardVars, déjà
+           utilisé sur le face-off juste au-dessus) : un match sur terre
+           battue a un terrain ocre, un match sur dur un terrain bleu, etc. -->
+      <div v-if="match.status !== 'scheduled' && match.winner" class="card result-showcase" :style="surfaceCardVars(match.surface)">
+        <svg class="result-court" viewBox="0 0 400 200" preserveAspectRatio="none" aria-hidden="true">
+          <rect x="20" y="20" width="360" height="160" fill="none" stroke="currentColor" stroke-width="2.4" />
+          <line x1="20" y1="42" x2="380" y2="42" stroke="currentColor" stroke-width="1.6" />
+          <line x1="20" y1="158" x2="380" y2="158" stroke="currentColor" stroke-width="1.6" />
+          <line x1="200" y1="12" x2="200" y2="188" stroke="currentColor" stroke-width="3" />
+          <line x1="106" y1="42" x2="106" y2="158" stroke="currentColor" stroke-width="1.6" />
+          <line x1="294" y1="42" x2="294" y2="158" stroke="currentColor" stroke-width="1.6" />
+          <line x1="106" y1="100" x2="294" y2="100" stroke="currentColor" stroke-width="1.6" />
+          <line x1="20" y1="94" x2="20" y2="106" stroke="currentColor" stroke-width="2.4" />
+          <line x1="380" y1="94" x2="380" y2="106" stroke="currentColor" stroke-width="2.4" />
+        </svg>
+
+        <div class="result-inner">
+          <div class="result-photo-wrap">
+            <img
+              v-if="showPhoto(match.winner)"
+              :src="match.winner.photoUrl"
+              class="result-photo"
+              alt=""
+              loading="lazy"
+              @error="onPhotoError(match.winner.id)"
+            />
+            <div v-else class="result-photo result-photo-fallback" :style="avatarGradient(match.winner.fullName)">
+              <span class="result-initials">{{ initials(match.winner.fullName) }}</span>
+            </div>
+            <img
+              v-if="flagUrl(match.winner.countryCode)"
+              :src="flagUrl(match.winner.countryCode)"
+              class="result-flag"
+              alt=""
+              loading="lazy"
+              @error="$event.target.style.display = 'none'"
+            />
           </div>
-          <img
-            v-if="flagUrl(match.winner.countryCode)"
-            :src="flagUrl(match.winner.countryCode)"
-            class="result-flag"
-            alt=""
-            loading="lazy"
-            @error="$event.target.style.display = 'none'"
-          />
-        </div>
 
-        <div class="result-body">
-          <span class="result-eyebrow">{{ match.status === 'walkover' ? 'Victoire par forfait' : 'Match terminé' }}</span>
-          <h2 class="result-winner">{{ match.winner.fullName }}</h2>
-          <p v-if="matchLoser" class="result-sub">bat {{ matchLoser.fullName }}</p>
+          <div class="result-body">
+            <span class="result-eyebrow">{{ match.status === 'walkover' ? 'Victoire par forfait' : 'Match terminé' }}</span>
+            <h2 class="result-winner">{{ match.winner.fullName }}</h2>
+            <p v-if="matchLoser" class="result-sub">bat {{ matchLoser.fullName }}</p>
 
-          <div v-if="resultSets.length" class="result-sets">
-            <span
-              v-for="(s, i) in resultSets"
-              :key="i"
-              class="result-set-pill"
-              :class="{ won: s.wonByWinner === true, lost: s.wonByWinner === false }"
-            >{{ s.text }}</span>
+            <div v-if="resultSets.length" class="result-sets">
+              <span
+                v-for="(s, i) in resultSets"
+                :key="i"
+                class="result-set-pill"
+                :class="{ won: s.wonByWinner === true, lost: s.wonByWinner === false }"
+              >{{ s.text }}</span>
+            </div>
+            <p v-else-if="match.scoreText" class="result-sub">{{ match.scoreText }}</p>
+
+            <div class="result-meta">{{ match.tournamentName }} · {{ match.round }} · {{ surfaceLabel(match.surface) }}</div>
           </div>
-          <p v-else-if="match.scoreText" class="result-sub">{{ match.scoreText }}</p>
-
-          <div class="result-meta">{{ match.tournamentName }} · {{ match.round }} · {{ surfaceLabel(match.surface) }}</div>
         </div>
 
         <span class="result-brand">TENNLY</span>
@@ -819,45 +839,71 @@ onMounted(async () => {
   color: #fff;
 }
 
-/* Carte "résultat" (11/09/2026) — visuel type "carte de match" affiché une
-   fois le match terminé : fond très sombre + accent lime (repris de
-   --btn/--lime, déjà l'identité "toujours sombre" de Tennly ailleurs sur le
-   site, voir tokens.css) plutôt qu'un fond clair comme les autres .card —
-   volontairement plus "affiche" que les cartes de données classiques
-   juste en dessous (palmarès, forme du moment…). */
+/* Carte "résultat" (11/09/2026, agrandie sur demande explicite le
+   11/09/2026 — "meilleur design, fond avec un terrain de tennis") :
+   bannière plein format, hauteur généreuse, fond coloré par la vraie
+   surface du match (--surface-from/to, voir surfaceCardVars) assombri par
+   un voile sombre pour que le texte blanc reste lisible — même logique que
+   .face-off juste au-dessus, poussée beaucoup plus loin ici puisque cette
+   carte doit se lire comme une affiche, pas comme une carte de données. */
 .result-showcase {
   position: relative;
   overflow: hidden;
   isolation: isolate;
+  min-height: 300px;
   display: flex;
   align-items: center;
-  gap: 28px;
-  padding: 32px 36px;
-  background: linear-gradient(160deg, #101012 0%, var(--btn) 55%, #08110d 100%);
+  padding: 44px 48px;
+  background:
+    linear-gradient(160deg, rgba(6, 10, 8, 0.93) 0%, rgba(6, 10, 8, 0.86) 45%, rgba(6, 10, 8, 0.94) 100%),
+    linear-gradient(135deg, var(--surface-from), var(--surface-to));
   color: #fff;
 }
+/* Halo lime en surimpression, comme .face-off::after, mais plus marqué
+   puisqu'il n'y a pas d'autre source de couleur ici que le fond. */
 .result-showcase::after {
   content: '';
   position: absolute;
   inset: 0;
   z-index: 0;
-  opacity: 0.5;
-  background: radial-gradient(120% 140% at 8% -10%, rgba(199, 255, 60, 0.16) 0%, transparent 55%);
+  background: radial-gradient(90% 120% at 82% 8%, var(--surface-glow) 0%, transparent 60%);
   pointer-events: none;
+}
+/* Le "terrain" : schéma de court dessiné en SVG (voir le template), posé en
+   fond plein format, très discret (les lignes ne doivent jamais rivaliser
+   avec le vainqueur/le score par-dessus) et légèrement zoomé/décentré pour
+   un effet "plan large" plutôt qu'un diagramme scolaire centré. */
+.result-court {
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  left: 50%;
+  width: 145%;
+  height: 145%;
+  transform: translate(-50%, -50%) rotate(-4deg);
+  color: rgba(255, 255, 255, 0.16);
+  pointer-events: none;
+}
+.result-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  width: 100%;
 }
 .result-photo-wrap {
   position: relative;
-  z-index: 1;
   flex: none;
 }
 .result-photo {
-  width: 128px;
-  height: 128px;
-  border-radius: 26px;
+  width: 176px;
+  height: 176px;
+  border-radius: 32px;
   object-fit: cover;
   box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.14),
-    0 14px 30px rgba(0, 0, 0, 0.4);
+    0 0 0 3px var(--lime),
+    0 22px 48px -10px rgba(0, 0, 0, 0.55);
 }
 .result-photo-fallback {
   display: flex;
@@ -865,90 +911,110 @@ onMounted(async () => {
   justify-content: center;
 }
 .result-initials {
-  font-size: 40px;
+  font-size: 56px;
   font-weight: 800;
   color: #fff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 .result-flag {
   position: absolute;
-  bottom: -6px;
-  right: -6px;
-  width: 34px;
-  height: 34px;
+  bottom: -8px;
+  right: -8px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   background: #fff;
   object-fit: cover;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 .result-body {
-  position: relative;
-  z-index: 1;
   min-width: 0;
 }
 .result-eyebrow {
-  display: inline-block;
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--lime);
-  margin-bottom: 6px;
+  margin-bottom: 10px;
+}
+.result-eyebrow::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--lime);
+  box-shadow: 0 0 10px 2px rgba(199, 255, 60, 0.7);
 }
 .result-winner {
   margin: 0;
-  font-size: 26px;
+  font-size: clamp(28px, 4vw, 44px);
   font-weight: 800;
-  letter-spacing: -0.01em;
-  line-height: 1.15;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+  text-wrap: balance;
 }
 .result-sub {
-  margin: 4px 0 0;
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.65);
+  margin: 6px 0 0;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.68);
 }
 .result-sets {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
-  margin-top: 16px;
+  gap: 8px;
+  margin-top: 20px;
 }
 .result-set-pill {
-  padding: 5px 12px;
+  padding: 6px 15px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(2px);
 }
 .result-set-pill.won {
-  background: rgba(199, 255, 60, 0.16);
+  background: rgba(199, 255, 60, 0.18);
   color: var(--lime);
-  border-color: rgba(199, 255, 60, 0.4);
+  border-color: rgba(199, 255, 60, 0.5);
 }
 .result-meta {
-  margin-top: 16px;
-  font-size: 12px;
+  margin-top: 18px;
+  font-size: 13px;
+  letter-spacing: 0.01em;
   color: rgba(255, 255, 255, 0.55);
 }
 .result-brand {
   position: absolute;
   z-index: 1;
-  top: 20px;
-  right: 24px;
-  font-size: 11px;
+  top: 24px;
+  right: 28px;
+  font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.45);
 }
 
 @media (max-width: 640px) {
   .result-showcase {
+    min-height: 0;
+    padding: 32px 22px;
+  }
+  .result-inner {
     flex-direction: column;
     text-align: center;
-    padding: 28px 22px;
+    gap: 18px;
+  }
+  .result-photo {
+    width: 120px;
+    height: 120px;
+    border-radius: 26px;
   }
   .result-sets {
     justify-content: center;
