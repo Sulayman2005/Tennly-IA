@@ -18,6 +18,13 @@
   --radius-card: 22px;
   --radius-pill: 999px;
   --shadow-soft: 0 2px 24px rgba(0, 0, 0, 0.06);
+  /* Passe "rendu premium" (09/09/2026) : une seule courbe d'accélération et
+     une seule ombre "élevée" définies ici une fois pour toutes, pour que les
+     pages retravaillées une à une (accueil en premier, voir HomeView.vue)
+     restent cohérentes entre elles plutôt que d'improviser un cubic-bezier
+     différent à chaque nouveau composant. */
+  --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
+  --shadow-elevated: 0 24px 48px -16px rgba(15, 25, 25, 0.22);
 
   /* Palette "terre battue" — utilisée uniquement par la section clay-hero de
      la page d'accueil (HomeView.vue), reprise du prototype validé. */

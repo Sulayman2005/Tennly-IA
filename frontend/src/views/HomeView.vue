@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 
@@ -101,22 +101,66 @@ const stats = ref([
 ])
 const yearsOfHistory = ref(null)
 
+// Compteurs animés "premium" (09/09/2026) : une fois le vrai chiffre reçu de
+// /api/stats, il ne s'affiche plus figé d'un coup mais monte en douceur
+// depuis 0 — habillage purement visuel de l'ARRIVÉE de la donnée, jamais de
+// valeur inventée : la cible de l'animation est toujours exactement la
+// valeur réelle de l'API (même logique que "value: null" plus haut — on
+// n'anime jamais un chiffre qu'on n'a pas encore). Désactivé pour les
+// personnes ayant réduit les animations système (voir prefersReducedMotion),
+// qui voient directement la valeur finale sans étape intermédiaire.
+function prefersReducedMotion() {
+  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+}
+function animateTo(targetRef, finalValue, duration = 1300) {
+  if (finalValue === null || finalValue === undefined) return
+  if (prefersReducedMotion()) {
+    targetRef.value = finalValue
+    return
+  }
+  const start = performance.now()
+  function tick(now) {
+    const t = Math.min(1, (now - start) / duration)
+    const eased = 1 - Math.pow(1 - t, 3)
+    targetRef.value = finalValue * eased
+    if (t < 1) requestAnimationFrame(tick)
+    else targetRef.value = finalValue
+  }
+  requestAnimationFrame(tick)
+}
+const animSuccessRate = ref(0)
+const animAnalyzedMatches = ref(0)
+const animYearsOfHistory = ref(0)
+
 const heroSuccessRate = computed(() => {
-  const v = stats.value[0].value
-  return v !== null ? v.toFixed(1).replace('.', ',') + ' %' : '—'
+  if (stats.value[0].value === null) return '—'
+  return animSuccessRate.value.toFixed(1).replace('.', ',') + ' %'
 })
 const heroAnalyzedMatches = computed(() => {
-  const v = stats.value[1].value
-  return v !== null ? new Intl.NumberFormat('fr-FR').format(v) : '—'
+  if (stats.value[1].value === null) return '—'
+  return new Intl.NumberFormat('fr-FR').format(Math.round(animAnalyzedMatches.value))
 })
 const heroYearsOfHistory = computed(() => {
-  const v = yearsOfHistory.value
-  if (v === null) return '—'
-  const rounded = Math.round(v)
+  if (yearsOfHistory.value === null) return '—'
+  const rounded = Math.round(animYearsOfHistory.value)
   return rounded + (rounded > 1 ? ' ans' : ' an')
 })
 
+// Halo qui suit le curseur dans le hero (09/09/2026, passe "rendu premium") :
+// pur détail d'ambiance, jamais activé au toucher (pas de souris → rien à
+// suivre) ni si les animations système sont réduites — voir spotlightEnabled
+// et le v-if sur .hero-spotlight dans le template.
+const heroSpotlight = reactive({ x: 50, y: 38 })
+const spotlightEnabled = ref(false)
+function onHeroPointerMove(e) {
+  const rect = e.currentTarget.getBoundingClientRect()
+  heroSpotlight.x = ((e.clientX - rect.left) / rect.width) * 100
+  heroSpotlight.y = ((e.clientY - rect.top) / rect.height) * 100
+}
+
 onMounted(async () => {
+  spotlightEnabled.value = Boolean(window.matchMedia?.('(pointer: fine)').matches) && !prefersReducedMotion()
+
   try {
     const data = await api.get('/api/stats')
     stats.value[0].value = data.successRateLast90Days
@@ -124,6 +168,13 @@ onMounted(async () => {
     stats.value[2].value = data.averageValueEdgePercent
     stats.value[3].value = data.brierScore
     yearsOfHistory.value = data.yearsOfHistory
+    // Léger décalage pour démarrer le compteur pile quand .hero-stats entre
+    // en scène (animation-delay 0.95s côté CSS) plutôt qu'avant, invisible.
+    setTimeout(() => {
+      animateTo(animSuccessRate, stats.value[0].value)
+      animateTo(animAnalyzedMatches, stats.value[1].value, 1600)
+      animateTo(animYearsOfHistory, yearsOfHistory.value, 1300)
+    }, 950)
   } catch (e) {
     // Silencieux : le hero affiche "—" via les computed heroSuccessRate/
     // heroAnalyzedMatches/heroYearsOfHistory tant que value reste null — plus
@@ -179,7 +230,7 @@ function toggleFaq(i) {
     fond blanc) + ".clay-hero" (illustration SVG provisoire) par une seule
     scène immersive : le texte est maintenant surimposé à la photo.
   -->
-  <section class="hero-carousel">
+  <section class="hero-carousel" @pointermove="spotlightEnabled && onHeroPointerMove($event)">
     <div
       v-for="(slide, i) in slides"
       :key="slide.key"
@@ -188,6 +239,7 @@ function toggleFaq(i) {
       :style="{ backgroundImage: `url(${slide.img})`, animationDelay: i * 2 + 's' }"
     ></div>
     <div class="hero-overlay"></div>
+    <div v-if="spotlightEnabled" class="hero-spotlight" :style="{ '--mx': heroSpotlight.x + '%', '--my': heroSpotlight.y + '%' }"></div>
 
     <div class="hero-content">
       <div class="eyebrow"><i></i>TENNIS · DONNÉES ATP RÉELLES</div>
@@ -392,7 +444,13 @@ function toggleFaq(i) {
   <!-- ================= MÉTHODOLOGIE / DONNÉES ================= -->
   <div class="section">
     <div class="method-band" v-reveal>
-      <div class="num">4 ans<small>d'historique ATP réel</small></div>
+      <!-- Corrigé le 09/09/2026 (passe "rendu premium") : ce "4 ans" était
+           codé en dur alors que le hero juste au-dessus affiche déjà le
+           vrai historique venu de /api/stats (yearsOfHistory) — écart
+           silencieux avec le principe "aucune donnée inventée" répété
+           partout ailleurs sur cette page. Réutilise maintenant la même
+           donnée réelle (et le même compteur animé) que le hero. -->
+      <div class="num">{{ heroYearsOfHistory }}<small>d'historique ATP réel</small></div>
       <p>
         <strong style="color: #fff">Aucune donnée inventée.</strong> Tennly rejoue chronologiquement plusieurs années de résultats ATP réels pour
         calculer chaque Elo, chaque score de service et chaque tendance — la méthode est documentée, pas cachée derrière une boîte noire marketing.
@@ -488,17 +546,25 @@ h3 {
    fois avant même d'être visible. Regroupe ici la transition de transform/
    box-shadow pour les cartes qui ont aussi un effet de survol, afin que les
    deux ne se marchent pas dessus. */
+/* Passe "rendu premium" (09/09/2026) : léger flou en plus du fondu/
+   déplacement, même langage que .hero-content h1 (heroTitleIn) plus haut —
+   une "mise au point" progressive plutôt qu'un simple fondu, sur la courbe
+   --ease-premium désormais partagée par toute la page. blur() reste léger
+   (6px) pour ne pas coûter cher au rendu pendant le scroll. */
 .reveal {
   opacity: 0;
   transform: translateY(26px);
+  filter: blur(6px);
   transition:
-    opacity 0.7s cubic-bezier(0.2, 0.8, 0.2, 1),
-    transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.7s var(--ease-premium),
+    transform 0.6s var(--ease-premium),
+    filter 0.6s var(--ease-premium),
     box-shadow 0.3s ease;
 }
 .reveal.is-visible {
   opacity: 1;
   transform: none;
+  filter: blur(0);
 }
 
 /* -- Hero carrousel --
@@ -586,6 +652,22 @@ h3 {
     opacity: 1;
   }
 }
+/* Halo qui suit le curseur (09/09/2026, passe "rendu premium") : détail
+   d'ambiance discret, jamais rendu si spotlightEnabled est faux côté script
+   (tactile ou animations système réduites — voir le v-if dans le template),
+   donc jamais de listener pointermove posé pour rien sur mobile. */
+.hero-spotlight {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: radial-gradient(480px circle at var(--mx, 50%) var(--my, 38%), rgba(199, 255, 60, 0.16), transparent 62%);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+.hero-carousel:hover .hero-spotlight {
+  opacity: 1;
+}
 .eyebrow {
   display: inline-flex;
   align-items: center;
@@ -669,7 +751,12 @@ h3 {
   border: none;
   cursor: pointer;
   box-shadow: var(--shadow-soft);
-  transition: transform 0.15s;
+  /* Passe "rendu premium" : une seule courbe (--ease-premium) et une ombre
+     qui se creuse en même temps que le bouton se soulève, plutôt qu'un
+     simple scale sans profondeur. */
+  transition:
+    transform 0.4s var(--ease-premium),
+    box-shadow 0.4s var(--ease-premium);
   animation: fadeUp 0.6s 0.2s ease both;
 }
 .hero-content .cta-main {
@@ -678,7 +765,12 @@ h3 {
   animation-delay: 0.75s;
 }
 .cta-main:hover {
-  transform: translateY(-2px) scale(1.02);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: var(--shadow-elevated);
+}
+.cta-main:active {
+  transform: translateY(-1px) scale(1.005);
+  transition-duration: 0.1s;
 }
 .cta-main .arrow {
   transition: transform 0.15s;
@@ -958,9 +1050,17 @@ h3 {
   background: linear-gradient(180deg, rgba(10, 20, 20, 0.15) 0%, rgba(6, 12, 12, 0.85) 100%);
   transition: background 0.3s ease;
 }
+/* La transition manquait ici (passe "rendu premium", 09/09/2026) : le
+   survol changeait transform/box-shadow instantanément, sans le
+   soulèvement fluide qu'on voit partout ailleurs sur la page. */
+.surface-card {
+  transition:
+    transform 0.45s var(--ease-premium),
+    box-shadow 0.45s var(--ease-premium);
+}
 .surface-card:hover {
-  transform: translateY(-7px) scale(1.015);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.26);
+  transform: translateY(-8px) scale(1.015);
+  box-shadow: var(--shadow-elevated);
 }
 .surface-card.dur {
   background-image: url('https://images.pexels.com/photos/30760348/pexels-photo-30760348.jpeg?auto=compress&cs=tinysrgb&w=1080');
@@ -1167,10 +1267,17 @@ h3 {
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 24px;
+  /* Idem .surface-card ci-dessus : transition ajoutée pour un survol fluide
+     plutôt qu'un changement instantané (passe "rendu premium"). */
+  transition:
+    transform 0.45s var(--ease-premium),
+    box-shadow 0.45s var(--ease-premium),
+    border-color 0.3s ease;
 }
 .feature-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 16px 34px rgba(15, 61, 62, 0.13);
+  transform: translateY(-7px);
+  box-shadow: var(--shadow-elevated);
+  border-color: transparent;
 }
 .feature-card .fi {
   width: 38px;
@@ -1293,6 +1400,10 @@ h3 {
   font-family: inherit;
   cursor: pointer;
   padding: 22px 26px;
+  transition: background 0.25s ease;
+}
+.faq-question:hover {
+  background: var(--card);
 }
 .faq-question span {
   font-size: 15px;
