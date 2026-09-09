@@ -440,50 +440,33 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Carte "résultat" (11/09/2026, redessinée le 11/09/2026 — "améliore
-           le design", puis le 11/09/2026 — "une vraie image de terrain,
-           enlève ce fond bleu qui fait vieux"). Pas d'accès à une vraie
-           photo de court dans cet environnement (et une photo trouvée sur
-           le web poserait un problème de droits) : le terrain est un
-           rendu SVG "deux tons" qui imite un vrai court photographié —
-           zone de jeu plus claire, dégagements (apron) plus sombres autour,
-           même principe que les vrais courts durs/terre battue/gazon —
-           plutôt qu'un simple dégradé plat uni comme avant. Toujours
-           coloré selon la VRAIE surface du match (surfaceCardVars). Un
-           voile sombre (.result-scrim) est posé par-dessus, côté texte
-           uniquement, pour que le nom reste lisible quelle que soit la
-           clarté du terrain. La photo du vainqueur reste l'élément
-           principal, fondue dans le sombre à gauche (le haut, en mobile).
+      <!-- Carte "résultat" — refonte complète (09/09/2026), suite au retour
+           tranché de l'utilisateur sur la version précédente (terrain SVG
+           "deux tons" + photo encadrée à gauche fondue au mask-image) :
+           "enlève moi ce fond bleu et ce carré moche et met un fond qui
+           prend toute la page avec un effet wow et des animations". Deux
+           défauts diagnostiqués dans cette version précédente : (1) la
+           photo n'était fondue que sur UN bord (mask-image horizontal ou
+           vertical) — comme les photos joueurs sont souvent recadrées sur
+           un fond studio uni, les 3 autres bords restaient nets, d'où le
+           "carré" ; (2) le fond était coloré par surfaceCardVars(surface),
+           très bleu pour le dur (#04213f → #0071e3), et dominait toute la
+           carte malgré le voile.
+           Nouvelle approche : la photo devient le fond PLEIN CADRE de toute
+           la carte (aucun cadre séparé => plus aucun bord net possible), la
+           couleur de surface n'est plus utilisée ICI DU TOUT — seul
+           l'accent citron vert de la marque (--lime) ponctue le visuel, sur
+           un voile neutre quasi-noir. La carte casse volontairement la
+           mise en page (pleine largeur d'écran, technique
+           margin:calc(50%-50vw), voir .result-showcase) pour un effet
+           bannière immersif plutôt qu'une carte de plus dans la colonne.
+           Animations (désactivées si prefers-reduced-motion) : zoom lent
+           de la photo (Ken Burns), reveal du texte en cascade, halos qui
+           respirent, reflet qui balaie la carte une fois au chargement.
            Affichée UNIQUEMENT une fois le match réellement terminé — voir
            matchLoser/resultSets dans le script. -->
-      <div v-if="match.status !== 'scheduled' && match.winner" class="card result-showcase" :style="surfaceCardVars(match.surface)">
-        <svg class="result-court" viewBox="0 0 400 200" preserveAspectRatio="none" aria-hidden="true">
-          <defs>
-            <radialGradient id="courtLight" cx="72%" cy="8%" r="75%">
-              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.4" />
-              <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
-            </radialGradient>
-          </defs>
-          <!-- Dégagements (apron) : ton sombre de la surface, sur toute la carte -->
-          <rect class="court-apron" x="0" y="0" width="400" height="200" />
-          <!-- Zone de jeu : ton clair de la surface, translucide pour rester feutré -->
-          <rect class="court-inbounds" x="20" y="20" width="360" height="160" />
-          <!-- Lumière de stade -->
-          <rect x="0" y="0" width="400" height="200" fill="url(#courtLight)" />
-          <!-- Lignes réelles : fond, couloirs, filet, ligne de service, ligne médiane -->
-          <rect class="court-line" x="20" y="20" width="360" height="160" fill="none" stroke-width="2.4" />
-          <line class="court-line" x1="20" y1="42" x2="380" y2="42" stroke-width="1.6" />
-          <line class="court-line" x1="20" y1="158" x2="380" y2="158" stroke-width="1.6" />
-          <line class="court-line" x1="200" y1="12" x2="200" y2="188" stroke-width="3" />
-          <line class="court-line" x1="106" y1="42" x2="106" y2="158" stroke-width="1.6" />
-          <line class="court-line" x1="294" y1="42" x2="294" y2="158" stroke-width="1.6" />
-          <line class="court-line" x1="106" y1="100" x2="294" y2="100" stroke-width="1.6" />
-          <line class="court-line" x1="20" y1="94" x2="20" y2="106" stroke-width="2.4" />
-          <line class="court-line" x1="380" y1="94" x2="380" y2="106" stroke-width="2.4" />
-        </svg>
-        <div class="result-scrim"></div>
-
-        <div class="result-photo-frame">
+      <div v-if="match.status !== 'scheduled' && match.winner" class="result-showcase">
+        <div class="result-bg">
           <img
             v-if="showPhoto(match.winner)"
             :src="match.winner.photoUrl"
@@ -493,17 +476,23 @@ onMounted(async () => {
             @error="onPhotoError(match.winner.id)"
           />
           <div v-else class="result-photo result-photo-fallback" :style="avatarGradient(match.winner.fullName)">
-            <span class="result-initials">{{ initials(match.winner.fullName) }}</span>
+            <span class="result-ghost-initials">{{ initials(match.winner.fullName) }}</span>
           </div>
-          <img
-            v-if="flagUrl(match.winner.countryCode)"
-            :src="flagUrl(match.winner.countryCode)"
-            class="result-flag"
-            alt=""
-            loading="lazy"
-            @error="$event.target.style.display = 'none'"
-          />
         </div>
+        <div class="result-glow result-glow-a"></div>
+        <div class="result-glow result-glow-b"></div>
+        <div class="result-vignette"></div>
+        <div class="result-shine"></div>
+
+        <img
+          v-if="flagUrl(match.winner.countryCode)"
+          :src="flagUrl(match.winner.countryCode)"
+          class="result-flag"
+          alt=""
+          loading="lazy"
+          @error="$event.target.style.display = 'none'"
+        />
+        <span class="result-brand">TENNLY</span>
 
         <div class="result-inner">
           <div class="result-body">
@@ -524,8 +513,6 @@ onMounted(async () => {
             <div class="result-meta">{{ match.tournamentName }} · {{ match.round }} · {{ surfaceLabel(match.surface) }}</div>
           </div>
         </div>
-
-        <span class="result-brand">TENNLY</span>
       </div>
 
       <div v-if="forbidden" class="card locked">
@@ -863,124 +850,148 @@ onMounted(async () => {
   color: #fff;
 }
 
-/* Carte "résultat" (11/09/2026, redessinée le 11/09/2026 — "améliore le
-   design") : la photo du vainqueur est désormais un vrai fond plein cadre
-   (pas une vignette encadrée), fondue dans le sombre via un mask-image —
-   .result-photo-frame occupe tout le bord gauche de la carte en desktop
-   (le haut, en mobile) et le texte vient respirer dans la zone où le
-   fondu est déjà terminé. Fond de carte toujours coloré par la vraie
-   surface du match (--surface-from/to, voir surfaceCardVars), assombri
-   pour que le texte blanc reste lisible — même logique que .face-off
-   juste au-dessus, poussée beaucoup plus loin ici. Empilement en z-index
-   explicite (0 à 3) pour ne pas dépendre de l'ordre implicite ::after vs
-   enfants positionnés, qui varie selon les navigateurs. */
+/* Carte "résultat" — refonte pleine page (09/09/2026, voir le commentaire
+   dans le <template> pour le diagnostic complet des deux défauts de la
+   version précédente). Bannière plein écran : width:100vw +
+   margin:calc(50%-50vw) est la technique classique pour faire "sortir" un
+   élément de son conteneur centré (ici <main>, max-width 1120px, voir
+   App.vue) jusqu'aux bords du viewport, quelle que soit la largeur d'écran
+   — fonctionne même avec le padding horizontal de <main> car il est
+   symétrique. Volontairement PAS de classe .card ici : on réécrit fond,
+   rayon, ombre et marge de zéro plutôt que de neutraliser ceux hérités. */
 .result-showcase {
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  min-height: 380px;
-  /* Base de secours sombre, visible seulement aux quatre coins que le SVG
-     du terrain (tourné et surdimensionné) ne recouvre pas — teintée du ton
-     sombre de la surface pour ne jamais créer de rupture de couleur. */
-  background: linear-gradient(160deg, var(--surface-from) 0%, #05070a 65%);
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  margin-bottom: 28px;
+  min-height: clamp(440px, 56vw, 640px);
+  background: #0b0c10;
   color: #fff;
 }
-.result-showcase::after {
-  content: '';
+
+.result-bg {
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: radial-gradient(90% 120% at 88% 6%, var(--surface-glow) 0%, transparent 60%);
-  pointer-events: none;
 }
-/* Le "terrain" : rendu SVG "deux tons" façon vrai court photographié (zone
-   de jeu plus claire entourée d'un dégagement plus sombre — voir
-   .court-apron/.court-inbounds ci-dessous), légèrement zoomé/décentré pour
-   un effet "plan large" plutôt qu'un diagramme scolaire centré. C'est
-   maintenant un vrai élément visuel (pas juste un filigree en fond) : les
-   lignes et tons doivent se voir clairement, sans pour autant écraser le
-   vainqueur/le score qui restent par-dessus (voir .result-scrim). */
-.result-court {
-  position: absolute;
-  z-index: 1;
-  top: 50%;
-  left: 50%;
-  width: 148%;
-  height: 148%;
-  transform: translate(-50%, -50%) rotate(-3deg);
-  pointer-events: none;
-}
-.court-apron {
-  fill: var(--surface-from);
-}
-.court-inbounds {
-  fill: var(--surface-to);
-  opacity: 0.6;
-}
-.court-line {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.55);
-}
-/* Voile de lisibilité : assombrit uniquement le côté texte (la carte se lit
-   de gauche — photo — à droite — texte), pour que le blanc reste lisible
-   quelle que soit la clarté du terrain en dessous, sans pour autant noyer
-   sa couleur comme le faisait l'ancien fond plat. */
-.result-scrim {
-  position: absolute;
-  z-index: 2;
-  inset: 0;
-  background: linear-gradient(100deg, transparent 28%, rgba(4, 7, 9, 0.62) 58%, rgba(4, 7, 9, 0.82) 100%);
-  pointer-events: none;
-}
-.result-photo-frame {
-  position: absolute;
-  z-index: 3;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 44%;
-}
+/* La photo EST le fond de toute la carte (plus de cadre séparé) : plus
+   aucun bord net possible, donc plus de "carré". Léger zoom-arrière au
+   chargement (Ken Burns) pour la partie "wow"/animations demandée. */
 .result-photo {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: top center;
-  mask-image: linear-gradient(to right, black 45%, transparent 92%);
-  -webkit-mask-image: linear-gradient(to right, black 45%, transparent 92%);
+  object-position: center 18%;
+  transform: scale(1.12);
+  animation: resultKenBurns 9s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .result-photo-fallback {
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.result-initials {
-  font-size: 76px;
-  font-weight: 800;
-  color: #fff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+.result-ghost-initials {
+  font-family: 'Anton', sans-serif;
+  font-size: clamp(120px, 22vw, 260px);
+  color: rgba(255, 255, 255, 0.14);
+  letter-spacing: 0.02em;
 }
-.result-flag {
+
+/* Halos décoratifs : seule touche de couleur de toute la carte, l'accent
+   citron vert de la marque (--lime) — jamais la couleur de surface du
+   match, qui était précisément la source du "fond bleu" reproché. */
+.result-glow {
   position: absolute;
   z-index: 1;
-  top: 18px;
-  left: 18px;
-  width: 36px;
-  height: 36px;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(60px);
+}
+.result-glow-a {
+  top: -18%;
+  right: -8%;
+  width: 46%;
+  background: radial-gradient(circle, rgba(199, 255, 60, 0.28) 0%, transparent 70%);
+  animation: resultGlowDrift 14s ease-in-out infinite;
+}
+.result-glow-b {
+  bottom: -22%;
+  left: -10%;
+  width: 40%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  animation: resultGlowDrift 18s ease-in-out infinite reverse;
+}
+
+/* Voile neutre quasi-noir (jamais teinté par la surface) : très léger en
+   haut, opaque en bas et sur la gauche pour que le texte reste lisible
+   quelle que soit la photo — clair, sombre, cadrage serré ou large. */
+.result-vignette {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(5, 6, 8, 0.15) 0%, rgba(5, 6, 8, 0.55) 55%, rgba(5, 6, 8, 0.94) 100%),
+    linear-gradient(90deg, rgba(5, 6, 8, 0.75) 0%, rgba(5, 6, 8, 0.15) 42%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Reflet qui balaie la carte une seule fois au chargement — l'"effet wow"
+   demandé, ponctuel plutôt qu'en boucle pour ne pas distraire. */
+.result-shine {
+  position: absolute;
+  z-index: 2;
+  top: -20%;
+  left: 0;
+  width: 34%;
+  height: 140%;
+  background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, 0.16) 45%, transparent 100%);
+  transform: translateX(-140%) skewX(-14deg);
+  animation: resultShine 2.2s cubic-bezier(0.4, 0, 0.2, 1) 0.5s 1 both;
+  pointer-events: none;
+}
+
+.result-flag {
+  position: absolute;
+  z-index: 3;
+  top: 22px;
+  left: 24px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: #fff;
   object-fit: cover;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  animation: resultRise 0.6s ease 0.05s both;
 }
+.result-brand {
+  position: absolute;
+  z-index: 3;
+  top: 26px;
+  right: 28px;
+  font-family: 'Anton', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.55);
+  opacity: 0;
+  animation: resultRise 0.6s ease 0.1s both;
+}
+
 .result-inner {
   position: relative;
-  z-index: 4;
+  z-index: 3;
   display: flex;
-  align-items: center;
-  min-height: 380px;
-  padding: 40px 48px 40px 46%;
+  align-items: flex-end;
+  min-height: clamp(440px, 56vw, 640px);
+  padding: 40px clamp(24px, 6vw, 72px) 48px;
 }
 .result-body {
-  min-width: 0;
+  max-width: 720px;
 }
 .result-eyebrow {
   display: inline-flex;
@@ -989,10 +1000,12 @@ onMounted(async () => {
   font-family: 'Anton', sans-serif;
   font-size: 14px;
   font-weight: 400;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--lime);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  opacity: 0;
+  animation: resultRise 0.6s ease 0.15s both;
 }
 .result-eyebrow::before {
   content: '';
@@ -1000,28 +1013,36 @@ onMounted(async () => {
   height: 7px;
   border-radius: 50%;
   background: var(--lime);
-  box-shadow: 0 0 10px 2px rgba(199, 255, 60, 0.7);
+  box-shadow: 0 0 12px 3px rgba(199, 255, 60, 0.75);
+  animation: resultPulse 1.8s ease-in-out infinite;
 }
 .result-winner {
   margin: 0;
   font-family: 'Anton', sans-serif;
   font-weight: 400;
-  font-size: clamp(34px, 5vw, 58px);
+  font-size: clamp(38px, 6.4vw, 76px);
   letter-spacing: 0.01em;
-  line-height: 0.98;
+  line-height: 0.96;
   text-transform: uppercase;
   text-wrap: balance;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  animation: resultRise 0.7s ease 0.25s both;
 }
 .result-sub {
-  margin: 8px 0 0;
-  font-size: 16px;
-  color: rgba(255, 255, 255, 0.68);
+  margin: 10px 0 0;
+  font-size: 17px;
+  color: rgba(255, 255, 255, 0.72);
+  opacity: 0;
+  animation: resultRise 0.6s ease 0.35s both;
 }
 .result-sets {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 22px;
+  margin-top: 24px;
+  opacity: 0;
+  animation: resultRise 0.6s ease 0.45s both;
 }
 .result-set-pill {
   padding: 6px 15px;
@@ -1029,69 +1050,105 @@ onMounted(async () => {
   font-size: 14px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   backdrop-filter: blur(2px);
 }
 .result-set-pill.won {
-  background: rgba(199, 255, 60, 0.18);
+  background: rgba(199, 255, 60, 0.2);
   color: var(--lime);
-  border-color: rgba(199, 255, 60, 0.5);
+  border-color: rgba(199, 255, 60, 0.55);
 }
 .result-meta {
   margin-top: 20px;
   font-size: 13px;
   letter-spacing: 0.01em;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.58);
+  opacity: 0;
+  animation: resultRise 0.6s ease 0.55s both;
 }
-.result-brand {
-  position: absolute;
-  z-index: 4;
-  top: 24px;
-  right: 28px;
-  font-family: 'Anton', sans-serif;
-  font-size: 14px;
-  font-weight: 400;
-  letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.45);
+
+@keyframes resultKenBurns {
+  from {
+    transform: scale(1.12);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@keyframes resultGlowDrift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-4%, 5%) scale(1.1);
+  }
+}
+@keyframes resultShine {
+  from {
+    transform: translateX(-140%) skewX(-14deg);
+  }
+  to {
+    transform: translateX(340%) skewX(-14deg);
+  }
+}
+@keyframes resultRise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes resultPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result-photo,
+  .result-glow-a,
+  .result-glow-b,
+  .result-shine,
+  .result-flag,
+  .result-brand,
+  .result-eyebrow,
+  .result-eyebrow::before,
+  .result-winner,
+  .result-sub,
+  .result-sets,
+  .result-meta {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
 
 @media (max-width: 640px) {
   .result-showcase {
-    min-height: 0;
-  }
-  /* Voile vertical (photo en haut, texte en bas) plutôt qu'horizontal. */
-  .result-scrim {
-    background: linear-gradient(180deg, transparent 32%, rgba(4, 7, 9, 0.68) 62%, rgba(4, 7, 9, 0.88) 100%);
-  }
-  .result-photo-frame {
-    position: relative;
-    z-index: 3;
-    width: 100%;
-    height: 220px;
-    top: auto;
-    bottom: auto;
-    left: auto;
-  }
-  .result-photo {
-    object-position: top center;
-    mask-image: linear-gradient(to bottom, black 45%, transparent 92%);
-    -webkit-mask-image: linear-gradient(to bottom, black 45%, transparent 92%);
+    min-height: clamp(420px, 145vw, 560px);
   }
   .result-inner {
-    min-height: 0;
-    flex-direction: column;
-    text-align: center;
-    padding: 0 22px 30px;
-    margin-top: -64px;
+    min-height: clamp(420px, 145vw, 560px);
+    padding: 32px 22px 34px;
+  }
+  .result-vignette {
+    background: linear-gradient(180deg, rgba(5, 6, 8, 0.1) 0%, rgba(5, 6, 8, 0.6) 55%, rgba(5, 6, 8, 0.96) 100%);
+  }
+  .result-photo {
+    object-position: center 12%;
   }
   .result-sets {
-    justify-content: center;
-  }
-  .result-brand {
-    top: 16px;
-    right: 18px;
+    justify-content: flex-start;
   }
 }
 
