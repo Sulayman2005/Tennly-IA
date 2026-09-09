@@ -299,6 +299,15 @@ onMounted(async () => {
     <p v-if="loading" class="state-msg">Chargement…</p>
 
     <template v-else-if="match">
+      <!-- Tournoi/round (11/09/2026) : déjà affichés sur MatchCard.vue (liste
+           /matchs) depuis le début, jamais repris ici — un oubli, pas un
+           choix. Placés en ligne au-dessus de la carte plutôt qu'ajoutés aux
+           badges déjà positionnés en absolu dans .face-off (circuit-badge
+           centré, surface-badge à droite) : un nom de tournoi long
+           entrerait en collision avec eux, alors qu'une ligne simple
+           au-dessus n'a pas cette contrainte. -->
+      <p class="match-meta">{{ match.tournamentName }} · {{ match.round }}</p>
+
       <div class="card face-off" :style="surfaceCardVars(match.surface)">
         <TourBadge :tour="match.playerA.tour" on-dark class="circuit-badge" />
         <span class="surface-badge">{{ surfaceLabel(match.surface) }}</span>
@@ -322,7 +331,13 @@ onMounted(async () => {
               @error="$event.target.style.display = 'none'"
             />
           </div>
-          <div class="name">{{ match.playerA.fullName }}</div>
+          <div class="name">
+            {{ match.playerA.fullName }}
+            <svg v-if="match.winner?.id === match.playerA.id" class="winner-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" aria-label="Vainqueur">
+              <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.22" />
+              <path d="M7 12.5l3 3 7-7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
           <div class="rank">N°{{ match.playerA.atpWtaRank }} mondial</div>
           <div class="chips">
             <span v-if="eloForSurface(match.playerA, match.surface) != null" class="chip">Elo {{ Math.round(eloForSurface(match.playerA, match.surface)) }}</span>
@@ -339,6 +354,16 @@ onMounted(async () => {
             />
           </template>
           <div v-else class="vs-plain">VS</div>
+
+          <!-- Score réel (voir ml-service/update_match_results.py,
+               11/09/2026) : donnée publique, affichée à tout le monde y
+               compris hors abonnement (comme le statut "Terminé" déjà
+               visible sur MatchCard.vue) — jamais conditionnée à
+               `prediction`, contrairement au reste de cette carte. -->
+          <div v-if="match.status !== 'scheduled' && match.scoreText" class="final-score">
+            <span class="final-score-label">{{ match.status === 'walkover' ? 'Forfait' : 'Score final' }}</span>
+            <span class="final-score-text">{{ match.scoreText }}</span>
+          </div>
         </div>
 
         <div class="player">
@@ -361,7 +386,13 @@ onMounted(async () => {
               @error="$event.target.style.display = 'none'"
             />
           </div>
-          <div class="name">{{ match.playerB.fullName }}</div>
+          <div class="name">
+            {{ match.playerB.fullName }}
+            <svg v-if="match.winner?.id === match.playerB.id" class="winner-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" aria-label="Vainqueur">
+              <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.22" />
+              <path d="M7 12.5l3 3 7-7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
           <div class="rank">N°{{ match.playerB.atpWtaRank }} mondial</div>
           <div class="chips">
             <span v-if="eloForSurface(match.playerB, match.surface) != null" class="chip">Elo {{ Math.round(eloForSurface(match.playerB, match.surface)) }}</span>
@@ -650,6 +681,19 @@ onMounted(async () => {
   border-radius: 999px;
   font-variant-numeric: tabular-nums;
 }
+.winner-icon {
+  color: var(--lime);
+  vertical-align: -2px;
+  margin-left: 2px;
+}
+
+.match-meta {
+  max-width: 880px;
+  margin: 0 auto 14px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--grey);
+}
 
 .mid {
   position: relative;
@@ -668,6 +712,28 @@ onMounted(async () => {
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--line);
+}
+.final-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+.final-score-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.65);
+}
+.final-score-text {
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
 }
 
 /* Face-à-face — décompte brut des confrontations directes, présenté en

@@ -30,6 +30,24 @@ function onPhotoError(playerId) {
 function showPhoto(player) {
   return hasPhoto(player) && !photoErrored.has(player.id)
 }
+
+// Libellé de statut (11/09/2026) : jusqu'ici tout match non 'scheduled'
+// affichait juste "Terminé", y compris un forfait (status 'walkover') — pas
+// faux, mais moins précis que ce qu'on sait déjà côté back (voir
+// MatchStatus.php). 'winner'/'scoreText' sont exposés par l'API depuis le
+// début (Groups 'match:read' sur TennisMatch.php) mais n'ont jamais été
+// affichés nulle part côté frontend : ça n'avait aucun intérêt tant que
+// import_upcoming_matches.py ne les renseignait jamais (voir
+// update_match_results.py, qui vient combler ce trou côté données).
+function statusLabel(status) {
+  if (status === 'scheduled') return 'À venir'
+  if (status === 'walkover') return 'Terminé (forfait)'
+  return 'Terminé'
+}
+
+function isWinner(player) {
+  return props.match.winner?.id === player.id
+}
 </script>
 
 <template>
@@ -42,7 +60,7 @@ function showPhoto(player) {
       <span class="mc-surface">{{ surfaceLabel(match.surface) }}</span>
       <span class="mc-time">
         {{ new Date(match.scheduledAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) }}
-        · <span class="mc-status" :class="{ done: match.status !== 'scheduled' }">{{ match.status === 'scheduled' ? 'À venir' : 'Terminé' }}</span>
+        · <span class="mc-status" :class="{ done: match.status !== 'scheduled' }">{{ statusLabel(match.status) }}</span>
       </span>
     </div>
     <div class="mc-body">
@@ -67,14 +85,26 @@ function showPhoto(player) {
           />
         </div>
         <div>
-          <div class="mc-name">{{ match.playerA.fullName }}</div>
+          <div class="mc-name">
+            {{ match.playerA.fullName }}
+            <svg v-if="isWinner(match.playerA)" class="mc-winner-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" aria-label="Vainqueur">
+              <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.22" />
+              <path d="M7 12.5l3 3 7-7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
           <div class="mc-rank">N°{{ match.playerA.atpWtaRank }} mondial</div>
         </div>
       </div>
       <div class="mc-vs">VS</div>
       <div class="mc-player mc-player-right">
         <div>
-          <div class="mc-name">{{ match.playerB.fullName }}</div>
+          <div class="mc-name">
+            <svg v-if="isWinner(match.playerB)" class="mc-winner-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" aria-label="Vainqueur">
+              <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.22" />
+              <path d="M7 12.5l3 3 7-7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            {{ match.playerB.fullName }}
+          </div>
           <div class="mc-rank">N°{{ match.playerB.atpWtaRank }} mondial</div>
         </div>
         <div class="mc-avatar" :class="{ 'is-favorite': isFavorite(match.playerB) }" :style="!showPhoto(match.playerB) ? avatarGradient(match.playerB.fullName) : null">
@@ -97,6 +127,13 @@ function showPhoto(player) {
           />
         </div>
       </div>
+    </div>
+    <!-- Score réel (voir ml-service/update_match_results.py, 11/09/2026) :
+         donnée publique, jamais réservée aux abonnés — contrairement à
+         mc-bottom juste en dessous (confidenceLevel), on ne conditionne pas
+         cet affichage à un quelconque statut d'abonnement. -->
+    <div v-if="match.status !== 'scheduled' && match.scoreText" class="mc-result">
+      <span class="mc-result-score">{{ match.scoreText }}</span>
     </div>
     <!-- match.prediction existe pour tout le monde (au moins { id }, voir
          TennisMatch::$prediction côté backend) mais confidenceLevel n'est
@@ -300,6 +337,26 @@ function showPhoto(player) {
 }
 .mc-status.done {
   opacity: 0.65;
+}
+.mc-winner-icon {
+  color: var(--lime);
+  vertical-align: -1px;
+}
+.mc-result {
+  position: relative;
+  z-index: 2;
+  margin-top: 10px;
+  text-align: center;
+}
+.mc-result-score {
+  display: inline-flex;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 }
 .mc-bottom {
   position: relative;
