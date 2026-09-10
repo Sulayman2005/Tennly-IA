@@ -350,7 +350,7 @@ onMounted(async () => {
       <div v-if="match.status === 'scheduled' || match.status === 'live'" class="card face-off" :style="surfaceCardVars(match.surface)">
         <TourBadge :tour="match.playerA.tour" on-dark class="circuit-badge" />
         <span class="surface-badge">{{ surfaceLabel(match.surface) }}</span>
-        <div class="player">
+        <div class="player player-left">
           <div class="avatar" :class="{ 'is-favorite': isFavorite(match.playerA) }" :style="!showPhoto(match.playerA) ? avatarGradient(match.playerA.fullName) : null">
             <img
               v-if="showPhoto(match.playerA)"
@@ -405,7 +405,7 @@ onMounted(async () => {
           </div>
         </div>
 
-        <div class="player">
+        <div class="player player-right">
           <div class="avatar" :class="{ 'is-favorite': isFavorite(match.playerB) }" :style="!showPhoto(match.playerB) ? avatarGradient(match.playerB.fullName) : null">
             <img
               v-if="showPhoto(match.playerB)"
@@ -562,11 +562,13 @@ onMounted(async () => {
             <div class="h2h-score" :class="{ lead: headToHead.wins_player > headToHead.wins_opponent }">
               <span class="h2h-number">{{ headToHead.wins_player }}</span>
               <span class="h2h-name">{{ match.playerA.fullName.split(' ').at(-1) }}</span>
+              <span v-if="headToHead.wins_player > headToHead.wins_opponent" class="h2h-lead-tag">En tête</span>
             </div>
             <span class="h2h-sep">—</span>
             <div class="h2h-score" :class="{ lead: headToHead.wins_opponent > headToHead.wins_player }">
               <span class="h2h-number">{{ headToHead.wins_opponent }}</span>
               <span class="h2h-name">{{ match.playerB.fullName.split(' ').at(-1) }}</span>
+              <span v-if="headToHead.wins_opponent > headToHead.wins_player" class="h2h-lead-tag">En tête</span>
             </div>
           </div>
         </div>
@@ -626,8 +628,17 @@ onMounted(async () => {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .card {
+  * {
     animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .player-left,
+  .player-right,
+  .mid {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 
@@ -662,6 +673,19 @@ onMounted(async () => {
   margin-bottom: 18px;
   animation: fadeUp 0.5s ease both;
 }
+/* Léger relief au survol (passe "premium", 11/09/2026) — même langage que
+   HomeView.vue/MatchesView.vue/ModelReliabilityView.vue. Exclue .face-off :
+   cette carte a déjà sa propre ombre teintée par surface (surface-shadow),
+   qu'une ombre neutre générique affadirait plutôt que sublimerait. */
+.card:not(.face-off) {
+  transition:
+    box-shadow 0.35s var(--ease-premium),
+    transform 0.35s var(--ease-premium);
+}
+.card:not(.face-off):hover {
+  box-shadow: var(--shadow-elevated);
+  transform: translateY(-2px);
+}
 
 .face-off {
   position: relative;
@@ -679,7 +703,7 @@ onMounted(async () => {
   --card: rgba(255, 255, 255, 0.16);
   --green: var(--lime);
   box-shadow: 0 22px 44px -18px var(--surface-shadow);
-  animation: cardIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: cardIn 0.6s var(--ease-premium) both;
 }
 @keyframes cardIn {
   from {
@@ -689,6 +713,49 @@ onMounted(async () => {
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+/* Entrée en scène des deux joueurs (passe "premium", 11/09/2026) : chacun
+   glisse depuis son côté plutôt que d'apparaître d'un bloc avec le reste de
+   .face-off — un léger effet "confrontation" plus marqué que le simple
+   fondu déjà porté par cardIn sur la carte entière. */
+.player-left {
+  animation: slideInLeft 0.7s var(--ease-premium) 0.08s both;
+}
+.player-right {
+  animation: slideInRight 0.7s var(--ease-premium) 0.14s both;
+}
+.mid {
+  animation: midFadeIn 0.6s var(--ease-premium) 0.2s both;
+}
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes midFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 .face-off::after {
@@ -738,7 +805,21 @@ onMounted(async () => {
   box-shadow:
     inset 0 0 0 2px rgba(255, 255, 255, 0.22),
     0 8px 20px rgba(0, 0, 0, 0.3);
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    transform 0.4s var(--ease-premium),
+    box-shadow 0.4s var(--ease-premium);
+}
+.player:hover .avatar {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.3),
+    0 12px 26px rgba(0, 0, 0, 0.36);
+}
+.player:hover .avatar.is-favorite {
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.35),
+    0 0 0 3px var(--lime),
+    0 12px 28px rgba(199, 255, 60, 0.4);
 }
 .avatar.is-favorite {
   box-shadow:
@@ -1186,6 +1267,17 @@ onMounted(async () => {
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
+.h2h-lead-tag {
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--green);
+  background: rgba(15, 61, 62, 0.08);
+  padding: 2px 9px;
+  border-radius: 999px;
+}
 .h2h-sep {
   font-size: 20px;
   font-weight: 700;
@@ -1239,6 +1331,27 @@ onMounted(async () => {
   font-weight: 700;
   color: var(--green);
 }
+/* Repère visuel du côté gagnant (passe "premium", 11/09/2026) : un point
+   discret plutôt que de compter uniquement sur le gras + la couleur, pour
+   rester lisible même en cas de daltonisme rouge/vert — et surlignage léger
+   au survol de la ligne, pour que ce tableau dense se parcoure plus
+   facilement que du texte figé. */
+.stats-table td.win::after {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  vertical-align: middle;
+}
+.stats-table tbody tr {
+  transition: background 0.2s ease;
+}
+.stats-table tbody tr:hover {
+  background: rgba(15, 61, 62, 0.035);
+}
 
 .locked {
   text-align: center;
@@ -1280,6 +1393,13 @@ h3 {
 .factors li {
   display: flex;
   gap: 10px;
+  padding: 8px 10px;
+  margin: 0 -10px;
+  border-radius: 12px;
+  transition: background 0.2s ease;
+}
+.factors li:hover {
+  background: rgba(15, 61, 62, 0.035);
 }
 .factors .tag {
   flex: none;
