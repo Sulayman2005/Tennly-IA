@@ -31,16 +31,21 @@ function showPhoto(player) {
   return hasPhoto(player) && !photoErrored.has(player.id)
 }
 
-// Libellé de statut (11/09/2026) : jusqu'ici tout match non 'scheduled'
-// affichait juste "Terminé", y compris un forfait (status 'walkover') — pas
-// faux, mais moins précis que ce qu'on sait déjà côté back (voir
-// MatchStatus.php). 'winner'/'scoreText' sont exposés par l'API depuis le
-// début (Groups 'match:read' sur TennisMatch.php) mais n'ont jamais été
-// affichés nulle part côté frontend : ça n'avait aucun intérêt tant que
-// import_upcoming_matches.py ne les renseignait jamais (voir
-// update_match_results.py, qui vient combler ce trou côté données).
+// Libellé de statut (11/09/2026, complété le 10/09/2026) : jusqu'ici tout
+// match non 'scheduled' affichait juste "Terminé", y compris un forfait
+// (status 'walkover') — pas faux, mais moins précis que ce qu'on sait déjà
+// côté back (voir MatchStatus.php). 'winner'/'scoreText' sont exposés par
+// l'API depuis le début (Groups 'match:read' sur TennisMatch.php) mais
+// n'ont jamais été affichés nulle part côté frontend : ça n'avait aucun
+// intérêt tant que import_upcoming_matches.py ne les renseignait jamais
+// (voir update_match_results.py, qui vient combler ce trou côté données).
+// Le cas 'live' manquait carrément ici (un match en cours retombait dans
+// le "return 'Terminé'" par défaut — un match toujours en train de se
+// jouer affiché comme terminé) — ajouté explicitement, voir aussi le badge
+// dédié .mc-live dans le template.
 function statusLabel(status) {
   if (status === 'scheduled') return 'À venir'
+  if (status === 'live') return 'En direct'
   if (status === 'walkover') return 'Terminé (forfait)'
   return 'Terminé'
 }
@@ -58,9 +63,14 @@ function isWinner(player) {
         {{ match.tournamentName }} · {{ match.round }}
       </span>
       <span class="mc-surface">{{ surfaceLabel(match.surface) }}</span>
+      <!-- Badge "En direct" dédié (10/09/2026) : distinct de .mc-status pour
+           qu'un match en cours ressorte visuellement (pastille rouge
+           pulsante, convention universelle du direct) plutôt que de se
+           fondre dans le même texte discret que "Terminé"/"À venir". -->
+      <span v-if="match.status === 'live'" class="mc-live"><i></i>EN DIRECT</span>
       <span class="mc-time">
         {{ new Date(match.scheduledAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) }}
-        · <span class="mc-status" :class="{ done: match.status !== 'scheduled' }">{{ statusLabel(match.status) }}</span>
+        · <span class="mc-status" :class="{ done: match.status !== 'scheduled' && match.status !== 'live' }">{{ statusLabel(match.status) }}</span>
       </span>
     </div>
     <div class="mc-body">
@@ -164,8 +174,8 @@ function isWinner(player) {
   cursor: pointer;
   transform: translateY(0) scale(1);
   transition:
-    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.4s var(--ease-premium),
+    box-shadow 0.4s var(--ease-premium),
     background 0.5s ease;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16);
 }
@@ -235,6 +245,48 @@ function isWinner(player) {
   background: rgba(255, 255, 255, 0.14);
   margin-right: auto;
 }
+/* Badge "En direct" (10/09/2026) : rouge + pastille pulsante, jamais la
+   couleur de surface (déjà utilisée pour --surface-tint/--surface-glow
+   partout ailleurs sur cette carte) ni le citron vert (réservé au positif —
+   favori, confiance, victoire) — le rouge est la convention universelle du
+   direct, personne ne doit avoir à deviner ce que ça veut dire. */
+.mc-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+  padding: 3px 10px 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 69, 58, 0.22);
+  color: #fff;
+  border: 1px solid rgba(255, 69, 58, 0.5);
+}
+.mc-live i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 2px rgba(255, 69, 58, 0.35);
+  animation: mcLivePulse 1.6s ease-in-out infinite;
+}
+@keyframes mcLivePulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 2px rgba(255, 69, 58, 0.35);
+  }
+  50% {
+    opacity: 0.55;
+    box-shadow: 0 0 0 4px rgba(255, 69, 58, 0.16);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mc-live i {
+    animation: none;
+  }
+}
 .mc-body {
   position: relative;
   z-index: 2;
@@ -267,7 +319,9 @@ function isWinner(player) {
   box-shadow:
     inset 0 0 0 2px rgba(255, 255, 255, 0.22),
     0 6px 16px rgba(0, 0, 0, 0.28);
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+  transition:
+    transform 0.4s var(--ease-premium),
+    box-shadow 0.4s ease;
 }
 .match-card:hover .mc-avatar {
   transform: translateY(-2px) scale(1.04);

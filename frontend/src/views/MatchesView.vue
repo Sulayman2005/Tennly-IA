@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import MatchCard from '@/components/MatchCard.vue'
@@ -22,6 +22,12 @@ async function fetchAllPages(query) {
   return all
 }
 
+// Corrigé le 10/09/2026 : cette fonction ne récupérait QUE les matchs
+// 'scheduled' à venir et les matchs 'finished'/'walkover' — un match
+// 'live' (en cours) n'était interrogé nulle part et disparaissait donc
+// purement et simplement de la page, alors que c'est justement le plus
+// urgent à voir. Ajout d'un troisième appel dédié, mis en tête de liste
+// (voir aussi le badge .mc-live sur MatchCard.vue).
 async function loadMatches({ silent = false } = {}) {
   if (!silent) {
     loading.value = true
@@ -29,12 +35,14 @@ async function loadMatches({ silent = false } = {}) {
   }
   try {
     const nowIso = new Date().toISOString()
-    const [upcoming, finishedData] = await Promise.all([
+    const [liveData, upcoming, finishedData] = await Promise.all([
+      api.get('/api/tennis_matches?status=live&order[scheduledAt]=asc&itemsPerPage=50'),
       fetchAllPages(`?status=scheduled&scheduledAt[strictly_after]=${encodeURIComponent(nowIso)}&order[scheduledAt]=asc&order[id]=asc&itemsPerPage=50`),
       api.get('/api/tennis_matches?status[]=finished&status[]=walkover&order[scheduledAt]=desc&order[id]=desc&itemsPerPage=50'),
     ])
+    const live = liveData['hydra:member'] ?? liveData['member'] ?? liveData
     const rest = finishedData['hydra:member'] ?? finishedData['member'] ?? finishedData
-    matches.value = [...upcoming, ...rest]
+    matches.value = [...live, ...upcoming, ...rest]
     error.value = null
   } catch (e) {
     if (!silent) error.value = e
@@ -51,6 +59,30 @@ onUnmounted(() => clearInterval(pollTimer))
 
 function openMatch(match) {
   router.push({ name: 'match-detail', params: { id: match.id } })
+}
+
+// Filtres (10/09/2026, passe "rendu premium") : purement client — tout est
+// déjà chargé en mémoire (voir matches ci-dessus), donc filtrer ne relance
+// aucun appel réseau. "Tous" en premier et sélectionné par défaut pour ne
+// rien cacher au premier affichage.
+const activeFilter = ref('all')
+const filters = [
+  { key: 'all', label: 'Tous' },
+  { key: 'live', label: 'En direct' },
+  { key: 'scheduled', label: 'À venir' },
+  { key: 'done', label: 'Terminés' },
+]
+const filteredMatches = computed(() => {
+  if (activeFilter.value === 'all') return matches.value
+  if (activeFilter.value === 'done') {
+    return matches.value.filter((m) => m.status === 'finished' || m.status === 'walkover')
+  }
+  return matches.value.filter((m) => m.status === activeFilter.value)
+})
+function filterCount(key) {
+  if (key === 'all') return matches.value.length
+  if (key === 'done') return matches.value.filter((m) => m.status === 'finished' || m.status === 'walkover').length
+  return matches.value.filter((m) => m.status === key).length
 }
 </script>
 
@@ -74,17 +106,46 @@ function openMatch(match) {
       <p class="sub">Favori pressenti, probabilité et analyse complète (radar, facteurs, cote de valeur) réservés à nos abonnés — le calendrier des matchs à venir reste consultable par tous.</p>
     </div>
 
-    <p v-if="loading" class="state-msg">Chargement des analyses…</p>
+    <!-- Squelette de chargement (10/09/2026, passe "rendu premium") :
+         remplace le simple texte "Chargement…" par des cartes fantômes qui
+         imitent la forme d'une vraie MatchCard (shimmer qui balaie),
+         puisque la liste peut mettre un instant à arriver et qu'un texte
+         seul, sur une page par ailleurs déjà très visuelle, détonnait. -->
+    <div v-if="loading" class="match-list" aria-hidden="true">
+      <div v-for="n in 4" :key="n" class="skeleton-card" :style="{ animationDelay: n * 0.06 + 's' }"></div>
+    </div>
     <p v-else-if="error" class="state-msg error">Impossible de charger les matchs pour le moment.</p>
     <div v-else-if="!matches.length" class="state-empty">
       <div class="icon">🎾</div>
       <p>Aucun match pour le moment — reviens un peu plus tard.</p>
     </div>
-    <div v-else class="match-list">
-      <div v-for="(match, i) in matches" :key="match.id" class="match-item" :style="{ animationDelay: i * 0.05 + 's' }">
-        <MatchCard :match="match" @open="openMatch" />
+    <template v-else>
+      <!-- Filtres (10/09/2026) : purement client, voir filteredMatches dans
+           le script — aucun rechargement réseau au clic. -->
+      <div class="filter-row" role="tablist" aria-label="Filtrer les matchs">
+        <button
+          v-for="f in filters"
+          :key="f.key"
+          type="button"
+          role="tab"
+          class="filter-chip"
+          :class="{ active: activeFilter === f.key, live: f.key === 'live' && filterCount('live') > 0 }"
+          :aria-selected="activeFilter === f.key"
+          @click="activeFilter = f.key"
+        >
+          <i v-if="f.key === 'live' && filterCount('live') > 0"></i>
+          {{ f.label }}
+          <span class="filter-count">{{ filterCount(f.key) }}</span>
+        </button>
       </div>
-    </div>
+
+      <p v-if="!filteredMatches.length" class="state-empty-inline">Aucun match dans cette catégorie pour le moment.</p>
+      <div v-else class="match-list">
+        <div v-for="(match, i) in filteredMatches" :key="match.id" class="match-item" :style="{ animationDelay: Math.min(i, 10) * 0.05 + 's' }">
+          <MatchCard :match="match" @open="openMatch" />
+        </div>
+      </div>
+    </template>
   </section>
 </template>
 
@@ -255,6 +316,72 @@ h1 .accent {
   margin: 0;
   font-size: 14px;
 }
+.state-empty-inline {
+  position: relative;
+  z-index: 1;
+  color: var(--grey);
+  font-size: 14px;
+  padding: 24px 0;
+}
+
+/* -- Filtres (10/09/2026) -- */
+.filter-row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 22px;
+}
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--grey);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    transform 0.3s var(--ease-premium);
+}
+.filter-chip:hover {
+  border-color: var(--green);
+  color: var(--ink);
+  transform: translateY(-1px);
+}
+.filter-chip.active {
+  background: var(--btn);
+  border-color: var(--btn);
+  color: #fff;
+}
+.filter-chip.live:not(.active) {
+  border-color: rgba(255, 69, 58, 0.4);
+  color: var(--red);
+}
+.filter-chip i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--red);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.filter-chip.active i {
+  background: #fff;
+}
+.filter-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: inherit;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
 
 .match-list {
   position: relative;
@@ -265,5 +392,37 @@ h1 .accent {
 }
 .match-item {
   animation: fadeUp 0.5s ease both;
+}
+
+/* -- Squelette de chargement (10/09/2026) --
+   Même gabarit qu'une MatchCard (hauteur/rayon proches) pour que le
+   passage au vrai contenu ne "saute" pas visuellement, avec un shimmer qui
+   balaie en boucle plutôt qu'un simple gris figé. */
+.skeleton-card {
+  position: relative;
+  overflow: hidden;
+  height: 172px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+  background: var(--card);
+  animation: fadeUp 0.4s ease both;
+}
+.skeleton-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.7) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+}
+@keyframes skeletonShimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-card::after {
+    animation: none;
+  }
 }
 </style>
