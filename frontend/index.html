@@ -10,10 +10,18 @@
          utilisée ailleurs sur le site, qui reste sur la police système
          (voir tokens.css). Chargée globalement ici plutôt qu'en @import
          dans le composant : une seule requête, mise en cache pour tout le
-         site si d'autres écrans en ont besoin plus tard. -->
+         site si d'autres écrans en ont besoin plus tard.
+
+         Police mono "JetBrains Mono" (15/09/2026) : réservée à la page
+         /fiabilite (ModelReliabilityView.vue), passée en thème sombre
+         "technique" — chiffres et libellés de données en monospace pour
+         un effet console/terminal, jamais utilisée ailleurs. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="app"></div>
