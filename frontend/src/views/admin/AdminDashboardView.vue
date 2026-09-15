@@ -479,17 +479,20 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
   line-height: 1.5;
 }
 
-/* Révélation au scroll + hover-lift, alignées sur le même vocabulaire de
-   mouvement que le reste du site (var(--ease-premium)/var(--shadow-elevated)). */
+/* Révélation au scroll + survol : bordure qui s'accentue plutôt qu'une
+   ombre généreuse — même logique "console" que le reste de l'admin
+   (voir AdminLayout.vue), pas le langage "premium" du site public. */
 .grid .card {
-  transition: box-shadow 0.35s var(--ease-premium), transform 0.35s var(--ease-premium);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s var(--ease-premium);
 }
 .grid .card:hover {
-  box-shadow: var(--shadow-elevated);
+  border-color: #cfd6d2;
+  box-shadow: 0 10px 28px -18px rgba(20, 24, 26, 0.28);
   transform: translateY(-2px);
 }
 .card.perf-hero:hover {
-  box-shadow: 0 24px 48px -16px rgba(15, 25, 25, 0.4);
+  border-color: transparent;
+  box-shadow: 0 20px 44px -18px rgba(0, 0, 0, 0.55);
 }
 
 .reveal {
@@ -540,6 +543,7 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
   position: relative;
   overflow: hidden;
   background: linear-gradient(135deg, var(--ink), #1a3a2e);
+  border-color: transparent;
   color: #fff;
   display: flex;
   flex-direction: column;
@@ -572,9 +576,11 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
 }
 
 .perf-hero .big {
-  font-size: 42px;
-  font-weight: 800;
+  font-family: var(--mono);
+  font-size: 40px;
+  font-weight: 700;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .perf-hero .lbl {
@@ -611,9 +617,9 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
 }
 
 .perf-mini .chip {
-  background: rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(6px);
-  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--adm-radius-sm);
   padding: 8px 16px;
   display: flex;
   flex-direction: column;
@@ -622,8 +628,10 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
 }
 
 .perf-mini .chip b {
+  font-family: var(--mono);
   font-size: 16px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .perf-mini .chip span {
@@ -634,7 +642,8 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
 
 /* INSIGHT */
 .insight {
-  background: #eef7f1;
+  background: #f5faf6;
+  border-left: 3px solid var(--green);
 }
 .insight-head {
   display: flex;
@@ -694,6 +703,7 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
 }
 .acc-stat b {
   display: block;
+  font-family: var(--mono);
   font-size: 18px;
   font-variant-numeric: tabular-nums;
 }
@@ -723,6 +733,7 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
   justify-content: center;
 }
 .acc-gauge-label b {
+  font-family: var(--mono);
   font-size: 15px;
   font-weight: 700;
 }
@@ -756,7 +767,8 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
 
 /* MRR */
 .mrr {
-  font-size: 32px;
+  font-family: var(--mono);
+  font-size: 30px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   display: block;
@@ -782,17 +794,18 @@ const monthLabel = computed(() => today.toLocaleDateString('fr-FR', { month: 'lo
 }
 .mrr-bar-track {
   height: 7px;
-  border-radius: 99px;
+  border-radius: 4px;
   background: var(--admin-bg);
   overflow: hidden;
 }
 .mrr-bar-track i {
   display: block;
   height: 100%;
-  border-radius: 99px;
+  border-radius: 4px;
   transition: width 1.1s var(--ease-premium);
 }
 .mrr-bar-count {
+  font-family: var(--mono);
   font-weight: 700;
   text-align: right;
   font-variant-numeric: tabular-nums;

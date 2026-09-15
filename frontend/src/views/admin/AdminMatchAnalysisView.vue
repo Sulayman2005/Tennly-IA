@@ -197,10 +197,9 @@ function scheduledLabel(iso) {
   gap: 16px;
   background: linear-gradient(120deg, var(--green), var(--green2) 60%, #051616);
   color: #fff;
-  border-radius: 24px;
+  border-radius: var(--adm-radius);
   padding: 26px 30px;
   margin-bottom: 20px;
-  box-shadow: var(--shadow-soft);
   flex-wrap: wrap;
 }
 .mh-left h1 {
@@ -213,19 +212,21 @@ function scheduledLabel(iso) {
   gap: 10px;
   flex-wrap: wrap;
   font-size: 12px;
+  font-family: var(--mono);
   opacity: 0.8;
 }
 .mh-meta span {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--adm-radius-sm);
 }
 .mh-badge {
   background: rgba(199, 255, 60, 0.18);
   border: 1px solid rgba(199, 255, 60, 0.5);
   color: var(--lime);
   padding: 8px 16px;
-  border-radius: 999px;
+  border-radius: var(--adm-radius-sm);
   font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
@@ -233,12 +234,12 @@ function scheduledLabel(iso) {
 
 .tabswitch {
   display: inline-flex;
-  gap: 4px;
-  background: var(--admin-card);
-  padding: 4px;
-  border-radius: 999px;
+  gap: 2px;
+  background: var(--admin-bg);
+  border: 1px solid var(--line);
+  padding: 3px;
+  border-radius: var(--adm-radius-sm);
   margin-bottom: 20px;
-  box-shadow: var(--shadow-soft);
 }
 .tabswitch button {
   border: none;
@@ -247,13 +248,15 @@ function scheduledLabel(iso) {
   font-size: 13px;
   font-weight: 600;
   padding: 8px 18px;
-  border-radius: 999px;
+  border-radius: 6px;
   cursor: pointer;
   font-family: inherit;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 .tabswitch button.active {
-  background: var(--ink);
-  color: #fff;
+  background: var(--admin-card);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgba(20, 24, 26, 0.14);
 }
 
 .grid {
@@ -280,7 +283,9 @@ function scheduledLabel(iso) {
 }
 .stat b {
   display: block;
+  font-family: var(--mono);
   font-size: 22px;
+  font-variant-numeric: tabular-nums;
 }
 .stat b.pos {
   color: #1f7d33;
@@ -335,6 +340,7 @@ function scheduledLabel(iso) {
   background: linear-gradient(270deg, var(--blue), #3ba7ff);
 }
 .tval {
+  font-family: var(--mono);
   font-weight: 700;
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -368,10 +374,12 @@ function scheduledLabel(iso) {
 .tag.ok {
   background: #e6f9ea;
   color: #1f7d33;
+  border: 1px solid rgba(31, 125, 51, 0.2);
 }
 .tag.warn {
   background: #fff3cd;
   color: #8a6100;
+  border: 1px solid rgba(138, 97, 0, 0.2);
 }
 
 .compare-line {
@@ -383,12 +391,13 @@ function scheduledLabel(iso) {
   margin-bottom: 14px;
 }
 .compare-line b {
+  font-family: var(--mono);
   font-size: 13px;
   white-space: nowrap;
 }
 .cbar {
   height: 8px;
-  border-radius: 99px;
+  border-radius: 4px;
   background: var(--admin-bg);
   position: relative;
   overflow: hidden;
@@ -398,23 +407,25 @@ function scheduledLabel(iso) {
   top: 0;
   bottom: 0;
   left: 0;
-  border-radius: 99px;
+  border-radius: 4px;
   background: var(--green);
 }
 .result-badge {
   display: inline-block;
   padding: 8px 16px;
-  border-radius: 999px;
+  border-radius: var(--adm-radius-sm);
   font-size: 13px;
   font-weight: 700;
 }
 .result-badge.ok {
   background: #e6f9ea;
   color: #1f7d33;
+  border: 1px solid rgba(31, 125, 51, 0.2);
 }
 .result-badge.bad {
   background: #fdecea;
   color: #b3261e;
+  border: 1px solid rgba(179, 38, 30, 0.2);
 }
 
 @media (max-width: 980px) {

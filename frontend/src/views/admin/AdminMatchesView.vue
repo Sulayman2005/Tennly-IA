@@ -141,12 +141,18 @@ h1 {
 .filters input {
   border: 1px solid var(--line);
   background: var(--admin-bg);
-  border-radius: 10px;
+  border-radius: var(--adm-radius-sm);
   padding: 8px 12px;
   font-size: 13px;
   font-family: inherit;
   color: var(--ink);
   min-width: 160px;
+  transition: border-color 0.15s ease;
+}
+.filters select:focus,
+.filters input:focus {
+  outline: none;
+  border-color: var(--green);
 }
 
 .match-row {
@@ -154,9 +160,11 @@ h1 {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   flex-wrap: wrap;
   cursor: pointer;
+  text-decoration: none;
+  color: inherit;
 }
 .mr-players {
   display: flex;
@@ -190,19 +198,25 @@ h1 {
 }
 .badge {
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: var(--adm-radius-sm);
   font-weight: 700;
   font-size: 11px;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
   background: var(--admin-bg);
   color: var(--ink);
+  border: 1px solid var(--line);
 }
 .badge.finished {
   background: #e6f9ea;
   color: #1f7d33;
+  border-color: rgba(31, 125, 51, 0.2);
 }
 .badge.live {
   background: #fdecea;
   color: #b3261e;
+  border-color: rgba(179, 38, 30, 0.2);
 }
 
 @media (max-width: 640px) {

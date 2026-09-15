@@ -132,19 +132,24 @@ h1 {
 .filters select {
   border: 1px solid var(--line);
   background: var(--admin-bg);
-  border-radius: 10px;
+  border-radius: var(--adm-radius-sm);
   padding: 8px 12px;
   font-size: 13px;
   font-family: inherit;
   color: var(--ink);
   min-width: 180px;
+  transition: border-color 0.15s ease;
+}
+.filters select:focus {
+  outline: none;
+  border-color: var(--green);
 }
 
 .sub-row {
   display: flex;
   align-items: center;
   gap: 20px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   flex-wrap: wrap;
 }
 .who {
@@ -182,28 +187,36 @@ h1 {
   font-size: 13px;
 }
 .plan-price {
+  font-family: var(--mono);
   font-size: 12px;
   color: var(--grey);
 }
 .badge {
   padding: 4px 12px;
-  border-radius: 999px;
+  border-radius: var(--adm-radius-sm);
   font-size: 11px;
   font-weight: 700;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
   background: var(--admin-bg);
+  border: 1px solid var(--line);
 }
 .badge.active,
 .badge.trialing {
   background: #e6f9ea;
   color: #1f7d33;
+  border-color: rgba(31, 125, 51, 0.2);
 }
 .badge.past_due {
   background: #fff3cd;
   color: #8a6100;
+  border-color: rgba(138, 97, 0, 0.2);
 }
 .badge.canceled {
   background: #fdecea;
   color: #b3261e;
+  border-color: rgba(179, 38, 30, 0.2);
 }
 .period {
   display: flex;
