@@ -531,7 +531,15 @@ onMounted(async () => {
       <template v-else-if="prediction">
         <div class="card">
           <h3>Profil comparatif</h3>
-          <RadarChart :profile="prediction.radarProfile" :label-a="match.playerA.fullName" :label-b="match.playerB.fullName" />
+          <div class="sub">6 dimensions clés, normalisées sur 100</div>
+          <RadarChart
+            :profile="prediction.radarProfile"
+            :label-a="match.playerA.fullName"
+            :label-b="match.playerB.fullName"
+            :favorite-index="match.prediction?.favoritePlayer ? (isFavorite(match.playerA) ? 0 : 1) : null"
+            :winner-index="match.winner ? (match.winner.id === match.playerA.id ? 0 : 1) : null"
+            :probability-favorite="match.prediction?.probabilityFavorite ?? null"
+          />
         </div>
 
         <div v-if="snapshotRows.length" class="card">
@@ -597,10 +605,14 @@ onMounted(async () => {
 
         <div class="card why">
           <h3>Pourquoi cette analyse ?</h3>
+          <div class="sub">Chaque ligne indique le joueur qu'elle avantage, pas seulement le constat.</div>
           <ul class="factors">
             <li v-for="(factor, i) in prediction.explanationFactors" :key="i" :class="factor.tone">
               <span class="tag" :class="factor.tone === 'warn' ? 'warn' : 'ok'">{{ factor.tone === 'warn' ? '!' : '✓' }}</span>
-              {{ factor.label }}
+              <span class="factor-text">
+                {{ factor.label }}
+                <b class="factor-favors">— avantage {{ (factor.favors === 'A' ? match.playerA.fullName : match.playerB.fullName).split(' ').at(-1) }}</b>
+              </span>
             </li>
           </ul>
         </div>
@@ -1380,6 +1392,13 @@ h3 {
   font-weight: 700;
   margin: 0 0 18px;
 }
+.sub {
+  margin-top: -12px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--grey);
+  line-height: 1.5;
+}
 .factors {
   list-style: none;
   padding: 0;
@@ -1415,6 +1434,17 @@ h3 {
 .factors .tag.ok {
   background: #e6f9ea;
   color: #1f7d33;
+}
+.factor-text {
+  display: block;
+}
+.factor-favors {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--green);
+  white-space: nowrap;
 }
 .factors .tag.warn {
   background: #fff3cd;

@@ -98,7 +98,14 @@ function scheduledLabel(iso) {
         <div class="card">
           <h3>Profil comparatif</h3>
           <div class="sub">6 dimensions clés, normalisées sur 100</div>
-          <RadarChart :profile="prediction.radarProfile" :label-a="match.playerA.fullName" :label-b="match.playerB.fullName" />
+          <RadarChart
+            :profile="prediction.radarProfile"
+            :label-a="match.playerA.fullName"
+            :label-b="match.playerB.fullName"
+            :favorite-index="prediction.favoritePlayer.id === match.playerA.id ? 0 : 1"
+            :winner-index="isFinished ? (match.winner.id === match.playerA.id ? 0 : 1) : null"
+            :probability-favorite="prediction.probabilityFavorite"
+          />
         </div>
 
         <div class="card">
@@ -164,6 +171,36 @@ function scheduledLabel(iso) {
           <div class="result-badge" :class="predictionWasCorrect ? 'ok' : 'bad'">
             {{ predictionWasCorrect ? '✓ Analyse confirmée' : '✗ Le favori du modèle n’a pas gagné' }}
           </div>
+        </div>
+
+        <!-- Profil comparatif + facteurs (15/09/2026) : repris à l'identique
+             de l'onglet "Avant le match" plutôt que perdus au changement
+             d'onglet — un retour explicite signalait qu'on ne comprenait
+             plus l'analyse (qui était favori, pourquoi) une fois le match
+             terminé. Le radar affiche maintenant lui-même le favori ET le
+             vainqueur réel (voir RadarChart.vue), donc cette carte reste
+             utile même après "Analyse vs réalité" ci-dessus. -->
+        <div class="card span2">
+          <h3>Profil comparatif</h3>
+          <div class="sub">6 dimensions clés, normalisées sur 100</div>
+          <RadarChart
+            :profile="prediction.radarProfile"
+            :label-a="match.playerA.fullName"
+            :label-b="match.playerB.fullName"
+            :favorite-index="prediction.favoritePlayer.id === match.playerA.id ? 0 : 1"
+            :winner-index="match.winner.id === match.playerA.id ? 0 : 1"
+            :probability-favorite="prediction.probabilityFavorite"
+          />
+        </div>
+
+        <div class="card">
+          <h3>Pourquoi cette analyse ?</h3>
+          <ul class="ins-list">
+            <li v-for="(factor, i) in prediction.explanationFactors" :key="i" :class="factor.tone">
+              <span class="tag" :class="factor.tone">{{ factor.tone === 'warn' ? '!' : '✓' }}</span>
+              {{ factor.label }} ({{ factor.favors === 'A' ? match.playerA.fullName : match.playerB.fullName }}, {{ factor.impactPoints >= 0 ? '+' : '' }}{{ factor.impactPoints }} pt)
+            </li>
+          </ul>
         </div>
       </div>
     </template>
