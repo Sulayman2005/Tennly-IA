@@ -192,19 +192,19 @@ function goToMatches() {
 const faqs = [
   {
     q: 'Tennly est-il gratuit ?',
-    a: "Le début — qui est favori et ses chances de gagner — est gratuit sur tous les matchs. Pour voir l'explication complète, avec tous les détails, il faut être abonné.",
+    a: "Le favori et ses chances de gagner sont gratuits sur tous les matchs. L'explication complète est réservée aux abonnés.",
   },
   {
     q: 'Comment on devine qui va gagner ?',
-    a: "On calcule la force de chaque joueur sur chaque terrain, et on regarde de vraies statistiques (service, retour, forme, repos), à partir de matchs qui ont vraiment été joués — jamais un secret qu'on ne peut pas expliquer.",
+    a: "On regarde la force de chaque joueur et de vraies statistiques (service, retour, forme, repos), à partir de matchs réels.",
   },
   {
     q: 'Est-ce que Tennly décide à ma place ?',
-    a: "Non. Tennly t'aide juste à comprendre et à réfléchir : ce n'est pas un conseil pour parier de l'argent, et rien n'est garanti.",
+    a: "Non. Tennly t'aide à comprendre : ce n'est pas un conseil pour parier de l'argent, et rien n'est garanti.",
   },
   {
     q: 'Est-ce que c\'est vrai, tout ça ?',
-    a: "Oui : tout vient de vrais matchs qui ont vraiment eu lieu, et on explique comment on calcule tout, sans rien cacher. On n'invente jamais un chiffre.",
+    a: "Oui : tout vient de vrais matchs, et on explique comment on calcule, sans rien cacher.",
   },
 ]
 const openFaqIndex = ref(0)
@@ -271,28 +271,6 @@ function toggleFaq(i) {
     <div class="hero-scrollcue" aria-hidden="true"><i></i></div>
   </section>
 
-  <!--
-    Ruban animé en boucle infinie — remplace l'ancien stat-banner (4 cases
-    qui dépendaient de /api/stats et restaient vides/cassées tant que
-    l'endpoint était lent ou en erreur). Purement décoratif, jamais bloqué
-    par un chargement réseau : le vrai chiffre de réussite/matchs analysés
-    reste affiché juste au-dessus, dans le hero (.hero-stats).
-  -->
-  <div class="live-ribbon" aria-hidden="true">
-    <div class="live-ribbon-track">
-      <span class="live-chip"><i class="dot"></i>On recalcule la force de chaque joueur</span>
-      <span class="live-chip"><i class="dot"></i>6 choses importantes regardées</span>
-      <span class="live-chip"><i class="dot"></i>Basé sur de vrais matchs déjà joués</span>
-      <span class="live-chip"><i class="dot"></i>Rien n'est inventé</span>
-      <span class="live-chip"><i class="dot"></i>Mis à jour après chaque match</span>
-      <span class="live-chip"><i class="dot"></i>On recalcule la force de chaque joueur</span>
-      <span class="live-chip"><i class="dot"></i>6 choses importantes regardées</span>
-      <span class="live-chip"><i class="dot"></i>Basé sur de vrais matchs déjà joués</span>
-      <span class="live-chip"><i class="dot"></i>Rien n'est inventé</span>
-      <span class="live-chip"><i class="dot"></i>Mis à jour après chaque match</span>
-    </div>
-  </div>
-
   <div class="section-divider" aria-hidden="true"><span></span></div>
 
   <!-- ================= COMMENT ÇA MARCHE (09/09/2026) =================
@@ -300,20 +278,24 @@ function toggleFaq(i) {
        concurrent) : Tennly n'avait jusqu'ici aucun explicatif "en 3 étapes"
        avant de plonger directement dans la liste des matchs. Les 3 étapes
        reprennent des faits déjà vrais ailleurs sur cette page (6 signaux
-       réels — voir .live-ribbon et la section "Sous le capot" plus bas —
-       et le circuit ATP complet — voir .level-row juste en dessous) plutôt
-       que d'inventer un nouveau discours. -->
+       réels — voir la section "Sous le capot" plus bas — et le circuit ATP
+       complet — voir .level-row juste en dessous) plutôt que d'inventer un
+       nouveau discours.
+       Allègement (16/09/2026, sur demande explicite "trop de texte") : plus
+       de sous-titre sous le h2, et descriptions des 3 cartes raccourcies en
+       une ligne chacune — le ruban animé (.live-ribbon), qui répétait mot
+       pour mot les mêmes idées que la section "Sous le capot", a aussi été
+       retiré. -->
   <div class="section">
     <div class="section-head center" v-reveal>
       <div class="eyebrow" style="justify-content: center"><i></i>EN 3 ÉTAPES</div>
       <h2>Comment ça marche, Tennly ?</h2>
-      <p>Pas besoin d'être un pro du tennis : trois étapes toutes simples entre toi et une réponse claire.</p>
     </div>
     <div class="steps-row">
       <div class="step-card" v-reveal="0">
         <div class="step-num">1</div>
         <h4>Choisis un match</h4>
-        <p>Regarde les matchs d'aujourd'hui ou de bientôt, des petits tournois jusqu'aux plus grands, comme Roland-Garros.</p>
+        <p>Parmi les matchs d'aujourd'hui ou de bientôt.</p>
       </div>
       <div class="step-arrow" aria-hidden="true">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12h15M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
@@ -321,7 +303,7 @@ function toggleFaq(i) {
       <div class="step-card" v-reveal="90">
         <div class="step-num">2</div>
         <h4>On regarde 6 choses importantes</h4>
-        <p>Qui sert bien, qui renvoie bien, qui est en forme, qui s'est bien reposé, qui a déjà gagné contre l'autre, et qui progresse en ce moment — toujours à partir de vrais matchs déjà joués.</p>
+        <p>Toujours à partir de vrais matchs déjà joués.</p>
       </div>
       <div class="step-arrow" aria-hidden="true">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12h15M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
@@ -329,7 +311,7 @@ function toggleFaq(i) {
       <div class="step-card" v-reveal="180">
         <div class="step-num">3</div>
         <h4>On te dit qui a le plus de chances</h4>
-        <p>Un favori, un chiffre facile à comprendre, et toujours les raisons derrière — jamais un secret.</p>
+        <p>Avec toujours les raisons derrière.</p>
       </div>
     </div>
   </div>
@@ -339,23 +321,22 @@ function toggleFaq(i) {
     <div class="section-head center" v-reveal>
       <div class="eyebrow" style="justify-content: center"><i></i>TOUS LES TERRAINS</div>
       <h2>Tous les tournois de tennis, sur tous les types de terrain</h2>
-      <p>On adapte nos calculs à chaque terrain, parce qu'on ne joue pas pareil sur terre battue, sur dur ou sur gazon.</p>
     </div>
     <div class="surface-row">
       <div class="surface-card dur" v-reveal="0">
         <div class="dot"></div>
         <div class="name">Dur</div>
-        <div class="desc">Australian Open, US Open, et les gros tournois en intérieur ou en extérieur.</div>
+        <div class="desc">Australian Open, US Open.</div>
       </div>
       <div class="surface-card terre" v-reveal="110">
         <div class="dot"></div>
         <div class="name">Terre battue</div>
-        <div class="desc">Roland-Garros, Monte-Carlo, Rome — le terrain préféré des spécialistes de la terre battue.</div>
+        <div class="desc">Roland-Garros, Monte-Carlo, Rome.</div>
       </div>
       <div class="surface-card gazon" v-reveal="220">
         <div class="dot"></div>
         <div class="name">Gazon</div>
-        <div class="desc">Wimbledon, et les petits tournois sur herbe juste avant.</div>
+        <div class="desc">Wimbledon.</div>
       </div>
     </div>
     <div class="level-row" v-reveal="280">
@@ -371,7 +352,6 @@ function toggleFaq(i) {
     <div class="section-head" v-reveal>
       <div class="eyebrow"><i></i>PAR EXEMPLE</div>
       <h2>Voici à quoi ça ressemble, une analyse Tennly</h2>
-      <p>Un chiffre facile à comprendre, et surtout les raisons derrière — jamais un secret.</p>
     </div>
     <!-- Restylé en carte sombre le 09/09/2026 (voir .example-panel) : même
          langage visuel que le hero et la carte résultat plutôt qu'un simple
@@ -410,9 +390,9 @@ function toggleFaq(i) {
       </div>
       <div class="why" v-reveal="120">
         <ul>
-          <li><span class="tag ok">✓</span>Sinner est plus fort sur terre battue (+77 points), d'après tous ses matchs déjà joués sur ce terrain.</li>
-          <li><span class="tag ok">✓</span>Il est en pleine forme : il progresse depuis ses 8 derniers matchs.</li>
-          <li><span class="tag warn">!</span>Quand ils se sont déjà affrontés, c'est match nul (2 victoires chacun) — ça ne change rien pour ce match.</li>
+          <li><span class="tag ok">✓</span>Sinner est plus fort sur terre battue (+77 points).</li>
+          <li><span class="tag ok">✓</span>Il est en pleine forme depuis ses 8 derniers matchs.</li>
+          <li><span class="tag warn">!</span>Résultats déjà égaux entre eux (2 victoires chacun) — ça ne change rien.</li>
         </ul>
       </div>
     </div>
@@ -426,7 +406,6 @@ function toggleFaq(i) {
     <div class="section-head center" v-reveal>
       <div class="eyebrow" style="justify-content: center"><i></i>COMMENT ON CALCULE</div>
       <h2>Ce qu'on regarde vraiment</h2>
-      <p>Pas de secret : six vraies choses, calculées à partir de matchs réellement joués — rien n'est inventé, rien ne reste figé.</p>
     </div>
     <div class="feature-grid">
       <div class="feature-card" v-reveal="0">
@@ -436,7 +415,7 @@ function toggleFaq(i) {
           </svg>
         </div>
         <h4>La force de chaque joueur, terrain par terrain</h4>
-        <p>Recalculée après chaque match, séparément sur dur, terre battue et gazon — un joueur peut être très fort sur un terrain et moins bon sur un autre.</p>
+        <p>Recalculée après chaque match.</p>
       </div>
       <div class="feature-card" v-reveal="70">
         <div class="fi">
@@ -446,7 +425,7 @@ function toggleFaq(i) {
           </svg>
         </div>
         <h4>Le service et le retour</h4>
-        <p>On regarde comment chaque joueur sert et renvoie la balle, avec ses vraies statistiques — jamais une estimation au hasard.</p>
+        <p>De vraies statistiques de jeu.</p>
       </div>
       <div class="feature-card" v-reveal="140">
         <div class="fi">
@@ -455,7 +434,7 @@ function toggleFaq(i) {
           </svg>
         </div>
         <h4>La forme et le repos</h4>
-        <p>A-t-il gagné ses derniers matchs ? A-t-il eu le temps de se reposer avant celui-ci ? (Jamais le résultat du match qu'on essaie de deviner !)</p>
+        <p>Ses derniers résultats et son temps de repos.</p>
       </div>
       <div class="feature-card" v-reveal="0">
         <div class="fi">
@@ -464,7 +443,7 @@ function toggleFaq(i) {
           </svg>
         </div>
         <h4>Leurs matchs l'un contre l'autre</h4>
-        <p>Ce qui s'est passé les fois où ces deux joueurs se sont déjà affrontés.</p>
+        <p>Leurs affrontements précédents.</p>
       </div>
       <div class="feature-card" v-reveal="70">
         <div class="fi">
@@ -473,7 +452,7 @@ function toggleFaq(i) {
           </svg>
         </div>
         <h4>En pleine forme, ou pas ?</h4>
-        <p>Est-ce qu'un joueur s'améliore en ce moment ? On regarde ses 8 derniers matchs pour le savoir.</p>
+        <p>Sa progression sur ses 8 derniers matchs.</p>
       </div>
       <div class="feature-card" v-reveal="140">
         <div class="fi">
@@ -482,7 +461,7 @@ function toggleFaq(i) {
           </svg>
         </div>
         <h4>Les surprises</h4>
-        <p>Est-ce que ce joueur arrive parfois à battre quelqu'un de mieux classé que lui ? On compte les vraies fois où c'est arrivé.</p>
+        <p>Sa capacité à battre plus fort que lui.</p>
       </div>
     </div>
     </div>
@@ -518,10 +497,6 @@ function toggleFaq(i) {
         <div class="stat-label">mises à jour automatiques</div>
       </div>
     </div>
-    <p class="stats-note" v-reveal="100">
-      <strong>Rien n'est figé.</strong> Chaque nuit, tout seul, Tennly va chercher les nouveaux matchs à venir, note le vrai score de ceux qui viennent de
-      se terminer, et met à jour les photos et les informations des joueurs — toujours avec de vrais résultats, jamais inventés.
-    </p>
   </div>
 
   <!-- ================= AVIS (emplacement honnête, pas de faux témoignages) ================= -->
@@ -533,7 +508,7 @@ function toggleFaq(i) {
     <div class="proof-placeholder" v-reveal="80">
       <div class="icon">💬</div>
       <strong>On vient tout juste de commencer</strong>
-      <span>Tennly est tout nouveau. Dès qu'on aura de vrais avis, on les mettra ici. On n'inventera jamais un faux avis.</span>
+      <span>Les vrais avis arriveront ici bientôt.</span>
     </div>
   </div>
 
