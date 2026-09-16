@@ -53,6 +53,16 @@ function prefersReducedMotion() {
 }
 const showVersusIntro = ref(false)
 
+// Popup "débloquer l'analyse complète" (16/09/2026, sur demande explicite,
+// avec une capture de référence à l'appui) : sur un match verrouillé, plus
+// de carte plate posée dans la page — une popup s'ouvre d'elle-même juste
+// après l'écran "versus", construite comme une seule affiche (icône +
+// message en gros, peu de texte autour) plutôt qu'un bloc de texte. Le
+// bouton "Voir les formules" à l'intérieur ouvre ensuite le vrai popup de
+// paiement (paywallOpen / PaywallModal.vue) — jamais l'inverse : cette
+// popup-ci ne collecte ni carte ni email, elle ne fait qu'annoncer.
+const showUnlockPopup = ref(false)
+
 // Carte "résultat" (11/09/2026) : visuel dédié affiché uniquement une fois
 // le match terminé (status 'finished'/'walkover' avec un winner connu — un
 // match 'live', par ex., n'a pas encore de vainqueur et ne doit rien
@@ -319,23 +329,15 @@ async function loadMatch() {
   }
 }
 
-onMounted(async () => {
-  await loadMatch()
-  loading.value = false
-
-  // Écran "versus" (16/09/2026) : uniquement si le match a bien pu être
-  // chargé, et jamais pour prefers-reduced-motion. Remplace l'ancienne
-  // ouverture automatique du popup d'abonnement (paywallOpen = true) — sur
-  // demande explicite, on ne pousse plus ce popup par-dessus la page ; le
-  // bouton "Débloquer l'analyse complète" (carte .locked, déjà positionnée
-  // juste avant l'analyse) reste le seul déclencheur du popup.
-  if (match.value && !prefersReducedMotion()) {
-    showVersusIntro.value = true
-    setTimeout(() => {
-      showVersusIntro.value = false
-    }, 1800)
-  }
-
+// Ce qui doit se passer une fois l'écran "versus" terminé (ou immédiatement
+// s'il n'a jamais été affiché, cas prefers-reduced-motion) : inchangé pour
+// le retour de paiement, mais la popup "débloquer l'analyse complète"
+// remplace désormais l'ouverture automatique de paywallOpen — voir
+// showUnlockPopup plus haut. Ouverte pour tout visiteur bloqué (abonné non
+// connecté comme visiteur anonyme), pas seulement les connectés non-abonnés
+// comme avant : la popup n'étant qu'une annonce (pas un formulaire), il n'y
+// a plus de raison de la réserver aux seuls connectés.
+function afterVersusIntro() {
   if (justPaid.value && !auth.isAuthenticated) {
     postPaymentOpen.value = true
   } else if (justPaid.value && forbidden.value) {
@@ -344,6 +346,26 @@ onMounted(async () => {
       await loadMatch()
       activating.value = false
     }, 3000)
+  } else if (forbidden.value) {
+    showUnlockPopup.value = true
+  }
+}
+
+onMounted(async () => {
+  await loadMatch()
+  loading.value = false
+
+  // Écran "versus" (16/09/2026) : uniquement si le match a bien pu être
+  // chargé, et jamais pour prefers-reduced-motion — dans ce cas la suite
+  // s'enchaîne immédiatement, sans attente artificielle.
+  if (match.value && !prefersReducedMotion()) {
+    showVersusIntro.value = true
+    setTimeout(() => {
+      showVersusIntro.value = false
+      afterVersusIntro()
+    }, 1800)
+  } else {
+    afterVersusIntro()
   }
 })
 </script>
@@ -360,7 +382,7 @@ onMounted(async () => {
            reste de la page (confrontation détaillée, puis analyse ou son
            déblocage) ne se révèle. Voir showVersusIntro dans le script pour
            la durée et le cas prefers-reduced-motion. -->
-      <div v-if="showVersusIntro" class="versus-intro" :style="surfaceCardVars(match.surface)">
+      <div v-if="showVersusIntro" class="versus-intro">
         <div class="vi-player">
           <div class="vi-avatar" :style="!showPhoto(match.playerA) ? avatarGradient(match.playerA.fullName) : null">
             <img
@@ -378,8 +400,6 @@ onMounted(async () => {
 
         <div class="vi-mid">
           <span class="vi-vs">VS</span>
-          <div class="vi-loading"><span></span><span></span><span></span></div>
-          <div class="vi-caption">Préparation de l'analyse…</div>
         </div>
 
         <div class="vi-player">
@@ -396,6 +416,8 @@ onMounted(async () => {
           </div>
           <div class="vi-name">{{ match.playerB.fullName }}</div>
         </div>
+
+        <div class="vi-progress"><span class="vi-progress-bar"></span></div>
       </div>
 
       <template v-else>
@@ -582,17 +604,21 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div v-if="forbidden" class="card locked">
-        <template v-if="activating">
-          <div class="lock-icon">⏳</div>
-          <p>Paiement reçu, activation de ton abonnement en cours…</p>
-        </template>
-        <template v-else>
-          <div class="lock-icon">🔒</div>
-          <p>Analyse complète réservée aux abonnés.</p>
-          <button class="btn-primary" @click="paywallOpen = true">Débloquer l'analyse complète</button>
-          <a v-if="!auth.isAuthenticated" class="already-sub" @click="goToLogin">Déjà abonné ? Se connecter</a>
-        </template>
+      <div v-if="forbidden && activating" class="card locked">
+        <div class="lock-icon">⏳</div>
+        <p>Paiement reçu, activation de ton abonnement en cours…</p>
+      </div>
+
+      <!-- Repli minimal (16/09/2026) : la vraie invitation à s'abonner vit
+           désormais dans la popup "affiche" (showUnlockPopup, ouverte toute
+           seule juste après l'écran versus — voir onMounted/afterVersusIntro
+           et .unlock-overlay plus bas). Ce lien reste juste au cas où le
+           visiteur ferme la popup sans agir, pour ne pas le laisser bloqué
+           sans aucun moyen de la rouvrir. -->
+      <div v-else-if="forbidden" class="unlock-inline">
+        <button type="button" class="unlock-inline-btn" @click="showUnlockPopup = true">
+          <span class="unlock-inline-icon">🔒</span> Débloquer l'analyse complète
+        </button>
       </div>
 
       <template v-else-if="prediction">
@@ -690,6 +716,22 @@ onMounted(async () => {
 
   <PaywallModal :open="paywallOpen" @close="paywallOpen = false" />
   <PostPaymentModal :open="postPaymentOpen" :session-id="checkoutSessionId" @linked="onPostPaymentLinked" />
+
+  <!-- Popup "affiche" (16/09/2026) : une seule affiche (icône + message en
+       gros), pas un formulaire — voir showUnlockPopup dans le script pour
+       le pourquoi. Son bouton ouvre le vrai popup de paiement
+       (paywallOpen) plutôt que de dupliquer les formules ici. -->
+  <div v-if="showUnlockPopup" class="unlock-overlay" @click.self="showUnlockPopup = false">
+    <div class="unlock-modal">
+      <button class="unlock-modal-close" @click="showUnlockPopup = false" aria-label="Fermer">✕</button>
+      <div class="unlock-poster">
+        <span class="unlock-poster-icon">🔒</span>
+        <h3 class="unlock-poster-text">Débloque<br />l'analyse<br />complète</h3>
+      </div>
+      <button class="unlock-modal-cta" @click="showUnlockPopup = false; paywallOpen = true">Voir les formules</button>
+      <a v-if="!auth.isAuthenticated" class="unlock-modal-already" @click="showUnlockPopup = false; goToLogin()">Déjà abonné ? Se connecter</a>
+    </div>
+  </div>
 </template>
 
 <style scoped>
@@ -970,41 +1012,48 @@ onMounted(async () => {
   color: var(--grey);
 }
 
-/* Écran "versus" (16/09/2026) : même langage visuel que .face-off (fond
-   dégradé teinté par la surface du match, accent citron vert) mais en plus
-   sobre — pas de badges, pas de stats, juste les deux joueurs et une
-   attente courte avant la révélation du reste de la page. */
+/* Écran "versus" — refonte "affiche" (16/09/2026, sur demande explicite
+   avec capture de référence à l'appui) : abandon du fond dégradé teinté par
+   la surface au profit d'un visuel proche d'une affiche de combat — fond
+   blanc, très grandes photos rondes, "VS" énorme en Anton (même police que
+   .result-winner), noms en majuscules dessous. Chaque élément entre en
+   scène (glissade, "tampon" pour le VS) au lieu d'apparaître d'un bloc, et
+   une fine barre de progression matérialise l'attente avant la révélation
+   du reste de la page. */
 .versus-intro {
   position: relative;
-  overflow: hidden;
   display: grid;
-  grid-template-columns: 1fr 160px 1fr;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 24px;
-  padding: 48px 36px;
+  gap: 20px;
+  padding: 56px 28px 44px;
   margin-bottom: 18px;
   border-radius: var(--radius-card);
-  color: #fff;
+  background: #fff;
+  border: 1px solid var(--line);
   text-align: center;
-  background:
-    radial-gradient(130% 160% at 50% -20%, var(--surface-glow) 0%, transparent 60%),
-    linear-gradient(135deg, var(--surface-from), var(--surface-to));
   animation: fadeUp 0.4s ease both;
+}
+.vi-player {
+  min-width: 0;
 }
 .vi-avatar {
   position: relative;
-  width: 96px;
-  height: 96px;
+  width: clamp(120px, 20vw, 180px);
+  height: clamp(120px, 20vw, 180px);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  margin: 0 auto 12px;
-  box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.22),
-    0 8px 20px rgba(0, 0, 0, 0.3);
-  animation: viPulse 1.6s ease-in-out infinite;
+  margin: 0 auto 16px;
+  box-shadow: 0 16px 32px -14px rgba(15, 61, 62, 0.28);
+}
+.vi-player:first-child .vi-avatar {
+  animation: viSlideLeft 0.6s var(--ease-premium) both;
+}
+.vi-player:last-child .vi-avatar {
+  animation: viSlideRight 0.6s var(--ease-premium) both;
 }
 .vi-avatar-photo {
   width: 100%;
@@ -1012,78 +1061,118 @@ onMounted(async () => {
   object-fit: cover;
 }
 .vi-avatar-initials {
-  font-weight: 800;
-  font-size: 28px;
+  font-family: 'Anton', sans-serif;
+  font-size: clamp(32px, 6vw, 52px);
   color: #fff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 .vi-name {
-  font-weight: 700;
-  font-size: 15px;
+  font-family: 'Anton', sans-serif;
+  font-weight: 400;
+  font-size: clamp(14px, 2.1vw, 21px);
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--ink);
+  animation: viRise 0.5s ease 0.35s both;
+}
+.vi-mid {
+  padding: 0 4px;
 }
 .vi-vs {
+  display: inline-block;
+  font-family: 'Anton', sans-serif;
+  font-weight: 400;
+  font-size: clamp(42px, 7vw, 84px);
+  line-height: 1;
+  color: var(--ink);
+  animation: viStamp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.45s both;
+}
+.vi-progress {
+  grid-column: 1 / -1;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+  margin-top: 12px;
+}
+.vi-progress-bar {
   display: block;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.75);
-  margin-bottom: 16px;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, var(--green), var(--lime));
+  transform-origin: left;
+  transform: scaleX(0);
+  animation: viProgress 1.8s linear both;
 }
-.vi-loading {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-.vi-loading span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--lime);
-  animation: viDot 1s ease-in-out infinite;
-}
-.vi-loading span:nth-child(2) {
-  animation-delay: 0.15s;
-}
-.vi-loading span:nth-child(3) {
-  animation-delay: 0.3s;
-}
-.vi-caption {
-  font-size: 12.5px;
-  color: rgba(255, 255, 255, 0.6);
-}
-@keyframes viPulse {
-  0%,
-  100% {
-    transform: scale(1);
+@keyframes viSlideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-32px) scale(0.85);
   }
-  50% {
-    transform: scale(1.05);
-  }
-}
-@keyframes viDot {
-  0%,
-  80%,
-  100% {
-    opacity: 0.3;
-    transform: scale(0.8);
-  }
-  40% {
+  to {
     opacity: 1;
-    transform: scale(1);
+    transform: none;
+  }
+}
+@keyframes viSlideRight {
+  from {
+    opacity: 0;
+    transform: translateX(32px) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes viRise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes viStamp {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-6deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.12) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+@keyframes viProgress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .vi-avatar,
-  .vi-loading span {
+  .vi-name,
+  .vi-vs,
+  .vi-progress-bar {
     animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 @media (max-width: 640px) {
   .versus-intro {
     grid-template-columns: 1fr;
-    gap: 20px;
-    padding: 36px 22px;
+    gap: 16px;
+    padding: 40px 20px 32px;
+  }
+  .vi-vs {
+    font-size: 40px;
   }
 }
 
@@ -1559,14 +1648,158 @@ onMounted(async () => {
   margin-bottom: 12px;
 }
 .locked p {
-  margin: 0 0 18px;
+  margin: 0;
   color: var(--ink);
   font-size: 15px;
 }
-.already-sub {
+
+/* Repli minimal (16/09/2026) : un simple lien-bouton, plus une carte pleine
+   — la vraie invitation vit dans la popup "affiche" juste en dessous. */
+.unlock-inline {
+  text-align: center;
+  padding: 10px 0 18px;
+}
+.unlock-inline-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: none;
+  padding: 6px 4px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--grey);
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.unlock-inline-btn:hover {
+  color: var(--ink);
+}
+.unlock-inline-icon {
+  font-size: 13px;
+}
+
+/* Popup "affiche" (16/09/2026, sur demande explicite avec capture de
+   référence à l'appui) : même schéma d'overlay que PaywallModal.vue, mais
+   un contenu réduit à une seule affiche (icône + message en très gros,
+   fond dégradé vert/citron pleine carte façon poster) plutôt qu'un bloc de
+   texte + formules — les formules restent dans le vrai popup de paiement,
+   ouvert depuis le bouton "Voir les formules" ci-dessous. */
+.unlock-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 12, 12, 0.56);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 50;
+  box-sizing: border-box;
+}
+.unlock-modal {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  background: #fff;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 32px 64px -20px rgba(2, 14, 14, 0.45);
+  animation: modalIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  padding: 22px 22px 26px;
+  text-align: center;
+  box-sizing: border-box;
+}
+@media (prefers-reduced-motion: reduce) {
+  .unlock-modal {
+    animation: none;
+  }
+}
+.unlock-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(15, 61, 62, 0.08);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+.unlock-modal-close:hover {
+  background: rgba(15, 61, 62, 0.16);
+}
+.unlock-poster {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 18px;
+  padding: 36px 20px 30px;
+  margin-bottom: 18px;
+  background:
+    radial-gradient(130% 160% at 50% -20%, rgba(199, 255, 60, 0.32) 0%, transparent 60%),
+    linear-gradient(135deg, var(--green), var(--green2));
+}
+.unlock-poster-icon {
+  display: block;
+  font-size: 34px;
+  margin-bottom: 12px;
+  animation: unlockIconPulse 1.8s ease-in-out infinite;
+}
+.unlock-poster-text {
+  margin: 0;
+  font-family: 'Anton', sans-serif;
+  font-weight: 400;
+  font-size: clamp(28px, 8vw, 36px);
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+}
+@keyframes unlockIconPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .unlock-poster-icon {
+    animation: none !important;
+  }
+}
+.unlock-modal-cta {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 13px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.unlock-modal-cta:hover {
+  transform: translateY(-1px);
+  opacity: 0.92;
+}
+.unlock-modal-already {
   display: block;
   margin-top: 14px;
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--grey);
   text-decoration: underline;
   cursor: pointer;
