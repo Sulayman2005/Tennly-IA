@@ -235,7 +235,6 @@ function toggleFaq(i) {
     <div class="hero-content">
       <div class="eyebrow"><i></i>TENNIS · DE VRAIS CHIFFRES, PAS DES DEVINETTES</div>
       <h1>Sais qui va <span class="accent">gagner</span><br />avant la fin du match.</h1>
-      <p>On regarde plein de vrais matchs de tennis pour deviner qui va gagner, et on t'explique toujours pourquoi — sans rien te cacher.</p>
       <button class="cta-main" @click="goToMatches">
         Voir les matchs du jour <span class="arrow">→</span>
       </button>
