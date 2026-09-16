@@ -72,17 +72,50 @@ const filters = [
   { key: 'scheduled', label: 'À venir' },
   { key: 'done', label: 'Terminés' },
 ]
+
+// Barre de recherche (16/09/2026, sur demande explicite "rechercher un
+// match plus rapidement") : purement client, comme les filtres de statut
+// ci-dessus — recherche sur les deux joueurs et le nom du tournoi, insensible
+// à la casse et aux accents (normalize + suppression des diacritiques), pour
+// que "federer" retrouve aussi bien "Roger Federer" que taper sans accent ne
+// bloque pas une recherche sur "Roland-Garros". Se combine avec le filtre de
+// statut actif plutôt que de le remplacer.
+const searchQuery = ref('')
+function normalizeSearch(str) {
+  return (str ?? '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+}
 const filteredMatches = computed(() => {
-  if (activeFilter.value === 'all') return matches.value
+  let list = matches.value
   if (activeFilter.value === 'done') {
-    return matches.value.filter((m) => m.status === 'finished' || m.status === 'walkover')
+    list = list.filter((m) => m.status === 'finished' || m.status === 'walkover')
+  } else if (activeFilter.value !== 'all') {
+    list = list.filter((m) => m.status === activeFilter.value)
   }
-  return matches.value.filter((m) => m.status === activeFilter.value)
+  const q = normalizeSearch(searchQuery.value.trim())
+  if (!q) return list
+  return list.filter((m) => {
+    const haystack = normalizeSearch(`${m.playerA?.fullName ?? ''} ${m.playerB?.fullName ?? ''} ${m.tournamentName ?? ''}`)
+    return haystack.includes(q)
+  })
 })
+// Les compteurs des onglets tiennent compte de la recherche en cours (et
+// pas seulement du statut) : sinon un onglet pouvait afficher "12" alors
+// que la recherche active n'en laissait voir aucun, ce qui semblait cassé.
 function filterCount(key) {
-  if (key === 'all') return matches.value.length
-  if (key === 'done') return matches.value.filter((m) => m.status === 'finished' || m.status === 'walkover').length
-  return matches.value.filter((m) => m.status === key).length
+  const q = normalizeSearch(searchQuery.value.trim())
+  const matchesSearch = (m) => {
+    if (!q) return true
+    const haystack = normalizeSearch(`${m.playerA?.fullName ?? ''} ${m.playerB?.fullName ?? ''} ${m.tournamentName ?? ''}`)
+    return haystack.includes(q)
+  }
+  if (key === 'all') return matches.value.filter(matchesSearch).length
+  if (key === 'done') {
+    return matches.value.filter((m) => (m.status === 'finished' || m.status === 'walkover') && matchesSearch(m)).length
+  }
+  return matches.value.filter((m) => m.status === key && matchesSearch(m)).length
 }
 </script>
 
@@ -120,26 +153,45 @@ function filterCount(key) {
       <p>Aucun match pour le moment — reviens un peu plus tard.</p>
     </div>
     <template v-else>
-      <!-- Filtres (10/09/2026) : purement client, voir filteredMatches dans
-           le script — aucun rechargement réseau au clic. -->
-      <div class="filter-row" role="tablist" aria-label="Filtrer les matchs">
-        <button
-          v-for="f in filters"
-          :key="f.key"
-          type="button"
-          role="tab"
-          class="filter-chip"
-          :class="{ active: activeFilter === f.key, live: f.key === 'live' && filterCount('live') > 0 }"
-          :aria-selected="activeFilter === f.key"
-          @click="activeFilter = f.key"
-        >
-          <i v-if="f.key === 'live' && filterCount('live') > 0"></i>
-          {{ f.label }}
-          <span class="filter-count">{{ filterCount(f.key) }}</span>
-        </button>
+      <!-- Filtres + recherche (10/09/2026 puis 16/09/2026) : purement
+           client, voir filteredMatches dans le script — aucun rechargement
+           réseau ni à la frappe ni au clic. -->
+      <div class="matches-controls">
+        <div class="filter-row" role="tablist" aria-label="Filtrer les matchs">
+          <button
+            v-for="f in filters"
+            :key="f.key"
+            type="button"
+            role="tab"
+            class="filter-chip"
+            :class="{ active: activeFilter === f.key, live: f.key === 'live' && filterCount('live') > 0 }"
+            :aria-selected="activeFilter === f.key"
+            @click="activeFilter = f.key"
+          >
+            <i v-if="f.key === 'live' && filterCount('live') > 0"></i>
+            {{ f.label }}
+            <span class="filter-count">{{ filterCount(f.key) }}</span>
+          </button>
+        </div>
+
+        <div class="search-bar">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
+            <path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Rechercher un joueur ou un tournoi…"
+            aria-label="Rechercher un match"
+          />
+          <button v-if="searchQuery" type="button" class="search-clear" aria-label="Effacer la recherche" @click="searchQuery = ''">✕</button>
+        </div>
       </div>
 
-      <p v-if="!filteredMatches.length" class="state-empty-inline">Aucun match dans cette catégorie pour le moment.</p>
+      <p v-if="!filteredMatches.length" class="state-empty-inline">
+        {{ searchQuery.trim() ? 'Aucun match ne correspond à ta recherche.' : 'Aucun match dans cette catégorie pour le moment.' }}
+      </p>
       <div v-else class="match-list">
         <div v-for="(match, i) in filteredMatches" :key="match.id" class="match-item" :style="{ animationDelay: Math.min(i, 10) * 0.05 + 's' }">
           <MatchCard :match="match" @open="openMatch" />
@@ -325,13 +377,85 @@ h1 .accent {
 }
 
 /* -- Filtres (10/09/2026) -- */
-.filter-row {
+.matches-controls {
   position: relative;
   z-index: 1;
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 0 0 22px;
+}
+.filter-row {
+  display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 0 0 22px;
+}
+/* -- Barre de recherche (16/09/2026) --
+   Même grammaire visuelle que .filter-chip (pilule bordée, --line/--bg au
+   repos, --green au focus) pour rester cohérente avec les filtres juste à
+   côté, plutôt qu'un champ de formulaire générique. */
+.search-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 260px;
+  max-width: 320px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  border-radius: 999px;
+  color: var(--grey);
+  transition: border-color 0.25s ease;
+}
+.search-bar:focus-within {
+  border-color: var(--green);
+  color: var(--ink);
+}
+.search-bar svg {
+  flex: none;
+}
+.search-bar input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 10px 0;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: var(--ink);
+}
+.search-bar input::placeholder {
+  color: var(--grey);
+}
+.search-clear {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: var(--line);
+  color: var(--grey);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.search-clear:hover {
+  background: var(--green);
+  color: #fff;
+}
+@media (max-width: 480px) {
+  .search-bar {
+    flex-basis: 100%;
+    max-width: 100%;
+  }
 }
 .filter-chip {
   display: inline-flex;
