@@ -192,19 +192,19 @@ function goToMatches() {
 const faqs = [
   {
     q: 'Tennly est-il gratuit ?',
-    a: "L'aperçu (favori pressenti + probabilité) est gratuit sur tous les matchs. L'analyse complète — radar comparatif, facteurs d'explication détaillés, cote de valeur — est réservée aux abonnés.",
+    a: "Le début — qui est favori et ses chances de gagner — est gratuit sur tous les matchs. Pour voir l'explication complète, avec tous les détails, il faut être abonné.",
   },
   {
-    q: "Comment fonctionne l'analyse ?",
-    a: 'Un système Elo par surface combiné à de vraies statistiques de jeu (service, retour, forme, repos), rejoué sur l\'historique ATP réel — pas un modèle opaque qu\'on ne peut pas expliquer.',
+    q: 'Comment on devine qui va gagner ?',
+    a: "On calcule la force de chaque joueur sur chaque terrain, et on regarde de vraies statistiques (service, retour, forme, repos), à partir de matchs qui ont vraiment été joués — jamais un secret qu'on ne peut pas expliquer.",
   },
   {
-    q: 'Est-ce que Tennly agit à ma place ?',
-    a: "Non. Tennly est un outil d'aide à la décision et d'analyse : il ne constitue pas un conseil financier et ne garantit aucun résultat.",
+    q: 'Est-ce que Tennly décide à ma place ?',
+    a: "Non. Tennly t'aide juste à comprendre et à réfléchir : ce n'est pas un conseil pour parier de l'argent, et rien n'est garanti.",
   },
   {
-    q: 'Les données sont-elles fiables ?',
-    a: "Elles viennent de résultats ATP réellement joués, avec la méthode de calcul documentée publiquement — aucune statistique n'est inventée ou estimée sans le dire.",
+    q: 'Est-ce que c\'est vrai, tout ça ?',
+    a: "Oui : tout vient de vrais matchs qui ont vraiment eu lieu, et on explique comment on calcule tout, sans rien cacher. On n'invente jamais un chiffre.",
   },
 ]
 const openFaqIndex = ref(0)
@@ -233,15 +233,15 @@ function toggleFaq(i) {
     <div v-if="spotlightEnabled" class="hero-spotlight" :style="{ '--mx': heroSpotlight.x + '%', '--my': heroSpotlight.y + '%' }"></div>
 
     <div class="hero-content">
-      <div class="eyebrow"><i></i>TENNIS · DONNÉES ATP RÉELLES</div>
-      <h1>Prédis chaque <span class="accent">victoire</span><br />avant qu'elle n'ait lieu.</h1>
-      <p>Des analyses tennis calibrées, expliquées simplement, avec un historique de performance 100 % public.</p>
+      <div class="eyebrow"><i></i>TENNIS · DE VRAIS CHIFFRES, PAS DES DEVINETTES</div>
+      <h1>Sais qui va <span class="accent">gagner</span><br />avant la fin du match.</h1>
+      <p>On regarde plein de vrais matchs de tennis pour deviner qui va gagner, et on t'explique toujours pourquoi — sans rien te cacher.</p>
       <button class="cta-main" @click="goToMatches">
-        Voir les analyses du jour <span class="arrow">→</span>
+        Voir les matchs du jour <span class="arrow">→</span>
       </button>
       <div class="hero-stats">
-        <div class="hs"><b>{{ heroSuccessRate }}</b> de réussite sur 90 jours</div>
-        <div class="hs"><b>{{ heroAnalyzedMatches }}</b> matchs analysés</div>
+        <div class="hs"><b>{{ heroSuccessRate }}</b> de bonnes réponses ces 3 derniers mois</div>
+        <div class="hs"><b>{{ heroAnalyzedMatches }}</b> matchs déjà étudiés</div>
         <!-- Remplace l'ancien "X an(s) d'historique ATP rejoué" (09/09/2026) :
              ce chiffre venait de /api/stats et affichait parfois "1 an", ce
              qui sonnait faible à côté des deux stats précédentes — sur
@@ -250,7 +250,7 @@ function toggleFaq(i) {
              externes (voir scripts/import_matches_cron.sh,
              update_results_cron.sh, import_photos_cron.sh) plutôt qu'un
              chiffre qui dépend juste de la date de lancement du site. -->
-        <div class="hs"><b>Automatique</b> chaque nuit · résultats &amp; stats à jour</div>
+        <div class="hs"><b>Tout seul</b>, chaque nuit · toujours à jour</div>
       </div>
     </div>
 
@@ -281,16 +281,16 @@ function toggleFaq(i) {
   -->
   <div class="live-ribbon" aria-hidden="true">
     <div class="live-ribbon-track">
-      <span class="live-chip"><i class="dot"></i>Elo recalculé par surface</span>
-      <span class="live-chip"><i class="dot"></i>6 signaux réels analysés</span>
-      <span class="live-chip"><i class="dot"></i>Rejoué sur l'historique ATP</span>
-      <span class="live-chip"><i class="dot"></i>Aucune donnée inventée</span>
-      <span class="live-chip"><i class="dot"></i>Mis à jour à chaque match</span>
-      <span class="live-chip"><i class="dot"></i>Elo recalculé par surface</span>
-      <span class="live-chip"><i class="dot"></i>6 signaux réels analysés</span>
-      <span class="live-chip"><i class="dot"></i>Rejoué sur l'historique ATP</span>
-      <span class="live-chip"><i class="dot"></i>Aucune donnée inventée</span>
-      <span class="live-chip"><i class="dot"></i>Mis à jour à chaque match</span>
+      <span class="live-chip"><i class="dot"></i>On recalcule la force de chaque joueur</span>
+      <span class="live-chip"><i class="dot"></i>6 choses importantes regardées</span>
+      <span class="live-chip"><i class="dot"></i>Basé sur de vrais matchs déjà joués</span>
+      <span class="live-chip"><i class="dot"></i>Rien n'est inventé</span>
+      <span class="live-chip"><i class="dot"></i>Mis à jour après chaque match</span>
+      <span class="live-chip"><i class="dot"></i>On recalcule la force de chaque joueur</span>
+      <span class="live-chip"><i class="dot"></i>6 choses importantes regardées</span>
+      <span class="live-chip"><i class="dot"></i>Basé sur de vrais matchs déjà joués</span>
+      <span class="live-chip"><i class="dot"></i>Rien n'est inventé</span>
+      <span class="live-chip"><i class="dot"></i>Mis à jour après chaque match</span>
     </div>
   </div>
 
@@ -307,30 +307,30 @@ function toggleFaq(i) {
   <div class="section">
     <div class="section-head center" v-reveal>
       <div class="eyebrow" style="justify-content: center"><i></i>EN 3 ÉTAPES</div>
-      <h2>Comment fonctionne Tennly</h2>
-      <p>Pas besoin de connaître l'Elo par cœur : trois étapes simples entre toi et une analyse claire.</p>
+      <h2>Comment ça marche, Tennly ?</h2>
+      <p>Pas besoin d'être un pro du tennis : trois étapes toutes simples entre toi et une réponse claire.</p>
     </div>
     <div class="steps-row">
       <div class="step-card" v-reveal="0">
         <div class="step-num">1</div>
         <h4>Choisis un match</h4>
-        <p>Parcours les matchs du jour ou à venir, sur tout le circuit ATP — Grand Chelem, Masters 1000, ATP 500 et 250.</p>
+        <p>Regarde les matchs d'aujourd'hui ou de bientôt, des petits tournois jusqu'aux plus grands, comme Roland-Garros.</p>
       </div>
       <div class="step-arrow" aria-hidden="true">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12h15M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
       </div>
       <div class="step-card" v-reveal="90">
         <div class="step-num">2</div>
-        <h4>6 signaux réels sont croisés</h4>
-        <p>Elo par surface, service &amp; retour, forme, repos, face-à-face, dynamique du moment — recalculés sur l'historique ATP réel.</p>
+        <h4>On regarde 6 choses importantes</h4>
+        <p>Qui sert bien, qui renvoie bien, qui est en forme, qui s'est bien reposé, qui a déjà gagné contre l'autre, et qui progresse en ce moment — toujours à partir de vrais matchs déjà joués.</p>
       </div>
       <div class="step-arrow" aria-hidden="true">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12h15M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
       </div>
       <div class="step-card" v-reveal="180">
         <div class="step-num">3</div>
-        <h4>Reçois la probabilité expliquée</h4>
-        <p>Un favori, une probabilité claire, et les raisons derrière — jamais une boîte noire.</p>
+        <h4>On te dit qui a le plus de chances</h4>
+        <p>Un favori, un chiffre facile à comprendre, et toujours les raisons derrière — jamais un secret.</p>
       </div>
     </div>
   </div>
@@ -338,25 +338,25 @@ function toggleFaq(i) {
   <!-- ================= COUVERTURE (surfaces / tournois) ================= -->
   <div class="section">
     <div class="section-head center" v-reveal>
-      <div class="eyebrow" style="justify-content: center"><i></i>COUVERTURE</div>
-      <h2>Tous les tournois du circuit ATP, sur toutes les surfaces</h2>
-      <p>Le même moteur d'analyse s'adapte à chaque terrain — parce que la terre battue, le dur et le gazon ne se jouent pas pareil.</p>
+      <div class="eyebrow" style="justify-content: center"><i></i>TOUS LES TERRAINS</div>
+      <h2>Tous les tournois de tennis, sur tous les types de terrain</h2>
+      <p>On adapte nos calculs à chaque terrain, parce qu'on ne joue pas pareil sur terre battue, sur dur ou sur gazon.</p>
     </div>
     <div class="surface-row">
       <div class="surface-card dur" v-reveal="0">
         <div class="dot"></div>
         <div class="name">Dur</div>
-        <div class="desc">Australian Open, US Open, Masters 1000 indoor/outdoor.</div>
+        <div class="desc">Australian Open, US Open, et les gros tournois en intérieur ou en extérieur.</div>
       </div>
       <div class="surface-card terre" v-reveal="110">
         <div class="dot"></div>
         <div class="name">Terre battue</div>
-        <div class="desc">Roland-Garros, Monte-Carlo, Rome — l'Elo terre battue tourne à plein régime.</div>
+        <div class="desc">Roland-Garros, Monte-Carlo, Rome — le terrain préféré des spécialistes de la terre battue.</div>
       </div>
       <div class="surface-card gazon" v-reveal="220">
         <div class="dot"></div>
         <div class="name">Gazon</div>
-        <div class="desc">Wimbledon et la courte tournée sur herbe qui précède.</div>
+        <div class="desc">Wimbledon, et les petits tournois sur herbe juste avant.</div>
       </div>
     </div>
     <div class="level-row" v-reveal="280">
@@ -370,9 +370,9 @@ function toggleFaq(i) {
   <!-- ================= EXEMPLE CONCRET ================= -->
   <div class="section">
     <div class="section-head" v-reveal>
-      <div class="eyebrow"><i></i>CONCRÈTEMENT</div>
-      <h2>Voici à quoi ressemble une analyse Tennly</h2>
-      <p>Une probabilité claire, et surtout les raisons derrière — jamais une boîte noire.</p>
+      <div class="eyebrow"><i></i>PAR EXEMPLE</div>
+      <h2>Voici à quoi ça ressemble, une analyse Tennly</h2>
+      <p>Un chiffre facile à comprendre, et surtout les raisons derrière — jamais un secret.</p>
     </div>
     <!-- Restylé en carte sombre le 09/09/2026 (voir .example-panel) : même
          langage visuel que le hero et la carte résultat plutôt qu'un simple
@@ -383,17 +383,17 @@ function toggleFaq(i) {
     <div class="example-panel">
       <div class="example-tag" v-reveal>
         <span class="example-match">Roland-Garros · Finale (exemple)</span>
-        <span class="example-ready"><i></i>Analyse prête</span>
+        <span class="example-ready"><i></i>C'est prêt !</span>
       </div>
       <div class="duel" style="margin-bottom: 0; background: transparent" v-reveal>
         <div class="p-card">
           <div class="av">JS</div>
           <div class="name">Jannik Sinner</div>
           <div class="rank">N°1 mondial</div>
-          <div class="elo">Elo terre battue 2 118</div>
+          <div class="elo">Force sur terre battue : 2 118</div>
         </div>
         <div class="mid">
-          <div class="vslabel">PROBABILITÉ</div>
+          <div class="vslabel">CHANCES DE GAGNER</div>
           <div class="gauge">
             <svg width="150" height="150" viewBox="0 0 150 150">
               <circle class="ring-bg" cx="75" cy="75" r="64" stroke-width="14" fill="none" />
@@ -406,14 +406,14 @@ function toggleFaq(i) {
           <div class="av" style="background: var(--blue)">CA</div>
           <div class="name">Carlos Alcaraz</div>
           <div class="rank">N°2 mondial</div>
-          <div class="elo">Elo terre battue 2 041</div>
+          <div class="elo">Force sur terre battue : 2 041</div>
         </div>
       </div>
       <div class="why" v-reveal="120">
         <ul>
-          <li><span class="tag ok">✓</span>Elo terre battue en faveur de Sinner (+77 points), recalculé sur l'historique réel de la surface.</li>
-          <li><span class="tag ok">✓</span>Dynamique du moment favorable : Elo en progression sur ses 8 derniers matchs.</li>
-          <li><span class="tag warn">!</span>Face-à-face équilibré (2 victoires partout) — facteur neutre sur ce match précis.</li>
+          <li><span class="tag ok">✓</span>Sinner est plus fort sur terre battue (+77 points), d'après tous ses matchs déjà joués sur ce terrain.</li>
+          <li><span class="tag ok">✓</span>Il est en pleine forme : il progresse depuis ses 8 derniers matchs.</li>
+          <li><span class="tag warn">!</span>Quand ils se sont déjà affrontés, c'est match nul (2 victoires chacun) — ça ne change rien pour ce match.</li>
         </ul>
       </div>
     </div>
@@ -425,9 +425,9 @@ function toggleFaq(i) {
   <div class="section band-soft">
     <div class="band-inner">
     <div class="section-head center" v-reveal>
-      <div class="eyebrow" style="justify-content: center"><i></i>SOUS LE CAPOT</div>
-      <h2>Ce que le modèle regarde vraiment</h2>
-      <p>Pas de boîte noire : six signaux réels, calculés sur l'historique ATP — rien d'inventé, rien de figé.</p>
+      <div class="eyebrow" style="justify-content: center"><i></i>COMMENT ON CALCULE</div>
+      <h2>Ce qu'on regarde vraiment</h2>
+      <p>Pas de secret : six vraies choses, calculées à partir de matchs réellement joués — rien n'est inventé, rien ne reste figé.</p>
     </div>
     <div class="feature-grid">
       <div class="feature-card" v-reveal="0">
@@ -436,8 +436,8 @@ function toggleFaq(i) {
             <path d="M4 18l5-6 4 4 7-9" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </div>
-        <h4>Elo par surface</h4>
-        <p>Recalculé match après match sur dur, terre battue et gazon séparément — un joueur peut monter sur l'un et stagner sur l'autre.</p>
+        <h4>La force de chaque joueur, terrain par terrain</h4>
+        <p>Recalculée après chaque match, séparément sur dur, terre battue et gazon — un joueur peut être très fort sur un terrain et moins bon sur un autre.</p>
       </div>
       <div class="feature-card" v-reveal="70">
         <div class="fi">
@@ -446,8 +446,8 @@ function toggleFaq(i) {
             <path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2" stroke-linecap="round" />
           </svg>
         </div>
-        <h4>Service &amp; retour réels</h4>
-        <p>Aces, % de premier service, balles de break — calculés sur les vraies statistiques de jeu, pas une estimation neutre.</p>
+        <h4>Le service et le retour</h4>
+        <p>On regarde comment chaque joueur sert et renvoie la balle, avec ses vraies statistiques — jamais une estimation au hasard.</p>
       </div>
       <div class="feature-card" v-reveal="140">
         <div class="fi">
@@ -455,8 +455,8 @@ function toggleFaq(i) {
             <path d="M4 20V10M12 20V4M20 20v-7" stroke="#fff" stroke-width="2" stroke-linecap="round" />
           </svg>
         </div>
-        <h4>Forme &amp; repos</h4>
-        <p>Taux de victoire récent et jours de repos réels avant le match — jamais le résultat du match lui-même.</p>
+        <h4>La forme et le repos</h4>
+        <p>A-t-il gagné ses derniers matchs ? A-t-il eu le temps de se reposer avant celui-ci ? (Jamais le résultat du match qu'on essaie de deviner !)</p>
       </div>
       <div class="feature-card" v-reveal="0">
         <div class="fi">
@@ -464,8 +464,8 @@ function toggleFaq(i) {
             <path d="M4 4l16 16M20 4L4 20" stroke="#fff" stroke-width="2" stroke-linecap="round" />
           </svg>
         </div>
-        <h4>Face-à-face</h4>
-        <p>L'historique réel entre les deux joueurs, uniquement sur leurs confrontations déjà jouées.</p>
+        <h4>Leurs matchs l'un contre l'autre</h4>
+        <p>Ce qui s'est passé les fois où ces deux joueurs se sont déjà affrontés.</p>
       </div>
       <div class="feature-card" v-reveal="70">
         <div class="fi">
@@ -473,8 +473,8 @@ function toggleFaq(i) {
             <path d="M4 16l5-9 4 6 3-4 4 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </div>
-        <h4>Dynamique du moment</h4>
-        <p>La tendance de l'Elo sur les 8 derniers matchs — un joueur peut progresser même avec un bilan moyen, face à plus fort.</p>
+        <h4>En pleine forme, ou pas ?</h4>
+        <p>Est-ce qu'un joueur s'améliore en ce moment ? On regarde ses 8 derniers matchs pour le savoir.</p>
       </div>
       <div class="feature-card" v-reveal="140">
         <div class="fi">
@@ -482,8 +482,8 @@ function toggleFaq(i) {
             <path d="M12 3l2.6 6.2L21 10l-5 4.2L17.4 21 12 17.4 6.6 21 8 14.2 3 10l6.4-.8z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round" />
           </svg>
         </div>
-        <h4>Capacité à créer l'exploit</h4>
-        <p>Le taux de victoire réel d'un joueur quand il partait outsider au classement — une vraie mesure, pas une intuition.</p>
+        <h4>Les surprises</h4>
+        <p>Est-ce que ce joueur arrive parfois à battre quelqu'un de mieux classé que lui ? On compte les vraies fois où c'est arrivé.</p>
       </div>
     </div>
     </div>
@@ -504,24 +504,24 @@ function toggleFaq(i) {
     <div class="stats-band" v-reveal>
       <div class="stat-cell">
         <div class="stat-num">{{ heroSuccessRate }}</div>
-        <div class="stat-label">de réussite sur 90 jours</div>
+        <div class="stat-label">de bonnes réponses ces 3 derniers mois</div>
       </div>
       <div class="stat-cell">
         <div class="stat-num">{{ heroAnalyzedMatches }}</div>
-        <div class="stat-label">matchs analysés</div>
+        <div class="stat-label">matchs déjà étudiés</div>
       </div>
       <div class="stat-cell">
         <div class="stat-num">6</div>
-        <div class="stat-label">signaux réels croisés par match</div>
+        <div class="stat-label">choses importantes regardées à chaque match</div>
       </div>
       <div class="stat-cell">
         <div class="stat-num">3<small>/nuit</small></div>
-        <div class="stat-label">synchronisations automatiques</div>
+        <div class="stat-label">mises à jour automatiques</div>
       </div>
     </div>
     <p class="stats-note" v-reveal="100">
-      <strong>Aucune donnée figée.</strong> Chaque nuit, Tennly récupère automatiquement les nouveaux matchs à venir, clôture ceux déjà joués avec leur
-      vrai score, et met à jour les photos et statistiques des joueurs — à partir de résultats ATP réellement joués, jamais estimés.
+      <strong>Rien n'est figé.</strong> Chaque nuit, tout seul, Tennly va chercher les nouveaux matchs à venir, note le vrai score de ceux qui viennent de
+      se terminer, et met à jour les photos et les informations des joueurs — toujours avec de vrais résultats, jamais inventés.
     </p>
   </div>
 
@@ -533,8 +533,8 @@ function toggleFaq(i) {
     </div>
     <div class="proof-placeholder" v-reveal="80">
       <div class="icon">💬</div>
-      <strong>Pas encore d'utilisateurs publics</strong>
-      <span>Tennly vient d'être lancé — dès les premiers retours réels, ils prendront place ici. Aucun avis fictif ne sera jamais affiché à leur place.</span>
+      <strong>On vient tout juste de commencer</strong>
+      <span>Tennly est tout nouveau. Dès qu'on aura de vrais avis, on les mettra ici. On n'inventera jamais un faux avis.</span>
     </div>
   </div>
 
@@ -568,15 +568,15 @@ function toggleFaq(i) {
   </div>
 
   <div class="final-cta" v-reveal>
-    <h3>Prêt à voir tes premières analyses ?</h3>
-    <p>Gratuit à découvrir, sans carte bancaire.</p>
+    <h3>Prêt à voir qui va gagner ?</h3>
+    <p>C'est gratuit à découvrir, pas besoin de carte bancaire.</p>
     <button class="cta-main" @click="goToMatches">
-      Voir les analyses du jour <span class="arrow">→</span>
+      Voir les matchs du jour <span class="arrow">→</span>
     </button>
   </div>
 
   <div class="site-footer">
-    © Tennly — Outil d'aide à la décision à titre informatif, ne constitue ni un conseil financier ni une garantie de résultat.
+    © Tennly — Un outil pour t'aider à réfléchir, à titre d'information seulement. Ce n'est pas un conseil pour parier de l'argent, et rien n'est garanti.
   </div>
 </template>
 
