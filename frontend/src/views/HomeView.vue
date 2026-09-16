@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, RouterLink } from 'vue-router'
 import { api } from '@/api/client'
 
 const router = useRouter()
@@ -519,6 +519,64 @@ function toggleFaq(i) {
     </div>
   </div>
 
+  <!-- ================= CONFIANCE (16/09/2026, sur demande explicite) =================
+       Aucun badge inventé (pas de "10 000 utilisateurs", pas de fausse note
+       app store) : les 4 points ci-dessous sont des faits vérifiables du
+       site — paiement Stripe déjà en place (voir PaywallModal.vue), page
+       /fiabilite déjà publiée avec les vraies statistiques du modèle,
+       résiliation "à tout moment" réellement prévue dans les CGV
+       (CgvView.vue §"Durée et résiliation"), page /confidentialite déjà
+       publiée. Même esprit que le reste de la page : jamais un argument
+       qu'on ne peut pas prouver en cliquant dessus. -->
+  <div class="section">
+    <div class="section-head center" v-reveal>
+      <div class="eyebrow" style="justify-content: center"><i></i>CONFIANCE</div>
+      <h2>Pourquoi tu peux nous faire confiance</h2>
+    </div>
+    <div class="trust-grid">
+      <div class="trust-item" v-reveal="0">
+        <div class="fi">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <rect x="5" y="11" width="14" height="9" rx="2" stroke="#fff" stroke-width="2" />
+            <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="#fff" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </div>
+        <h4>Paiement sécurisé</h4>
+        <p>Via Stripe — on ne voit ni ne garde jamais ta carte bancaire.</p>
+      </div>
+      <div class="trust-item" v-reveal="70">
+        <div class="fi">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z" stroke="#fff" stroke-width="2" stroke-linejoin="round" />
+            <circle cx="12" cy="12" r="3" stroke="#fff" stroke-width="2" />
+          </svg>
+        </div>
+        <h4>Méthode publique</h4>
+        <p><RouterLink :to="{ name: 'model-reliability' }">Voir la fiabilité réelle du modèle →</RouterLink></p>
+      </div>
+      <div class="trust-item" v-reveal="140">
+        <div class="fi">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M3 12a9 9 0 1 0 3-6.7" stroke="#fff" stroke-width="2" stroke-linecap="round" />
+            <polyline points="3 4 3 9 8 9" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <h4>Résiliable à tout moment</h4>
+        <p>Sans engagement, en 2 clics depuis ton compte.</p>
+      </div>
+      <div class="trust-item" v-reveal="0">
+        <div class="fi">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z" stroke="#fff" stroke-width="2" stroke-linejoin="round" />
+            <path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </div>
+        <h4>Données protégées</h4>
+        <p><RouterLink :to="{ name: 'privacy' }">Conformes au RGPD →</RouterLink></p>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= AVIS (emplacement honnête, pas de faux témoignages) ================= -->
   <div class="section">
     <div class="section-head center" v-reveal>
@@ -570,6 +628,12 @@ function toggleFaq(i) {
   </div>
 
   <div class="site-footer">
+    <div class="footer-legal-links">
+      <RouterLink :to="{ name: 'legal-notice' }">Mentions légales</RouterLink>
+      <RouterLink :to="{ name: 'cgu' }">CGU</RouterLink>
+      <RouterLink :to="{ name: 'cgv' }">CGV</RouterLink>
+      <RouterLink :to="{ name: 'privacy' }">Confidentialité</RouterLink>
+    </div>
     © Tennly — Un outil pour t'aider à réfléchir, à titre d'information seulement. Ce n'est pas un conseil pour parier de l'argent, et rien n'est garanti.
   </div>
 </template>
@@ -1483,6 +1547,61 @@ h3 {
   margin: 0;
 }
 
+/* -- Confiance (16/09/2026) --
+   Même grammaire visuelle que .feature-card (icône en pastille dégradée,
+   carte bordée) pour rester cohérent avec le reste de la page, sur 4
+   colonnes plutôt que 3 — 4 points de confiance courts et indépendants,
+   pas des paragraphes. */
+.trust-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.trust-item {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 22px;
+  transition:
+    transform 0.45s var(--ease-premium),
+    box-shadow 0.45s var(--ease-premium),
+    border-color 0.3s ease;
+}
+.trust-item:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-elevated);
+  border-color: transparent;
+}
+.trust-item .fi {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--green), var(--lime));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.trust-item h4 {
+  font-size: 14.5px;
+  margin: 0 0 6px;
+  font-weight: 700;
+}
+.trust-item p {
+  font-size: 13px;
+  color: var(--grey);
+  line-height: 1.5;
+  margin: 0;
+}
+.trust-item p a {
+  color: var(--green);
+  font-weight: 600;
+  text-decoration: none;
+}
+.trust-item p a:hover {
+  text-decoration: underline;
+}
+
 /* -- Comment ça marche (09/09/2026) -- */
 .steps-row {
   display: grid;
@@ -1729,6 +1848,22 @@ h3 {
   text-align: center;
   line-height: 1.6;
 }
+.footer-legal-links {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-bottom: 12px;
+}
+.footer-legal-links a {
+  color: var(--grey);
+  font-weight: 600;
+  text-decoration: none;
+}
+.footer-legal-links a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
 
 @media (max-width: 820px) {
   .hero-content h1 {
@@ -1801,6 +1936,9 @@ h3 {
   .surface-row,
   .feature-grid {
     grid-template-columns: 1fr;
+  }
+  .trust-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
   .steps-row {
     grid-template-columns: 1fr;
@@ -1880,6 +2018,9 @@ h3 {
   .stats-band {
     grid-template-columns: 1fr 1fr;
     padding: 28px 18px;
+  }
+  .trust-grid {
+    grid-template-columns: 1fr;
   }
   .proof-placeholder {
     padding: 28px 20px;
