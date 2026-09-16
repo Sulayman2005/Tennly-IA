@@ -96,6 +96,31 @@ const resultSets = computed(() => {
   })
 })
 
+// Repère "pronostic" sur la carte résultat (16/09/2026, passe premium) :
+// confronte le vainqueur RÉEL au favori donné par match.prediction AVANT le
+// match — cette donnée est déjà chargée pour tout le monde (gratuite, comme
+// le favori affiché sur .face-off), donc rien de nouveau à charger ici, et
+// jamais rien d'inventé : si le match n'avait pas de favori déclaré
+// (prediction absente), ce repère ne s'affiche simplement pas.
+const resultPronostic = computed(() => {
+  const m = match.value
+  const fav = m?.prediction?.favoritePlayer
+  if (!m?.winner || !fav) return null
+  const prob = m.prediction?.probabilityFavorite
+  if (fav.id === m.winner.id) {
+    const pct = prob != null ? Math.round(prob * 100) : null
+    return {
+      tone: 'confirmed',
+      label: pct != null ? `Favori confirmé · ${pct}% donnés par notre analyse` : 'Favori confirmé par notre analyse',
+    }
+  }
+  const pct = prob != null ? Math.round((1 - prob) * 100) : null
+  return {
+    tone: 'upset',
+    label: pct != null ? `Résultat surprise · ${pct}% de chances données` : 'Résultat surprise par rapport à notre analyse',
+  }
+})
+
 // Palmarès carrière (table player_career_stats, cf.
 // PlayerCareerStatsController) : réservé aux abonnés comme prediction, donc
 // chargé juste après elle dans loadMatch(). Certains joueurs n'ont pas de
@@ -555,6 +580,7 @@ onMounted(async () => {
            Affichée UNIQUEMENT une fois le match réellement terminé — voir
            matchLoser/resultSets dans le script. -->
       <div v-if="match.status !== 'scheduled' && match.winner" class="result-showcase">
+        <div class="result-hairline"></div>
         <div class="result-bg">
           <img
             v-if="showPhoto(match.winner)"
@@ -568,9 +594,11 @@ onMounted(async () => {
             <span class="result-ghost-initials">{{ initials(match.winner.fullName) }}</span>
           </div>
         </div>
+        <div class="result-duo"></div>
         <div class="result-glow result-glow-a"></div>
         <div class="result-glow result-glow-b"></div>
         <div class="result-vignette"></div>
+        <div class="result-grain"></div>
         <div class="result-shine"></div>
 
         <img
@@ -585,22 +613,34 @@ onMounted(async () => {
 
         <div class="result-inner">
           <div class="result-body">
-            <span class="result-eyebrow">{{ match.status === 'walkover' ? 'Victoire par forfait' : 'Match terminé' }}</span>
+            <div class="result-top-row">
+              <span class="result-eyebrow">{{ match.status === 'walkover' ? 'Victoire par forfait' : 'Match terminé' }}</span>
+              <span v-if="resultPronostic" class="result-pronostic" :class="resultPronostic.tone">{{ resultPronostic.label }}</span>
+            </div>
             <h2 class="result-winner">{{ match.winner.fullName }}</h2>
             <p v-if="matchLoser" class="result-sub">bat {{ matchLoser.fullName }}</p>
 
-            <div v-if="resultSets.length" class="result-sets">
-              <span
-                v-for="(s, i) in resultSets"
-                :key="i"
-                class="result-set-pill"
-                :class="{ won: s.wonByWinner === true, lost: s.wonByWinner === false }"
-              >{{ s.text }}</span>
+            <div v-if="resultSets.length" class="result-sets-wrap">
+              <span class="result-sets-label">Sets</span>
+              <div class="result-sets">
+                <span
+                  v-for="(s, i) in resultSets"
+                  :key="i"
+                  class="result-set-pill"
+                  :class="{ won: s.wonByWinner === true, lost: s.wonByWinner === false }"
+                >{{ s.text }}</span>
+              </div>
             </div>
             <p v-else-if="match.scoreText" class="result-sub">{{ match.scoreText }}</p>
 
             <div class="result-meta">{{ match.tournamentName }} · {{ match.round }} · {{ surfaceLabel(match.surface) }}</div>
           </div>
+        </div>
+
+        <div class="result-scrollcue" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
         </div>
       </div>
 
@@ -1239,10 +1279,53 @@ onMounted(async () => {
   color: #fff;
 }
 
+/* Fine ligne d'accent en haut de la bannière (passe premium, 16/09/2026) :
+   un "wipe" ponctuel de gauche à droite au chargement, comme un liseré de
+   couverture de magazine — même accent lime que le reste, jamais une
+   couleur nouvelle. */
+.result-hairline {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--lime), transparent);
+  transform-origin: left;
+  transform: scaleX(0);
+  animation: resultHairline 1s var(--ease-premium) 0.05s both;
+  pointer-events: none;
+}
+
 .result-bg {
   position: absolute;
   inset: 0;
   z-index: 0;
+}
+/* Léger habillage colorimétrique de la photo (passe premium, 16/09/2026) :
+   un voile teal profond en multiply, jamais une couleur nouvelle (mêmes
+   --green/--green2 que le reste du site) — donne un rendu "éditorial
+   sport" plus posé qu'une photo brute, sans jamais recolorer par surface
+   (voir le commentaire plus haut sur le "fond bleu" à ne pas reproduire). */
+.result-duo {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(160deg, rgba(10, 44, 45, 0.55) 0%, rgba(5, 6, 8, 0.1) 60%);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+/* Grain fin en overlay (passe premium, 16/09/2026) : texture SVG generée
+   inline (feTurbulence), très discrète — évite l'aspect "gradient plat"
+   d'un fond uni, sans ajouter de requête réseau ni de fichier image. */
+.result-grain {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 /* La photo EST le fond de toute la carte (plus de cadre séparé) : plus
    aucun bord net possible, donc plus de "carré". Léger zoom-arrière au
@@ -1360,6 +1443,13 @@ onMounted(async () => {
 .result-body {
   max-width: 720px;
 }
+.result-top-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
 .result-eyebrow {
   display: inline-flex;
   align-items: center;
@@ -1370,7 +1460,6 @@ onMounted(async () => {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--lime);
-  margin-bottom: 10px;
   opacity: 0;
   animation: resultRise 0.6s ease 0.15s both;
 }
@@ -1383,18 +1472,47 @@ onMounted(async () => {
   box-shadow: 0 0 12px 3px rgba(199, 255, 60, 0.75);
   animation: resultPulse 1.8s ease-in-out infinite;
 }
+/* Repère "pronostic" (passe premium, 16/09/2026) : confronte le résultat
+   réel au favori annoncé avant le match — voir resultPronostic dans le
+   script, jamais affiché si le match n'avait pas de favori déclaré. */
+.result-pronostic {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  animation: resultRise 0.6s ease 0.2s both;
+}
+.result-pronostic.confirmed {
+  color: var(--lime);
+  border-color: rgba(199, 255, 60, 0.5);
+  background: rgba(199, 255, 60, 0.14);
+}
+.result-pronostic.upset {
+  color: var(--amber);
+  border-color: rgba(255, 159, 10, 0.5);
+  background: rgba(255, 159, 10, 0.14);
+}
 .result-winner {
   margin: 0;
   font-family: 'Anton', sans-serif;
   font-weight: 400;
-  font-size: clamp(38px, 6.4vw, 76px);
+  font-size: clamp(40px, 6.8vw, 84px);
   letter-spacing: 0.01em;
-  line-height: 0.96;
+  line-height: 0.94;
   text-transform: uppercase;
   text-wrap: balance;
   text-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
   opacity: 0;
-  animation: resultRise 0.7s ease 0.25s both;
+  clip-path: inset(0 0 100% 0);
+  animation: resultWinnerReveal 0.9s var(--ease-premium) 0.25s both;
 }
 .result-sub {
   margin: 10px 0 0;
@@ -1403,13 +1521,24 @@ onMounted(async () => {
   opacity: 0;
   animation: resultRise 0.6s ease 0.35s both;
 }
+.result-sets-wrap {
+  margin-top: 26px;
+  opacity: 0;
+  animation: resultRise 0.6s ease 0.45s both;
+}
+.result-sets-label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 8px;
+}
 .result-sets {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 24px;
-  opacity: 0;
-  animation: resultRise 0.6s ease 0.45s both;
 }
 .result-set-pill {
   padding: 6px 15px;
@@ -1426,6 +1555,9 @@ onMounted(async () => {
   background: rgba(199, 255, 60, 0.2);
   color: var(--lime);
   border-color: rgba(199, 255, 60, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(199, 255, 60, 0.12),
+    0 6px 16px -6px rgba(199, 255, 60, 0.4);
 }
 .result-meta {
   margin-top: 20px;
@@ -1434,6 +1566,22 @@ onMounted(async () => {
   color: rgba(255, 255, 255, 0.58);
   opacity: 0;
   animation: resultRise 0.6s ease 0.55s both;
+}
+
+/* Invite discrète à poursuivre (passe premium, 16/09/2026) : il y a
+   toujours quelque chose juste en dessous (analyse, ou son déblocage) — un
+   simple chevron qui respire, jamais insistant. */
+.result-scrollcue {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.55);
+  opacity: 0;
+  animation:
+    resultRise 0.6s ease 0.9s both,
+    resultBounce 2s ease-in-out 1.6s infinite;
 }
 
 @keyframes resultKenBurns {
@@ -1480,23 +1628,56 @@ onMounted(async () => {
     opacity: 0.45;
   }
 }
+@keyframes resultHairline {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes resultWinnerReveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    clip-path: inset(0 0 0% 0);
+  }
+}
+@keyframes resultBounce {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(6px);
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .result-photo,
   .result-glow-a,
   .result-glow-b,
   .result-shine,
+  .result-hairline,
   .result-flag,
   .result-brand,
   .result-eyebrow,
   .result-eyebrow::before,
+  .result-pronostic,
   .result-winner,
   .result-sub,
-  .result-sets,
-  .result-meta {
+  .result-sets-wrap,
+  .result-meta,
+  .result-scrollcue {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
+    clip-path: none !important;
   }
 }
 
@@ -1516,6 +1697,9 @@ onMounted(async () => {
   }
   .result-sets {
     justify-content: flex-start;
+  }
+  .result-scrollcue {
+    display: none;
   }
 }
 
