@@ -234,7 +234,7 @@ function toggleFaq(i) {
 
     <div class="hero-content">
       <div class="eyebrow"><i></i>TENNIS · DE VRAIS CHIFFRES, PAS DES DEVINETTES</div>
-      <h1>Sais qui va <span class="accent">gagner</span><br />avant la fin du match.</h1>
+      <h1>Prédis chaque <span class="accent">match</span><br />avant qu'il n'ait lieu.</h1>
       <button class="cta-main" @click="goToMatches">
         Voir les matchs du jour <span class="arrow">→</span>
       </button>
