@@ -41,6 +41,18 @@ const forbidden = ref(false)
 const paywallOpen = ref(false)
 const postPaymentOpen = ref(false)
 
+// Mise en scène "versus" (16/09/2026, sur demande explicite) : juste après le
+// chargement du match, un court écran affiche les deux joueurs face à face
+// avant de révéler la suite (confrontation détaillée, puis soit l'analyse
+// complète, soit son déblocage — cette dernière carte existe déjà juste
+// au-dessus de l'analyse, voir plus bas dans le template, elle n'a pas
+// besoin d'être déplacée). Coupé net pour prefers-reduced-motion : l'écran
+// "versus" n'apparaît alors jamais, le contenu s'affiche directement.
+function prefersReducedMotion() {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+}
+const showVersusIntro = ref(false)
+
 // Carte "résultat" (11/09/2026) : visuel dédié affiché uniquement une fois
 // le match terminé (status 'finished'/'walkover' avec un winner connu — un
 // match 'live', par ex., n'a pas encore de vainqueur et ne doit rien
@@ -311,6 +323,19 @@ onMounted(async () => {
   await loadMatch()
   loading.value = false
 
+  // Écran "versus" (16/09/2026) : uniquement si le match a bien pu être
+  // chargé, et jamais pour prefers-reduced-motion. Remplace l'ancienne
+  // ouverture automatique du popup d'abonnement (paywallOpen = true) — sur
+  // demande explicite, on ne pousse plus ce popup par-dessus la page ; le
+  // bouton "Débloquer l'analyse complète" (carte .locked, déjà positionnée
+  // juste avant l'analyse) reste le seul déclencheur du popup.
+  if (match.value && !prefersReducedMotion()) {
+    showVersusIntro.value = true
+    setTimeout(() => {
+      showVersusIntro.value = false
+    }, 1800)
+  }
+
   if (justPaid.value && !auth.isAuthenticated) {
     postPaymentOpen.value = true
   } else if (justPaid.value && forbidden.value) {
@@ -319,8 +344,6 @@ onMounted(async () => {
       await loadMatch()
       activating.value = false
     }, 3000)
-  } else if (forbidden.value && auth.isAuthenticated) {
-    paywallOpen.value = true
   }
 })
 </script>
@@ -332,6 +355,50 @@ onMounted(async () => {
     <p v-if="loading" class="state-msg">Chargement…</p>
 
     <template v-else-if="match">
+      <!-- Mise en scène "versus" (16/09/2026, sur demande explicite) : les
+           deux joueurs face à face pendant un court instant avant que le
+           reste de la page (confrontation détaillée, puis analyse ou son
+           déblocage) ne se révèle. Voir showVersusIntro dans le script pour
+           la durée et le cas prefers-reduced-motion. -->
+      <div v-if="showVersusIntro" class="versus-intro" :style="surfaceCardVars(match.surface)">
+        <div class="vi-player">
+          <div class="vi-avatar" :style="!showPhoto(match.playerA) ? avatarGradient(match.playerA.fullName) : null">
+            <img
+              v-if="showPhoto(match.playerA)"
+              :src="match.playerA.photoUrl"
+              class="vi-avatar-photo"
+              alt=""
+              loading="lazy"
+              @error="onPhotoError(match.playerA.id)"
+            />
+            <span v-else class="vi-avatar-initials">{{ initials(match.playerA.fullName) }}</span>
+          </div>
+          <div class="vi-name">{{ match.playerA.fullName }}</div>
+        </div>
+
+        <div class="vi-mid">
+          <span class="vi-vs">VS</span>
+          <div class="vi-loading"><span></span><span></span><span></span></div>
+          <div class="vi-caption">Préparation de l'analyse…</div>
+        </div>
+
+        <div class="vi-player">
+          <div class="vi-avatar" :style="!showPhoto(match.playerB) ? avatarGradient(match.playerB.fullName) : null">
+            <img
+              v-if="showPhoto(match.playerB)"
+              :src="match.playerB.photoUrl"
+              class="vi-avatar-photo"
+              alt=""
+              loading="lazy"
+              @error="onPhotoError(match.playerB.id)"
+            />
+            <span v-else class="vi-avatar-initials">{{ initials(match.playerB.fullName) }}</span>
+          </div>
+          <div class="vi-name">{{ match.playerB.fullName }}</div>
+        </div>
+      </div>
+
+      <template v-else>
       <!-- Tournoi/round (11/09/2026) : déjà affichés sur MatchCard.vue (liste
            /matchs) depuis le début, jamais repris ici — un oubli, pas un
            choix. Placés en ligne au-dessus de la carte plutôt qu'ajoutés aux
@@ -617,6 +684,7 @@ onMounted(async () => {
           </ul>
         </div>
       </template>
+      </template>
     </template>
   </div>
 
@@ -900,6 +968,123 @@ onMounted(async () => {
   text-align: center;
   font-size: 13px;
   color: var(--grey);
+}
+
+/* Écran "versus" (16/09/2026) : même langage visuel que .face-off (fond
+   dégradé teinté par la surface du match, accent citron vert) mais en plus
+   sobre — pas de badges, pas de stats, juste les deux joueurs et une
+   attente courte avant la révélation du reste de la page. */
+.versus-intro {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 160px 1fr;
+  align-items: center;
+  gap: 24px;
+  padding: 48px 36px;
+  margin-bottom: 18px;
+  border-radius: var(--radius-card);
+  color: #fff;
+  text-align: center;
+  background:
+    radial-gradient(130% 160% at 50% -20%, var(--surface-glow) 0%, transparent 60%),
+    linear-gradient(135deg, var(--surface-from), var(--surface-to));
+  animation: fadeUp 0.4s ease both;
+}
+.vi-avatar {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin: 0 auto 12px;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.22),
+    0 8px 20px rgba(0, 0, 0, 0.3);
+  animation: viPulse 1.6s ease-in-out infinite;
+}
+.vi-avatar-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.vi-avatar-initials {
+  font-weight: 800;
+  font-size: 28px;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.vi-name {
+  font-weight: 700;
+  font-size: 15px;
+}
+.vi-vs {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.75);
+  margin-bottom: 16px;
+}
+.vi-loading {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.vi-loading span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lime);
+  animation: viDot 1s ease-in-out infinite;
+}
+.vi-loading span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.vi-loading span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.vi-caption {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.6);
+}
+@keyframes viPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+@keyframes viDot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vi-avatar,
+  .vi-loading span {
+    animation: none !important;
+  }
+}
+@media (max-width: 640px) {
+  .versus-intro {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 36px 22px;
+  }
 }
 
 .mid {
