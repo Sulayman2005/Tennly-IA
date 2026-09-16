@@ -182,8 +182,28 @@ onUnmounted(() => {
   clearInterval(slideTimer)
 })
 
+// Animation de clic sur le bouton principal (16/09/2026, sur demande
+// explicite) : au lieu de naviguer instantanément vers /matchs, le bouton
+// joue un bref effet de "lancement" (voir .cta-main.launching / @keyframes
+// ctaLaunchPulse dans le <style>) pendant ~420ms avant de changer de page —
+// assez long pour être visible, assez court pour ne jamais donner
+// l'impression que le clic n'a pas fonctionné. `launching` est partagé par
+// les deux boutons "Lancer l'analyse" de la page (hero + bandeau final) :
+// seul celui réellement cliqué est visible à l'écran au moment du clic.
+// Respecte prefers-reduced-motion (déjà utilisé ailleurs dans ce fichier,
+// voir prefersReducedMotion) : dans ce cas, navigation immédiate, sans
+// délai artificiel ni animation.
+const launching = ref(false)
 function goToMatches() {
-  router.push('/matchs')
+  if (launching.value) return
+  if (prefersReducedMotion()) {
+    router.push('/matchs')
+    return
+  }
+  launching.value = true
+  setTimeout(() => {
+    router.push('/matchs')
+  }, 420)
 }
 
 // FAQ en accordéon (un seul item ouvert à la fois) — le premier reste ouvert
@@ -235,8 +255,8 @@ function toggleFaq(i) {
     <div class="hero-content">
       <div class="eyebrow"><i></i>TENNIS · DE VRAIS CHIFFRES, PAS DES DEVINETTES</div>
       <h1>Prédis chaque <span class="accent">match</span><br />avant qu'il n'ait lieu.</h1>
-      <button class="cta-main" @click="goToMatches">
-        Voir les matchs du jour <span class="arrow">→</span>
+      <button class="cta-main" :class="{ launching }" @click="goToMatches">
+        Lancer l'analyse <span class="arrow">→</span>
       </button>
       <div class="hero-stats">
         <div class="hs"><b>{{ heroSuccessRate }}</b> de bonnes réponses ces 3 derniers mois</div>
@@ -544,8 +564,8 @@ function toggleFaq(i) {
   <div class="final-cta" v-reveal>
     <h3>Prêt à voir qui va gagner ?</h3>
     <p>C'est gratuit à découvrir, pas besoin de carte bancaire.</p>
-    <button class="cta-main" @click="goToMatches">
-      Voir les matchs du jour <span class="arrow">→</span>
+    <button class="cta-main" :class="{ launching }" @click="goToMatches">
+      Lancer l'analyse <span class="arrow">→</span>
     </button>
   </div>
 
@@ -843,6 +863,29 @@ h3 {
 .cta-main:active {
   transform: translateY(-1px) scale(1.005);
   transition-duration: 0.1s;
+}
+/* Animation de "lancement" au clic (16/09/2026, sur demande explicite) :
+   un anneau lumineux part du bouton et s'estompe pendant qu'il se
+   comprime puis rebondit légèrement, pendant les ~420ms où la navigation
+   vers /matchs est volontairement retardée côté script (voir `launching`/
+   goToMatches) pour laisser le temps à l'animation d'être vue. `pointer-
+   events: none` évite un double clic pendant que l'animation joue. */
+.cta-main.launching {
+  animation: ctaLaunchPulse 0.42s var(--ease-premium) both;
+  pointer-events: none;
+}
+@keyframes ctaLaunchPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(199, 255, 60, 0.55);
+  }
+  45% {
+    transform: scale(0.94);
+  }
+  100% {
+    transform: scale(1.03);
+    box-shadow: 0 0 0 24px rgba(199, 255, 60, 0);
+  }
 }
 .cta-main .arrow {
   transition: transform 0.15s;
