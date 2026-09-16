@@ -153,18 +153,15 @@ function filterCount(key) {
       <p>Aucun match pour le moment — reviens un peu plus tard.</p>
     </div>
     <template v-else>
-      <!-- Filtres + recherche (10/09/2026, puis 16/09/2026 x2) : purement
+      <!-- Filtres + recherche (10/09/2026, puis 16/09/2026 x3) : purement
            client, voir filteredMatches dans le script — aucun rechargement
            réseau ni à la frappe ni au clic.
-           Passe "plus de design" (16/09/2026, sur demande explicite) :
-           les deux tiennent maintenant dans un même panneau (.controls-card)
-           avec ombre douce, chaque catégorie a sa propre icône (grille,
-           pastille en direct déjà existante, horloge, coche) et l'onglet
-           actif passe d'un simple aplat à un dégradé --green→--lime avec
-           ombre portée, cohérent avec .cta-main et .fi ailleurs sur le
-           site. La recherche gagne un halo au focus (--ease-premium) au
-           lieu d'un simple changement de couleur de bordure. -->
-      <div class="controls-card">
+           Sur demande explicite ("un truc beaucoup plus simple"), retour à
+           un habillage minimal après une première passe jugée trop chargée
+           (carte, dégradé, halo, icônes par catégorie) : simples pilules
+           bordées, un seul aplat de couleur pour l'onglet actif, une barre
+           de recherche discrète. -->
+      <div class="matches-controls">
         <div class="filter-row" role="tablist" aria-label="Filtrer les matchs">
           <button
             v-for="f in filters"
@@ -177,32 +174,16 @@ function filterCount(key) {
             @click="activeFilter = f.key"
           >
             <i v-if="f.key === 'live' && filterCount('live') > 0"></i>
-            <svg v-if="f.key === 'all'" class="chip-icon" width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2" />
-              <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2" />
-              <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2" />
-              <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="2" />
-            </svg>
-            <svg v-else-if="f.key === 'scheduled'" class="chip-icon" width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" />
-              <path d="M12 7v5l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-            <svg v-else-if="f.key === 'done'" class="chip-icon" width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" />
-              <path d="M8 12.5l2.5 2.5L16 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
             {{ f.label }}
             <span class="filter-count">{{ filterCount(f.key) }}</span>
           </button>
         </div>
 
-        <div class="search-bar" :class="{ 'has-value': searchQuery }">
-          <span class="search-icon-wrap">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
-              <path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-            </svg>
-          </span>
+        <div class="search-bar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
+            <path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
           <input
             v-model="searchQuery"
             type="text"
@@ -406,7 +387,7 @@ h1 .accent {
    maintenant dans une carte bordée avec ombre douce (même langage que
    .feature-card/.trust-item ailleurs sur le site) pour former un vrai bloc
    d'outils, plutôt que deux éléments qui flottent sur le fond de page. */
-.controls-card {
+.matches-controls {
   position: relative;
   z-index: 1;
   display: flex;
@@ -415,64 +396,30 @@ h1 .accent {
   flex-wrap: wrap;
   gap: 14px;
   margin: 0 0 22px;
-  padding: 16px 18px;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  box-shadow: var(--shadow-soft);
 }
 .filter-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
-/* -- Barre de recherche --
-   L'icône vit maintenant dans sa propre pastille (comme .fi ailleurs sur le
-   site) qui passe du gris neutre au dégradé --green→--lime au focus, avec un
-   halo doux autour du champ plutôt qu'un simple changement de couleur de
-   bordure — pour que "la recherche est active" se voie du premier coup
-   d'œil, pas seulement au niveau du curseur clavier. */
 .search-bar {
-  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex: 1 1 260px;
-  max-width: 340px;
-  padding: 6px 16px 6px 6px;
+  gap: 8px;
+  flex: 1 1 240px;
+  max-width: 300px;
+  padding: 0 14px;
   border: 1px solid var(--line);
-  background: var(--bg);
-  border-radius: 999px;
   color: var(--grey);
-  transition:
-    border-color 0.3s var(--ease-premium),
-    box-shadow 0.3s var(--ease-premium),
-    transform 0.3s var(--ease-premium);
+  border-radius: 999px;
+  transition: border-color 0.2s ease;
 }
 .search-bar:focus-within {
-  border-color: transparent;
+  border-color: var(--green);
   color: var(--ink);
-  box-shadow: 0 0 0 3px rgba(199, 255, 60, 0.35), var(--shadow-soft);
-  transform: translateY(-1px);
 }
-.search-icon-wrap {
+.search-bar svg {
   flex: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--line);
-  color: var(--grey);
-  transition:
-    background 0.3s var(--ease-premium),
-    color 0.3s var(--ease-premium);
-}
-.search-bar:focus-within .search-icon-wrap,
-.search-bar.has-value .search-icon-wrap {
-  background: linear-gradient(135deg, var(--green), var(--lime));
-  color: #fff;
 }
 .search-bar input {
   flex: 1;
@@ -480,7 +427,7 @@ h1 .accent {
   border: none;
   background: transparent;
   outline: none;
-  padding: 8px 0;
+  padding: 9px 0;
   font-size: 13.5px;
   font-family: inherit;
   color: var(--ink);
@@ -493,24 +440,18 @@ h1 .accent {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border: none;
   border-radius: 50%;
   background: var(--line);
   color: var(--grey);
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1;
   cursor: pointer;
-  transition:
-    background 0.2s ease,
-    color 0.2s ease,
-    transform 0.2s var(--ease-premium);
 }
 .search-clear:hover {
-  background: var(--red);
-  color: #fff;
-  transform: scale(1.1);
+  color: var(--ink);
 }
 @media (max-width: 480px) {
   .search-bar {
@@ -531,36 +472,22 @@ h1 .accent {
   border-radius: 999px;
   cursor: pointer;
   transition:
-    background 0.3s var(--ease-premium),
-    border-color 0.3s var(--ease-premium),
-    color 0.3s var(--ease-premium),
-    box-shadow 0.3s var(--ease-premium),
-    transform 0.3s var(--ease-premium);
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
 .filter-chip:hover {
   border-color: var(--green);
   color: var(--ink);
-  transform: translateY(-1px);
 }
 .filter-chip.active {
-  background: linear-gradient(135deg, var(--green), var(--lime));
-  border-color: transparent;
+  background: var(--btn);
+  border-color: var(--btn);
   color: #fff;
-  box-shadow: 0 8px 18px rgba(15, 61, 62, 0.3);
-  transform: translateY(-1px);
 }
 .filter-chip.live:not(.active) {
   border-color: rgba(255, 69, 58, 0.4);
   color: var(--red);
-}
-.chip-icon {
-  flex: none;
-  opacity: 0.75;
-  transition: opacity 0.25s ease;
-}
-.filter-chip:hover .chip-icon,
-.filter-chip.active .chip-icon {
-  opacity: 1;
 }
 .filter-chip i {
   width: 6px;
@@ -576,14 +503,8 @@ h1 .accent {
   font-size: 11px;
   font-weight: 700;
   color: inherit;
-  opacity: 0.7;
+  opacity: 0.6;
   font-variant-numeric: tabular-nums;
-  background: rgba(255, 255, 255, 0.18);
-  padding: 1px 6px;
-  border-radius: 999px;
-}
-.filter-chip:not(.active) .filter-count {
-  background: var(--line);
 }
 
 .match-list {
