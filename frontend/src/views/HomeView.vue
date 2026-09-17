@@ -807,12 +807,20 @@ h3 {
   background-size: cover;
   background-position: center;
   opacity: 0;
-  transition: opacity 1.6s ease;
+  /* Anime aussi la luminosité/saturation en plus du fondu (17/09/2026, sur
+     demande explicite "avec des animations") : chaque nouvelle photo se
+     "réveille" doucement (un peu terne → pleine couleur) au lieu d'un simple
+     fondu plat, en plus du zoom lent continu (heroKenBurns) déjà en place. */
+  filter: brightness(0.86) saturate(0.85);
+  transition:
+    opacity 1.8s ease,
+    filter 1.8s ease;
   animation: heroKenBurns 20s ease-in-out infinite alternate;
-  will-change: opacity, transform;
+  will-change: opacity, transform, filter;
 }
 .hero-slide.active {
   opacity: 1;
+  filter: brightness(1) saturate(1);
   z-index: 1;
 }
 @keyframes heroKenBurns {
@@ -1095,7 +1103,8 @@ h3 {
   line-height: 1.3;
   transition:
     background 0.25s,
-    color 0.25s;
+    color 0.25s,
+    transform 0.25s ease;
 }
 .hero-dot-place {
   font-size: 10.5px;
@@ -1105,6 +1114,9 @@ h3 {
 .hero-dot.active {
   background: #fff;
   color: var(--green2);
+  /* Petit "pop" au changement de photo (17/09/2026, "avec des animations") :
+     renforce visuellement que la pastille active vient de changer. */
+  transform: scale(1.045);
 }
 .hero-dot.active .hero-dot-place {
   opacity: 0.6;
