@@ -765,7 +765,10 @@ onMounted(async () => {
     <div class="unlock-modal">
       <button class="unlock-modal-close" @click="showUnlockPopup = false" aria-label="Fermer">✕</button>
       <div class="unlock-poster">
-        <span class="unlock-poster-icon">🔒</span>
+        <!-- Cadenas remplacé par le logo (17/09/2026, demande explicite),
+             avec une animation "rebond" plutôt que le pulse précédent, pour
+             évoquer une vraie balle de tennis qui rebondit. -->
+        <img src="/logo-mark.png" alt="" class="unlock-poster-icon" />
         <h3 class="unlock-poster-text">Débloque<br />l'analyse<br />complète</h3>
       </div>
       <button class="unlock-modal-cta" @click="showUnlockPopup = false; paywallOpen = true">Voir les formules</button>
@@ -1935,9 +1938,13 @@ onMounted(async () => {
 }
 .unlock-poster-icon {
   display: block;
-  font-size: 34px;
-  margin-bottom: 12px;
-  animation: unlockIconPulse 1.8s ease-in-out infinite;
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 12px;
+  /* Rebond façon vraie balle de tennis (17/09/2026, demande explicite) :
+     un grand rebond puis un plus petit avant une pause, plutôt qu'un simple
+     va-et-vient — voir unlockBallBounce ci-dessous. */
+  animation: unlockBallBounce 1.8s ease-in-out infinite;
 }
 .unlock-poster-text {
   margin: 0;
@@ -1950,13 +1957,19 @@ onMounted(async () => {
   color: #fff;
   text-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
 }
-@keyframes unlockIconPulse {
+@keyframes unlockBallBounce {
   0%,
+  20%,
+  50%,
+  80%,
   100% {
-    transform: scale(1);
+    transform: translateY(0);
   }
-  50% {
-    transform: scale(1.12);
+  40% {
+    transform: translateY(-16px);
+  }
+  60% {
+    transform: translateY(-7px);
   }
 }
 @media (prefers-reduced-motion: reduce) {
