@@ -329,7 +329,7 @@ function toggleFaq(i) {
 
     <div class="hero-content">
       <div class="eyebrow"><i></i>TENNIS · ANALYSE PRO, DONNÉES RÉELLES</div>
-      <h1>Prédis chaque <span class="accent">match</span><br />avant qu'il ne commence.</h1>
+      <h1>Analyse et Prédis chaque <span class="accent">Victoire</span></h1>
       <button class="cta-main" :class="{ launching }" @click="goToMatches">
         Lancer l'analyse <span class="arrow">→</span>
       </button>
