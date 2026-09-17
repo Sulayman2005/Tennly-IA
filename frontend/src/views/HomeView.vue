@@ -392,7 +392,7 @@ function toggleFaq(i) {
        une ligne chacune — le ruban animé (.live-ribbon), qui répétait mot
        pour mot les mêmes idées que la section "Sous le capot", a aussi été
        retiré. -->
-  <div class="section">
+  <div class="section section--tight-top">
     <div class="section-head center" v-reveal>
       <div class="eyebrow" style="justify-content: center"><i></i>EN 3 ÉTAPES</div>
       <h2>Comment ça marche, Tennly ?</h2>
@@ -1299,6 +1299,14 @@ h3 {
 /* -- Sections génériques -- */
 .section {
   padding: 64px 0;
+}
+/* -- Transition hero → "Comment ça marche" resserrée (17/09/2026, demande
+   explicite : moins de blanc entre le bandeau vert des tournois et la
+   section suivante). Modificateur local, appliqué uniquement à cette
+   section : le rythme d'espacement standard (.section, 64px/48px) reste
+   inchangé partout ailleurs sur la page. -->
+.section--tight-top {
+  padding-top: 20px;
 }
 .section-head {
   max-width: 600px;
@@ -2216,6 +2224,12 @@ h3 {
   }
   .section {
     padding: 48px 0;
+  }
+  /* Répété ici (cascade) pour continuer à gagner sur .section en dessous de
+     cette largeur — sinon la version mobile de .section reprendrait le
+     dessus et redonnerait le grand espace blanc qu'on vient de resserrer. */
+  .section--tight-top {
+    padding-top: 20px;
   }
   .section-head h2 {
     font-size: 22px;
