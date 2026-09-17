@@ -2,40 +2,75 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { api } from '@/api/client'
+import { hasPhoto } from '@/utils/playerVisuals'
 
 const router = useRouter()
 
-// Carrousel du hero : une photo réelle par surface (dur / terre battue /
-// gazon), en écho direct à la section "Couverture" plus bas — purement
-// illustratif (aucun joueur, aucun tournoi précis n'est représenté), sous
-// licence libre (Pexels). Défilement automatique + navigation manuelle par
-// pastille, avec remise à zéro du minuteur sur interaction manuelle.
-const slides = [
+// Carrousel du hero : une photo par surface (dur / terre battue / gazon), en
+// écho direct à la section "Couverture" plus bas. Chaque slide part d'une
+// photo d'action générique sous licence libre (Pexels, aucun joueur
+// identifiable) — voir SHOWCASE_FALLBACK — et loadShowcaseFavorites() la
+// remplace, une fois le composant monté, par un VRAI joueur en tête d'un
+// vrai match à venir/en cours sur cette surface (17/09/2026, sur demande
+// explicite de mettre en avant "des grosses stars sur des matchs
+// importants" en photo). Volontairement PAS de vraie photo d'action de
+// presse (Getty/AP, etc. — droits d'auteur bien plus stricts qu'un portrait)
+// : on réutilise exactement la même source déjà utilisée partout ailleurs
+// sur le site pour les joueurs (portrait Wikipedia via player.photoUrl, voir
+// import_player_photos_wikipedia.py) plutôt que d'inventer une photo qu'on
+// n'a pas le droit de publier. Si aucun match exploitable n'est trouvé pour
+// une surface (creux du calendrier, aucun joueur avec photo…), cette surface
+// garde simplement sa photo de secours Pexels — jamais de portrait inventé.
+const SHOWCASE_FALLBACK = [
   {
     key: 'terre',
+    apiSurface: 'terre_battue',
     label: 'Terre battue',
     place: 'Roland-Garros',
-    // Joueur en plein service, court en terre battue, lumière de fin de
-    // journée — photo d'action (licence libre Pexels, aucun joueur
-    // identifiable/pro réel).
     img: 'https://images.pexels.com/photos/32289805/pexels-photo-32289805.jpeg?auto=compress&cs=tinysrgb&w=1920',
   },
   {
     key: 'gazon',
+    apiSurface: 'gazon',
     label: 'Gazon',
     place: 'Wimbledon',
     img: 'https://images.pexels.com/photos/19872965/pexels-photo-19872965.jpeg?auto=compress&cs=tinysrgb&w=1920',
   },
   {
     key: 'dur',
+    apiSurface: 'dur',
     label: 'Dur',
     place: 'US Open · Australian Open',
-    // Joueur en pleine frappe, court dur bleu — photo d'action.
     img: 'https://images.pexels.com/photos/33436529/pexels-photo-33436529.jpeg?auto=compress&cs=tinysrgb&w=1920',
   },
 ]
+const slides = ref(SHOWCASE_FALLBACK.map((s) => ({ ...s, player: null })))
 const activeSlide = ref(0)
 let slideTimer = null
+
+async function loadShowcaseFavorites() {
+  await Promise.all(
+    SHOWCASE_FALLBACK.map(async (s, i) => {
+      try {
+        const data = await api.get(
+          `/api/tennis_matches?surface=${s.apiSurface}&status[]=scheduled&status[]=live&order[scheduledAt]=asc&itemsPerPage=15`,
+        )
+        const matches = data['hydra:member'] ?? data['member'] ?? data
+        for (const m of matches) {
+          const favorite = m.prediction?.favoritePlayer
+          const candidates = favorite ? [favorite, m.playerA, m.playerB] : [m.playerA, m.playerB]
+          const player = candidates.find((p) => p && hasPhoto(p))
+          if (player) {
+            slides.value[i] = { ...slides.value[i], img: player.photoUrl, place: m.tournamentName, player: player.fullName }
+            return
+          }
+        }
+      } catch {
+        // Silencieux : cette surface garde sa photo de secours Pexels.
+      }
+    }),
+  )
+}
 
 function scheduleNextSlide() {
   clearInterval(slideTimer)
@@ -168,15 +203,22 @@ onMounted(async () => {
     }, 950)
   } catch (e) {
     // Silencieux : le hero affiche "—" via les computed heroSuccessRate/
-    // heroAnalyzedMatches tant que value reste null — plus besoin d'un
-    // message d'erreur visible depuis la suppression du ruban de stats
-    // détaillées (voir .live-ribbon dans le template).
+    // heroAnalyzedMatches tant que value reste null.
   }
+  loadShowcaseFavorites()
   scheduleNextSlide()
   setTimeout(() => {
     introDone.value = true
   }, 1900)
 })
+
+// Bandeau défilant "façon Visifoot" sous le hero (17/09/2026, sur demande
+// explicite) : uniquement des noms réels de circuits/tournois déjà utilisés
+// ailleurs sur cette page (section Couverture plus bas) — pas de vrai logo
+// officiel (marque déposée de chaque organisation, droits distincts d'une
+// simple mention textuelle) tant qu'on n'a pas d'accord avec ces
+// organisations, donc un simple texte façon badge plutôt qu'une image.
+const tourMarquee = ['ATP', 'WTA', 'Grand Chelem', 'Australian Open', 'Roland-Garros', 'Wimbledon', 'US Open', 'Masters 1000']
 
 onUnmounted(() => {
   clearInterval(slideTimer)
@@ -253,8 +295,8 @@ function toggleFaq(i) {
     <div v-if="spotlightEnabled" class="hero-spotlight" :style="{ '--mx': heroSpotlight.x + '%', '--my': heroSpotlight.y + '%' }"></div>
 
     <div class="hero-content">
-      <div class="eyebrow"><i></i>TENNIS · DE VRAIS CHIFFRES, PAS DES DEVINETTES</div>
-      <h1>Prédis chaque <span class="accent">match</span><br />avant qu'il n'ait lieu.</h1>
+      <div class="eyebrow"><i></i>TENNIS · ANALYSE PRO, DONNÉES RÉELLES</div>
+      <h1>Prédis chaque <span class="accent">match</span><br />avant qu'il ne commence.</h1>
       <button class="cta-main" :class="{ launching }" @click="goToMatches">
         Lancer l'analyse <span class="arrow">→</span>
       </button>
@@ -291,6 +333,17 @@ function toggleFaq(i) {
     <div class="hero-scrollcue" aria-hidden="true"><i></i></div>
   </section>
 
+  <!-- Bandeau défilant des circuits/tournois (17/09/2026, "façon Visifoot",
+       sur demande explicite) — voir tourMarquee dans le script pour le choix
+       texte plutôt que logo. Liste dupliquée une fois ci-dessous pour que la
+       boucle CSS (translateX(-50%)) soit invisible, sans saut au raccord. -->
+  <div class="tour-ribbon">
+    <div class="tour-ribbon-track">
+      <span v-for="t in tourMarquee" :key="t" class="tour-chip">{{ t }}</span>
+      <span v-for="t in tourMarquee" :key="t + '-dup'" class="tour-chip">{{ t }}</span>
+    </div>
+  </div>
+
   <div class="section-divider" aria-hidden="true"><span></span></div>
 
   <!-- ================= COMMENT ÇA MARCHE (09/09/2026) =================
@@ -322,7 +375,7 @@ function toggleFaq(i) {
       </div>
       <div class="step-card" v-reveal="90">
         <div class="step-num">2</div>
-        <h4>On regarde 6 choses importantes</h4>
+        <h4>On analyse 6 points importants</h4>
         <p>Toujours à partir de vrais matchs déjà joués.</p>
       </div>
       <div class="step-arrow" aria-hidden="true">
@@ -1065,7 +1118,7 @@ h3 {
    "breakout" que le hero) pour occuper toute la largeur de l'écran. La liste
    de chips est dupliquée une fois dans le template pour que la boucle
    translateX(-50%) soit invisible (pas de saut au raccord). */
-.live-ribbon {
+.tour-ribbon {
   position: relative;
   width: 100vw;
   left: 50%;
@@ -1079,15 +1132,15 @@ h3 {
   background: linear-gradient(120deg, var(--green2), var(--green) 55%, #051616);
   isolation: isolate;
 }
-.live-ribbon::before {
+.tour-ribbon::before {
   content: '';
   position: absolute;
   inset: 0;
   background: radial-gradient(600px 160px at 20% 50%, rgba(199, 255, 60, 0.22), transparent 65%);
-  animation: ribbonGlow 6s ease-in-out infinite alternate;
+  animation: tourRibbonGlow 6s ease-in-out infinite alternate;
   pointer-events: none;
 }
-@keyframes ribbonGlow {
+@keyframes tourRibbonGlow {
   from {
     transform: translateX(-12%);
     opacity: 0.7;
@@ -1097,16 +1150,16 @@ h3 {
     opacity: 1;
   }
 }
-.live-ribbon-track {
+.tour-ribbon-track {
   display: flex;
   width: max-content;
   gap: 14px;
-  animation: ribbonScroll 26s linear infinite;
+  animation: tourRibbonScroll 26s linear infinite;
 }
-.live-ribbon:hover .live-ribbon-track {
+.tour-ribbon:hover .tour-ribbon-track {
   animation-play-state: paused;
 }
-@keyframes ribbonScroll {
+@keyframes tourRibbonScroll {
   from {
     transform: translateX(0);
   }
@@ -1114,7 +1167,7 @@ h3 {
     transform: translateX(-50%);
   }
 }
-.live-chip {
+.tour-chip {
   flex: none;
   display: inline-flex;
   align-items: center;
@@ -1127,15 +1180,8 @@ h3 {
   color: #fff;
   font-size: 13.5px;
   font-weight: 600;
+  letter-spacing: 0.02em;
   white-space: nowrap;
-}
-.live-chip .dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--lime);
-  box-shadow: 0 0 0 3px rgba(199, 255, 60, 0.28);
-  flex: none;
 }
 
 /* -- Séparateur décoratif entre deux sections -- */
@@ -1993,7 +2039,7 @@ h3 {
   .band-inner {
     padding: 0 16px;
   }
-  .live-chip {
+  .tour-chip {
     padding: 8px 16px;
     font-size: 12.5px;
   }
