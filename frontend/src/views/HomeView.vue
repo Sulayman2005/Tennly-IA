@@ -21,27 +21,34 @@ const router = useRouter()
 // n'a pas le droit de publier. Si aucun match exploitable n'est trouvé pour
 // une surface (creux du calendrier, aucun joueur avec photo…), cette surface
 // garde simplement sa photo de secours Pexels — jamais de portrait inventé.
+//
+// Photos de secours changées le 17/09/2026 (demande explicite) pour des
+// prises de vue plus "premium" (drone/aérien, terrains vides, haute
+// résolution) — voir aussi le filtre `p.tour === 'atp'` dans
+// loadShowcaseFavorites() ci-dessous, qui garantit qu'un vrai joueur mis en
+// avant ici est toujours un joueur du circuit ATP (jamais une joueuse WTA),
+// sur demande explicite également.
 const SHOWCASE_FALLBACK = [
   {
     key: 'terre',
     apiSurface: 'terre_battue',
     label: 'Terre battue',
     place: 'Roland-Garros',
-    img: 'https://images.pexels.com/photos/32289805/pexels-photo-32289805.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    img: 'https://images.pexels.com/photos/30894524/pexels-photo-30894524.jpeg?auto=compress&cs=tinysrgb&w=1920',
   },
   {
     key: 'gazon',
     apiSurface: 'gazon',
     label: 'Gazon',
     place: 'Wimbledon',
-    img: 'https://images.pexels.com/photos/19872965/pexels-photo-19872965.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    img: 'https://images.pexels.com/photos/11301815/pexels-photo-11301815.jpeg?auto=compress&cs=tinysrgb&w=1920',
   },
   {
     key: 'dur',
     apiSurface: 'dur',
     label: 'Dur',
     place: 'US Open · Australian Open',
-    img: 'https://images.pexels.com/photos/33436529/pexels-photo-33436529.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    img: 'https://images.pexels.com/photos/9093874/pexels-photo-9093874.jpeg?auto=compress&cs=tinysrgb&w=1920',
   },
 ]
 const slides = ref(SHOWCASE_FALLBACK.map((s) => ({ ...s, player: null })))
@@ -73,7 +80,11 @@ async function loadShowcaseFavorites() {
         for (const m of matches) {
           const favorite = m.prediction?.favoritePlayer
           const candidates = favorite ? [favorite, m.playerA, m.playerB] : [m.playerA, m.playerB]
-          const player = candidates.find((p) => p && hasPhoto(p))
+          // tour === 'atp' (sur demande explicite, jamais une joueuse WTA en
+          // photo ici) — donnée réelle exposée par l'API (Player::$tour, cf.
+          // TourBadge.vue qui s'en sert déjà pour la puce ATP/WTA), jamais
+          // devinée.
+          const player = candidates.find((p) => p && p.tour === 'atp' && hasPhoto(p))
           if (player && (await preloadImage(player.photoUrl))) {
             slides.value[i] = { ...slides.value[i], img: player.photoUrl, place: m.tournamentName, player: player.fullName }
             return
