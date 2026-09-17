@@ -420,6 +420,17 @@ function toggleFaq(i) {
         <p>Et les facteurs qui expliquent pourquoi.</p>
       </div>
     </div>
+    <div class="steps-note" v-reveal="240">
+      <p><b>4 années</b> de matchs ATP et WTA déjà joués servent de base à chaque analyse, récupérées via une API tennis. Notre IA calcule ensuite 6 points pour chaque joueur :</p>
+      <div class="points-row">
+        <span class="point-chip">Niveau sur la surface</span>
+        <span class="point-chip">Forme récente</span>
+        <span class="point-chip">Service</span>
+        <span class="point-chip">Retour</span>
+        <span class="point-chip">Repos</span>
+        <span class="point-chip">Confrontations directes</span>
+      </div>
+    </div>
   </div>
 
   <!-- ================= COUVERTURE (surfaces / tournois) ================= -->
@@ -1827,6 +1838,40 @@ h3 {
   align-items: center;
   justify-content: center;
   color: var(--line);
+}
+
+/* -- Note "4 ans / API / 6 points" sous les 3 étapes (17/09/2026, demande
+   explicite : expliquer combien d'années de données, comment elles sont
+   récupérées, et détailler les 6 points directement sur cet écran) -- */
+.steps-note {
+  margin-top: 26px;
+  text-align: center;
+}
+.steps-note p {
+  max-width: 620px;
+  margin: 0 auto 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--grey);
+}
+.steps-note p b {
+  color: var(--green);
+  font-weight: 700;
+}
+.points-row {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.point-chip {
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--grey);
 }
 
 /* -- Chiffres clés (09/09/2026, remplace l'ancien .method-band à un seul
