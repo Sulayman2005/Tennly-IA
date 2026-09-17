@@ -48,6 +48,20 @@ const slides = ref(SHOWCASE_FALLBACK.map((s) => ({ ...s, player: null })))
 const activeSlide = ref(0)
 let slideTimer = null
 
+// Vérifie qu'une image se charge vraiment avant de l'utiliser en fond de
+// carrousel : contrairement à une balise <img> (qui a déjà un repli visuel
+// naturel en cas d'échec), un background-image CSS raté reste simplement
+// invisible, sans aucun signal — d'où ce test explicite pour ne jamais
+// remplacer une photo de secours qui marche par une URL cassée.
+function preloadImage(url) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => resolve(true)
+    img.onerror = () => resolve(false)
+    img.src = url
+  })
+}
+
 async function loadShowcaseFavorites() {
   await Promise.all(
     SHOWCASE_FALLBACK.map(async (s, i) => {
@@ -60,7 +74,7 @@ async function loadShowcaseFavorites() {
           const favorite = m.prediction?.favoritePlayer
           const candidates = favorite ? [favorite, m.playerA, m.playerB] : [m.playerA, m.playerB]
           const player = candidates.find((p) => p && hasPhoto(p))
-          if (player) {
+          if (player && (await preloadImage(player.photoUrl))) {
             slides.value[i] = { ...slides.value[i], img: player.photoUrl, place: m.tournamentName, player: player.fullName }
             return
           }
@@ -75,7 +89,7 @@ async function loadShowcaseFavorites() {
 function scheduleNextSlide() {
   clearInterval(slideTimer)
   slideTimer = setInterval(() => {
-    activeSlide.value = (activeSlide.value + 1) % slides.length
+    activeSlide.value = (activeSlide.value + 1) % slides.value.length
   }, 5500)
 }
 
@@ -289,7 +303,7 @@ function toggleFaq(i) {
       :key="slide.key"
       class="hero-slide"
       :class="{ active: i === activeSlide, 'intro-slide': i === 0 && !introDone }"
-      :style="{ backgroundImage: `url(${slide.img})`, animationDelay: i * 2 + 's' }"
+      :style="{ backgroundImage: `url('${slide.img}')`, animationDelay: i * 2 + 's' }"
     ></div>
     <div class="hero-overlay"></div>
     <div v-if="spotlightEnabled" class="hero-spotlight" :style="{ '--mx': heroSpotlight.x + '%', '--my': heroSpotlight.y + '%' }"></div>
