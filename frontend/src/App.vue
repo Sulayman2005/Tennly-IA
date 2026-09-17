@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterView, RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -57,10 +57,37 @@ onMounted(() => {
     auth.fetchCurrentUser()
   }
 })
+
+// Header transparent au-dessus du hero de l'accueil (17/09/2026, demande
+// explicite : que l'image de fond du hero remonte tout en haut de l'écran,
+// derrière le header, au lieu de s'arrêter sous une bande blanche). Actif
+// uniquement sur la page d'accueil et tant que le visiteur n'a pas encore
+// scrollé : dès qu'il descend un peu, le header redevient solide (blanc
+// flouté) comme sur le reste du site, pour rester lisible au-dessus du
+// contenu normal — qui est blanc lui aussi, contrairement au hero.
+const scrolledPastHero = ref(false)
+function updateHeroScrollState() {
+  scrolledPastHero.value = window.scrollY > 40
+}
+const heroOverlay = computed(() => route.name === 'home' && !scrolledPastHero.value)
+
+onMounted(() => {
+  updateHeroScrollState()
+  window.addEventListener('scroll', updateHeroScrollState, { passive: true })
+})
+onUnmounted(() => {
+  window.removeEventListener('scroll', updateHeroScrollState)
+})
+watch(
+  () => route.name,
+  () => {
+    updateHeroScrollState()
+  },
+)
 </script>
 
 <template>
-  <header class="topbar">
+  <header class="topbar" :class="{ 'topbar--overlay': heroOverlay }">
     <RouterLink to="/" class="logo">
       <!-- Logo remplacé le 17/09/2026 (demande directe du CEO) : nouvelle
            icône "balle de tennis" fournie telle quelle, à la place de
@@ -162,6 +189,33 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.86);
   backdrop-filter: blur(12px);
   z-index: 20;
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease;
+}
+
+/* -- Mode "flottant sur le hero" (17/09/2026) -- voir heroOverlay dans le
+   <script> : le header reste à sa place habituelle dans la page (aucun
+   changement de mise en page ailleurs, aucun risque de décalage), il
+   devient juste transparent le temps que le hero de l'accueil soit visible
+   derrière lui, avec un texte blanc pour rester lisible sur la photo. */
+.topbar--overlay {
+  background: transparent;
+  backdrop-filter: none;
+  border-bottom-color: transparent;
+}
+.topbar--overlay .logo,
+.topbar--overlay nav,
+.topbar--overlay .cta-mini,
+.topbar--overlay .account-email {
+  color: #fff;
+}
+.topbar--overlay .logout-btn {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+.topbar--overlay .menu-toggle span {
+  background: #fff;
 }
 
 .logo {
