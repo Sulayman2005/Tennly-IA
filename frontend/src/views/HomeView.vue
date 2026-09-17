@@ -445,11 +445,18 @@ function toggleFaq(i) {
         <div class="desc">Wimbledon.</div>
       </div>
     </div>
-    <div class="level-row" v-reveal="280">
-      <span class="level-chip">Grand Chelem</span>
-      <span class="level-chip">Masters 1000</span>
-      <span class="level-chip">ATP 500</span>
-      <span class="level-chip">ATP 250</span>
+    <!-- "Logos" des compétitions (17/09/2026, sur demande explicite du CEO,
+         "façon Visifoot") : pas de vraie image de logo officiel (ATP/Grand
+         Chelem) réutilisée ici — on n'a pas les droits sur ces marques
+         déposées, contrairement à une photo de terrain générique. À la
+         place, un bandeau de "blasons" texte, un par Grand Chelem réel,
+         avec la couleur signature de chaque tournoi — même esprit visuel
+         qu'un bandeau de logos, sans utiliser de vraie image protégée. -->
+    <div class="comp-row" v-reveal="280">
+      <span class="comp-badge ao"><b>AO</b>Australian Open</span>
+      <span class="comp-badge rg"><b>RG</b>Roland-Garros</span>
+      <span class="comp-badge wm"><b>W</b>Wimbledon</span>
+      <span class="comp-badge us"><b>US</b>US Open</span>
     </div>
   </div>
 
@@ -1332,14 +1339,20 @@ h3 {
   transform: translateY(-8px) scale(1.015);
   box-shadow: var(--shadow-elevated);
 }
+/* Alignées le 17/09/2026 (demande explicite "les mêmes images que sur les
+   slides") sur les photos du carrousel du hero (voir SHOWCASE_FALLBACK plus
+   haut dans le <script>) — avant, cette section "Tous les terrains" avait
+   ses 3 propres photos, jamais mises à jour en même temps que le hero, d'où
+   la confusion : les captures partagées montraient CETTE section-ci, pas le
+   hero, alors que je ne corrigeais que le hero. */
 .surface-card.dur {
-  background-image: url('https://images.pexels.com/photos/30760348/pexels-photo-30760348.jpeg?auto=compress&cs=tinysrgb&w=1080');
+  background-image: url('https://images.pexels.com/photos/31379978/pexels-photo-31379978.jpeg?auto=compress&cs=tinysrgb&w=1080');
 }
 .surface-card.terre {
-  background-image: url('https://images.pexels.com/photos/30617588/pexels-photo-30617588.jpeg?auto=compress&cs=tinysrgb&w=1080');
+  background-image: url('https://images.pexels.com/photos/30894524/pexels-photo-30894524.jpeg?auto=compress&cs=tinysrgb&w=1080');
 }
 .surface-card.gazon {
-  background-image: url('https://images.pexels.com/photos/19872965/pexels-photo-19872965.jpeg?auto=compress&cs=tinysrgb&w=1080');
+  background-image: url('https://images.pexels.com/photos/23940468/pexels-photo-23940468.jpeg?auto=compress&cs=tinysrgb&w=1080');
 }
 .surface-card .dot {
   width: 12px;
@@ -1368,18 +1381,50 @@ h3 {
   color: rgba(255, 255, 255, 0.82);
   line-height: 1.5;
 }
-.level-row {
+.comp-row {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
-.level-chip {
-  padding: 7px 15px;
+.comp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 8px 8px;
   border-radius: 999px;
   background: var(--card);
   font-size: 12.5px;
   color: var(--grey);
   font-weight: 600;
+  border: 1px solid var(--line);
+}
+.comp-badge b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 6px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+/* Une couleur "signature" par tournoi (celle associée à son identité visuelle
+   habituelle), jamais son vrai logo — voir le commentaire dans le
+   <template>. */
+.comp-badge.ao b {
+  background: linear-gradient(135deg, #0f4fa8, #1976d2);
+}
+.comp-badge.rg b {
+  background: linear-gradient(135deg, var(--clay), #b25a2e);
+}
+.comp-badge.wm b {
+  background: linear-gradient(135deg, #1f6b3a, #2e7d32);
+}
+.comp-badge.us b {
+  background: linear-gradient(135deg, #123a6b, #1d4e89);
 }
 
 /* -- Exemple concret --
