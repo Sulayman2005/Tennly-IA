@@ -2106,7 +2106,15 @@ h3 {
        sans jamais se chevaucher. */
     flex-direction: column;
     min-height: 560px;
-    padding-bottom: 28px;
+    /* Agrandi de 28px à 140px (17/09/2026, demande explicite : "on ne voit
+       pas [le bandeau/la suite] quand on arrive sur l'app") — sur mobile, le
+       bandeau des tournois (.tour-ribbon) suit juste après ce bloc, donc sa
+       hauteur totale décide si le bandeau (et la section blanche encore plus
+       bas) apparaît déjà au premier écran ou seulement après un petit scroll.
+       Cet espace supplémentaire reste entièrement recouvert par la photo (le
+       fond est en position absolute, voir .hero-slide) : ça pousse juste la
+       suite plus bas, ça ne crée aucun blanc. */
+    padding-bottom: 140px;
   }
   .hero-content {
     padding: 84px 20px 0;
