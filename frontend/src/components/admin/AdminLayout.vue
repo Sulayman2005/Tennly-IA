@@ -61,12 +61,11 @@ watch(
   <div class="admin-shell">
     <aside class="sidebar" :class="{ open: mobileNavOpen }">
       <RouterLink to="/admin" class="brand" @click="mobileNavOpen = false">
+        <!-- Logo remplacé le 17/09/2026 (demande directe du CEO) : même
+             icône "balle de tennis" que l'en-tête public (App.vue) et le
+             favicon (index.html), à la place de l'ancien mark en SVG. -->
         <span class="mark">
-          <svg viewBox="0 0 24 24" fill="none" style="width: 62%; height: 62%">
-            <circle cx="12" cy="12" r="8.4" stroke="#fff" stroke-width="1.7" />
-            <path d="M5.4 6C8.3 8.5 8.3 15.5 5.4 18" stroke="#fff" stroke-width="1.7" stroke-linecap="round" />
-            <path d="M18.6 6C15.7 8.5 15.7 15.5 18.6 18" stroke="#fff" stroke-width="1.7" stroke-linecap="round" />
-          </svg>
+          <img src="/logo-mark.png" alt="Tennly" class="mark-img" />
         </span>
         Tennly
       </RouterLink>
@@ -192,11 +191,18 @@ watch(
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--green), var(--lime));
+  background: #fff;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   flex: none;
+}
+.brand .mark-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .nav-label {

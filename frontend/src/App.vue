@@ -62,22 +62,14 @@ onMounted(() => {
 <template>
   <header class="topbar">
     <RouterLink to="/" class="logo">
-      <!-- Logo refait le 09/09/2026 ("un logo mieux") : l'ancien mark était un
-           simple cercle à deux arcs (une silhouette de balle vue de dessus,
-           assez générique — plusieurs marques sport utilisent ce même
-           motif). Remplacé par une trajectoire ascendante terminée par la
-           balle, qui illustre directement la promesse de l'app ("Prédis
-           chaque victoire avant qu'elle n'ait lieu" — voir HomeView.vue) :
-           une trajectoire qu'on lit avant qu'elle n'arrive à son point
-           d'impact. Le tracé fin en arrière-plan simule une traînée de
-           mouvement, la balle est le seul élément plein pour rester lisible
-           même à la taille d'une icône d'onglet. -->
+      <!-- Logo remplacé le 17/09/2026 (demande directe du CEO) : nouvelle
+           icône "balle de tennis" fournie telle quelle, à la place de
+           l'ancien mark dessiné en SVG ("trajectoire + balle"). Même
+           fichier utilisé partout (favicon dans index.html, en-tête
+           public ici, back-office dans AdminLayout.vue) pour une identité
+           cohérente. -->
       <span class="mark">
-        <svg viewBox="0 0 24 24" fill="none" style="width: 64%; height: 64%">
-          <path d="M4.3 17C8 16.6 10.4 8.7 16.6 6.1" stroke="#fff" stroke-opacity="0.4" stroke-width="1.5" stroke-linecap="round" />
-          <path d="M4.3 18.4C9 18 11.8 8.9 18.4 6" stroke="#fff" stroke-width="2.1" stroke-linecap="round" />
-          <circle cx="18.6" cy="5.6" r="2.35" fill="#fff" />
-        </svg>
+        <img src="/logo-mark.png" alt="Tennly" class="mark-img" />
       </span>
       Tennly
     </RouterLink>
@@ -187,7 +179,7 @@ onMounted(() => {
   width: 30px;
   height: 30px;
   border-radius: 9px;
-  background: linear-gradient(135deg, var(--green), var(--lime));
+  background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -197,6 +189,12 @@ onMounted(() => {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.35),
     0 3px 8px rgba(15, 61, 62, 0.35);
+}
+.logo .mark-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .logo .mark::after {
   content: '';
