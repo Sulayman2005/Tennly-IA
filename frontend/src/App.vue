@@ -173,35 +173,21 @@ onMounted(() => {
 }
 
 .logo .mark {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
+  /* Fond blanc + relief "carte" retirés (17/09/2026, demande explicite) :
+     le fichier logo-mark.png a maintenant un fond transparent (le carré
+     blanc autour de la balle a été enlevé au traitement d'image), donc le
+     logo flotte directement sur le header, sans carré derrière lui. */
   width: 30px;
   height: 30px;
-  border-radius: 9px;
-  background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Léger relief façon icône d'app (09/09/2026, "un logo mieux") : un trait
-     de lumière en haut, une ombre douce sous l'icône plutôt qu'un aplat de
-     couleur tout plat. */
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 3px 8px rgba(15, 61, 62, 0.35);
 }
 .logo .mark-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
-}
-.logo .mark::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: radial-gradient(120% 100% at 22% 0%, rgba(255, 255, 255, 0.32), transparent 55%);
 }
 
 nav {

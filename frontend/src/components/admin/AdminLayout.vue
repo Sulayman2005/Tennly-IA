@@ -188,11 +188,11 @@ watch(
   padding: 4px 6px 20px;
 }
 .brand .mark {
+  /* Fond blanc retiré (17/09/2026, demande explicite) : logo-mark.png a
+     maintenant un fond transparent, le logo flotte directement sans carré
+     blanc derrière lui (voir le même changement dans App.vue). */
   width: 28px;
   height: 28px;
-  border-radius: 8px;
-  background: #fff;
-  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -201,7 +201,7 @@ watch(
 .brand .mark-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
 }
 
