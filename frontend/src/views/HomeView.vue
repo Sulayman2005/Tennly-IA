@@ -28,6 +28,14 @@ const router = useRouter()
 // loadShowcaseFavorites() ci-dessous, qui garantit qu'un vrai joueur mis en
 // avant ici est toujours un joueur du circuit ATP (jamais une joueuse WTA),
 // sur demande explicite également.
+//
+// Deuxième passe le 17/09/2026 (toujours sur demande explicite, après retour
+// sur le premier choix) : le court "Dur" coincé entre deux immeubles et le
+// court "Gazon" au rendu trop sombre ont été remplacés — "Dur" par un
+// ensemble de courts bleus en plein jour entouré de verdure (pas de bâtiment
+// dans le cadre), "Gazon" par un gros plan lumineux sur les lignes blanches
+// d'un vrai gazon (le rendu large de Melbourne posait un problème de
+// luminosité). Terre battue inchangée (déjà jugée correcte).
 const SHOWCASE_FALLBACK = [
   {
     key: 'terre',
@@ -41,14 +49,14 @@ const SHOWCASE_FALLBACK = [
     apiSurface: 'gazon',
     label: 'Gazon',
     place: 'Wimbledon',
-    img: 'https://images.pexels.com/photos/11301815/pexels-photo-11301815.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    img: 'https://images.pexels.com/photos/23940468/pexels-photo-23940468.jpeg?auto=compress&cs=tinysrgb&w=1920',
   },
   {
     key: 'dur',
     apiSurface: 'dur',
     label: 'Dur',
     place: 'US Open · Australian Open',
-    img: 'https://images.pexels.com/photos/9093874/pexels-photo-9093874.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    img: 'https://images.pexels.com/photos/31379978/pexels-photo-31379978.jpeg?auto=compress&cs=tinysrgb&w=1920',
   },
 ]
 const slides = ref(SHOWCASE_FALLBACK.map((s) => ({ ...s, player: null })))
