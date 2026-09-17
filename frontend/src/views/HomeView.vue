@@ -807,6 +807,12 @@ h3 {
   margin-right: -50vw;
   overflow: hidden;
   min-height: calc(100vh - 71px); /* 71px ≈ hauteur du header sticky (App.vue) */
+  /* dvh en plus de vh (17/09/2026, demande explicite "prendre tout le
+     téléphone") : sur mobile, 100vh ne tient pas toujours compte de la barre
+     d'adresse qui apparaît/disparaît au scroll, ce qui peut laisser un peu
+     de blanc sous l'image. 100dvh suit la vraie hauteur visible ; navigateurs
+     qui ne le supportent pas gardent simplement la valeur vh ci-dessus. */
+  min-height: calc(100dvh - 71px);
   margin-top: -1px; /* colle au header, sans liseré d'un pixel */
   margin-bottom: 0;
   display: flex;
