@@ -409,7 +409,15 @@ function toggleFaq(i) {
       <div class="step-card" v-reveal="90">
         <div class="step-num">2</div>
         <h4>On analyse 6 points importants</h4>
-        <p>Toujours à partir de vrais matchs déjà joués, jamais de suppositions.</p>
+        <p>Sur 4 années de matchs ATP et WTA déjà joués, récupérés via une API tennis.</p>
+        <div class="points-row">
+          <span class="point-chip">Niveau sur la surface</span>
+          <span class="point-chip">Forme récente</span>
+          <span class="point-chip">Service</span>
+          <span class="point-chip">Retour</span>
+          <span class="point-chip">Repos</span>
+          <span class="point-chip">Confrontations directes</span>
+        </div>
       </div>
       <div class="step-arrow" aria-hidden="true">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12h15M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
@@ -418,17 +426,6 @@ function toggleFaq(i) {
         <div class="step-num">3</div>
         <h4>On te donne le favori</h4>
         <p>Et les facteurs qui expliquent pourquoi.</p>
-      </div>
-    </div>
-    <div class="steps-note" v-reveal="240">
-      <p><b>4 années</b> de matchs ATP et WTA déjà joués servent de base à chaque analyse, récupérées via une API tennis. Notre IA calcule ensuite 6 points pour chaque joueur :</p>
-      <div class="points-row">
-        <span class="point-chip">Niveau sur la surface</span>
-        <span class="point-chip">Forme récente</span>
-        <span class="point-chip">Service</span>
-        <span class="point-chip">Retour</span>
-        <span class="point-chip">Repos</span>
-        <span class="point-chip">Confrontations directes</span>
       </div>
     </div>
   </div>
@@ -738,7 +735,6 @@ function toggleFaq(i) {
       <RouterLink :to="{ name: 'cgv' }">CGV</RouterLink>
       <RouterLink :to="{ name: 'privacy' }">Confidentialité</RouterLink>
     </div>
-    © Tennly — Un outil pour t'aider à réfléchir, à titre d'information seulement. Ce n'est pas un conseil pour parier de l'argent, et rien n'est garanti.
   </div>
 </template>
 
@@ -1840,36 +1836,22 @@ h3 {
   color: var(--line);
 }
 
-/* -- Note "4 ans / API / 6 points" sous les 3 étapes (17/09/2026, demande
-   explicite : expliquer combien d'années de données, comment elles sont
-   récupérées, et détailler les 6 points directement sur cet écran) -- */
-.steps-note {
-  margin-top: 26px;
-  text-align: center;
-}
-.steps-note p {
-  max-width: 620px;
-  margin: 0 auto 14px;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--grey);
-}
-.steps-note p b {
-  color: var(--green);
-  font-weight: 700;
-}
+/* -- Les 6 points, directement dans la carte de l'étape 2 (17/09/2026,
+   demande explicite : les lister sur ce premier écran, sans avoir à
+   descendre plus bas dans la page) -- */
 .points-row {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
+  margin-top: 12px;
 }
 .point-chip {
-  padding: 7px 14px;
+  padding: 5px 12px;
   border-radius: 999px;
   background: var(--card);
   border: 1px solid var(--line);
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 600;
   color: var(--grey);
 }
