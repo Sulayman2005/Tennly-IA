@@ -229,7 +229,7 @@ function toggleFaq(i) {
 
     <div class="hero-content">
       <div class="eyebrow"><i></i>IA TENNIS · DONNÉES ATP RÉELLES</div>
-      <h1>Analyse et estime chaque <span class="accent">victoire</span></h1>
+      <h1>Prédis chaque <span class="accent">victoire</span><br />avant qu'elle n'ait lieu.</h1>
       <p>Des analyses tennis calibrées par IA, expliquées simplement, avec un historique de performance 100 % public.</p>
       <button class="cta-main" @click="goToMatches">
         Voir les analyses du jour <span class="arrow">→</span>
@@ -285,32 +285,6 @@ function toggleFaq(i) {
   </p>
 
   <div class="section-divider" aria-hidden="true"><span></span></div>
-
-  <!-- ================= COMMENT ÇA MARCHE ================= -->
-  <div class="section">
-    <div class="section-head center" v-reveal>
-      <div class="eyebrow" style="justify-content: center"><i></i>COMMENT ÇA MARCHE</div>
-      <h2>De la sélection du match à l'analyse complète</h2>
-      <p>Trois étapes simples, sans jargon, pour comprendre ce qui se passe derrière chaque prédiction.</p>
-    </div>
-    <div class="steps-row">
-      <div class="step-card" v-reveal="0">
-        <div class="step-num">1</div>
-        <h4>Choisis un match</h4>
-        <p>Parmi les matchs en cours et à venir sur le circuit ATP et WTA.</p>
-      </div>
-      <div class="step-card" v-reveal="90">
-        <div class="step-num">2</div>
-        <h4>L'IA analyse les données réelles</h4>
-        <p>Sur les dernières 4 années de matchs ATP et WTA déjà joués, récupérés via une API tennis de données privée et publique confirmées.</p>
-      </div>
-      <div class="step-card" v-reveal="180">
-        <div class="step-num">3</div>
-        <h4>Tu reçois l'analyse complète</h4>
-        <p>Probabilité claire, favori pressenti et les facteurs d'explication détaillés derrière chaque prédiction — jamais une boîte noire.</p>
-      </div>
-    </div>
-  </div>
 
   <!-- ================= COUVERTURE (surfaces / tournois) ================= -->
   <div class="section">
@@ -931,52 +905,6 @@ function toggleFaq(i) {
   background: linear-gradient(90deg, var(--green), var(--lime));
 }
 
-/* -- Comment ça marche --
-   Même vocabulaire visuel que .feature-card (grille de 3, carte bordée),
-   avec un badge numéroté en haut plutôt qu'une icône : ces trois blocs
-   décrivent un vrai enchaînement dans le temps (choisir -> analyser ->
-   recevoir), donc la numérotation porte une information réelle, pas
-   décorative. */
-.steps-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-.step-card {
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 24px;
-}
-.step-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 16px 34px rgba(15, 61, 62, 0.13);
-}
-.step-num {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--green), var(--lime));
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 15px;
-  margin-bottom: 16px;
-}
-.step-card h4 {
-  font-size: 15px;
-  margin: 0 0 8px;
-  font-weight: 700;
-}
-.step-card p {
-  font-size: 13.5px;
-  color: var(--grey);
-  line-height: 1.55;
-  margin: 0;
-}
-
 /* -- Bande teintée (section Fonctionnalités) --
    Même technique de "breakout" que le hero (100vw + marges négatives) pour
    que le fond dégradé occupe tout l'écran, avec un conteneur interne recalé
@@ -1496,8 +1424,7 @@ function toggleFaq(i) {
     display: none;
   }
   .surface-row,
-  .feature-grid,
-  .steps-row {
+  .feature-grid {
     grid-template-columns: 1fr;
   }
   .method-band {
