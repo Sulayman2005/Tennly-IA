@@ -1,41 +1,76 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter, RouterLink } from 'vue-router'
 import { api } from '@/api/client'
+import { hasPhoto } from '@/utils/playerVisuals'
 
 const router = useRouter()
 
-// Carrousel du hero : une photo réelle par surface (dur / terre battue /
-// gazon), en écho direct à la section "Couverture" plus bas — purement
-// illustratif (aucun joueur, aucun tournoi précis n'est représenté), sous
-// licence libre (Pexels). Défilement automatique + navigation manuelle par
-// pastille, avec remise à zéro du minuteur sur interaction manuelle.
-const slides = [
+// Carrousel du hero : une photo par surface (dur / terre battue / gazon), en
+// écho direct à la section "Couverture" plus bas. Chaque slide part d'une
+// photo d'action générique sous licence libre (Pexels, aucun joueur
+// identifiable) — voir SHOWCASE_FALLBACK — et loadShowcaseFavorites() la
+// remplace, une fois le composant monté, par un VRAI joueur en tête d'un
+// vrai match à venir/en cours sur cette surface (17/09/2026, sur demande
+// explicite de mettre en avant "des grosses stars sur des matchs
+// importants" en photo). Volontairement PAS de vraie photo d'action de
+// presse (Getty/AP, etc. — droits d'auteur bien plus stricts qu'un portrait)
+// : on réutilise exactement la même source déjà utilisée partout ailleurs
+// sur le site pour les joueurs (portrait Wikipedia via player.photoUrl, voir
+// import_player_photos_wikipedia.py) plutôt que d'inventer une photo qu'on
+// n'a pas le droit de publier. Si aucun match exploitable n'est trouvé pour
+// une surface (creux du calendrier, aucun joueur avec photo…), cette surface
+// garde simplement sa photo de secours Pexels — jamais de portrait inventé.
+const SHOWCASE_FALLBACK = [
   {
     key: 'terre',
+    apiSurface: 'terre_battue',
     label: 'Terre battue',
     place: 'Roland-Garros',
-    // Joueur en plein service, court en terre battue, lumière de fin de
-    // journée — photo d'action (licence libre Pexels, aucun joueur
-    // identifiable/pro réel).
     img: 'https://images.pexels.com/photos/32289805/pexels-photo-32289805.jpeg?auto=compress&cs=tinysrgb&w=1920',
   },
   {
     key: 'gazon',
+    apiSurface: 'gazon',
     label: 'Gazon',
     place: 'Wimbledon',
     img: 'https://images.pexels.com/photos/19872965/pexels-photo-19872965.jpeg?auto=compress&cs=tinysrgb&w=1920',
   },
   {
     key: 'dur',
+    apiSurface: 'dur',
     label: 'Dur',
     place: 'US Open · Australian Open',
-    // Joueur en pleine frappe, court dur bleu — photo d'action.
     img: 'https://images.pexels.com/photos/33436529/pexels-photo-33436529.jpeg?auto=compress&cs=tinysrgb&w=1920',
   },
 ]
+const slides = ref(SHOWCASE_FALLBACK.map((s) => ({ ...s, player: null })))
 const activeSlide = ref(0)
 let slideTimer = null
+
+async function loadShowcaseFavorites() {
+  await Promise.all(
+    SHOWCASE_FALLBACK.map(async (s, i) => {
+      try {
+        const data = await api.get(
+          `/api/tennis_matches?surface=${s.apiSurface}&status[]=scheduled&status[]=live&order[scheduledAt]=asc&itemsPerPage=15`,
+        )
+        const matches = data['hydra:member'] ?? data['member'] ?? data
+        for (const m of matches) {
+          const favorite = m.prediction?.favoritePlayer
+          const candidates = favorite ? [favorite, m.playerA, m.playerB] : [m.playerA, m.playerB]
+          const player = candidates.find((p) => p && hasPhoto(p))
+          if (player) {
+            slides.value[i] = { ...slides.value[i], img: player.photoUrl, place: m.tournamentName, player: player.fullName }
+            return
+          }
+        }
+      } catch {
+        // Silencieux : cette surface garde sa photo de secours Pexels.
+      }
+    }),
+  )
+}
 
 function scheduleNextSlide() {
   clearInterval(slideTimer)
@@ -56,12 +91,35 @@ function goToSlide(i) {
 // rejouer l'entrée sur les rotations suivantes du carrousel.
 const introDone = ref(false)
 
-// Révélation au scroll : directive v-reveal enregistrée globalement (voir
-// src/directives/reveal.js + main.js) — même langage visuel (fondu + léger
-// déplacement vers le haut) que le hero, appliqué au reste de la page au
-// moment où chaque bloc entre dans le viewport plutôt qu'au montage du
-// composant. Extraite d'ici vers un module partagé pour être réutilisable
-// par les autres vues sans dupliquer ce code.
+// Révélation au scroll : même langage visuel (fondu + léger déplacement
+// vers le haut) que le hero, mais appliqué au reste de la page au moment où
+// chaque bloc entre dans le viewport plutôt qu'au montage du composant —
+// sans ça, tout ce qui est sous le premier écran (désormais plein cadre)
+// avait déjà fini son animation avant même d'être visible.
+const vReveal = {
+  mounted(el, binding) {
+    el.classList.add('reveal')
+    if (typeof binding.value === 'number' && binding.value > 0) {
+      el.style.transitionDelay = binding.value + 'ms'
+    }
+    if (typeof IntersectionObserver === 'undefined') {
+      el.classList.add('is-visible')
+      return
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            el.classList.add('is-visible')
+            io.unobserve(el)
+          }
+        })
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -40px 0px' },
+    )
+    io.observe(el)
+  },
+}
 
 // Chiffres réels de GET /api/stats (backend : HomeStatsSummary/HomeStatsProvider)
 // — remplace les valeurs fixes qui étaient codées en dur ici (voir l'ancien
@@ -76,110 +134,118 @@ const stats = ref([
   { key: 'valueEdge', value: null, decimals: 1, prefix: '+', suffix: ' %', label: 'Value moyenne vs cote de clôture' },
   { key: 'brier', value: null, decimals: 2, prefix: '', suffix: '', label: 'Brier score (plus bas = meilleur)' },
 ])
-const yearsOfHistory = ref(null)
-const loading = ref(true)
-const loadError = ref(false)
 
-// Icône par stat (purement décoratif) — même convention que les ICONS de
-// AdminLayout.vue (map de SVG bruts rendus via v-html), une par clé de
-// `stats` ci-dessus plutôt que de réutiliser celles de la grille
-// "Fonctionnalités" plus bas, pour éviter qu'un même pictogramme apparaisse
-// deux fois sur la page avec un sens différent.
-const STAT_ICONS = {
-  successRate:
-    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="#fff" stroke-width="1.8"/><circle cx="12" cy="12" r="2.6" fill="#fff"/></svg>',
-  analyzedMatches:
-    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="#fff" stroke-width="1.7"/><path d="M9.3 6.2C11.5 8.6 11.5 15.4 9.3 17.8" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><path d="M14.7 6.2C12.5 8.6 12.5 15.4 14.7 17.8" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>',
-  valueEdge:
-    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 17l6-6 4 4 6-8" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 7h6v6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  brier:
-    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4.5 15a7.5 7.5 0 1115 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><path d="M12 15l3.6-4.6" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="15" r="1.3" fill="#fff"/></svg>',
+// Compteurs animés "premium" (09/09/2026) : une fois le vrai chiffre reçu de
+// /api/stats, il ne s'affiche plus figé d'un coup mais monte en douceur
+// depuis 0 — habillage purement visuel de l'ARRIVÉE de la donnée, jamais de
+// valeur inventée : la cible de l'animation est toujours exactement la
+// valeur réelle de l'API (même logique que "value: null" plus haut — on
+// n'anime jamais un chiffre qu'on n'a pas encore). Désactivé pour les
+// personnes ayant réduit les animations système (voir prefersReducedMotion),
+// qui voient directement la valeur finale sans étape intermédiaire.
+function prefersReducedMotion() {
+  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 }
-
-// Compteurs et barres animés au chargement (repris du prototype validé) :
-// on part de 0 et on anime vers la vraie valeur, plutôt que d'afficher un
-// nombre figé d'entrée de jeu. Une stat sans donnée (value === null) n'est
-// jamais animée : "—" reste affiché tel quel.
-const statValues = ref(stats.value.map(() => 0))
-const barWidths = ref(stats.value.map(() => 0))
-
-function formatStat(i) {
-  const s = stats.value[i]
-  if (s.value === null) return '—'
-  return s.prefix + statValues.value[i].toFixed(s.decimals) + s.suffix
+function animateTo(targetRef, finalValue, duration = 1300) {
+  if (finalValue === null || finalValue === undefined) return
+  if (prefersReducedMotion()) {
+    targetRef.value = finalValue
+    return
+  }
+  const start = performance.now()
+  function tick(now) {
+    const t = Math.min(1, (now - start) / duration)
+    const eased = 1 - Math.pow(1 - t, 3)
+    targetRef.value = finalValue * eased
+    if (t < 1) requestAnimationFrame(tick)
+    else targetRef.value = finalValue
+  }
+  requestAnimationFrame(tick)
 }
-
-// Largeur de la barre décorative sous chaque chiffre : purement visuelle
-// (pas une donnée affichée en tant que telle), mais dérivée du vrai chiffre
-// quand ça a un sens plutôt que d'être une valeur arbitraire.
-function barWidthFor(s) {
-  if (s.value === null) return 0
-  if (s.key === 'successRate') return Math.round(s.value)
-  if (s.key === 'brier') return Math.round((1 - s.value) * 100) // plus bas = meilleur -> barre plus pleine
-  if (s.key === 'valueEdge') return Math.min(100, Math.round(s.value * 10))
-  return 90
-}
-
-function animateStats() {
-  stats.value.forEach((s, i) => {
-    if (s.value === null) return
-    const duration = 900
-    const start = performance.now()
-    function step(now) {
-      const t = Math.min(1, (now - start) / duration)
-      const eased = 1 - Math.pow(1 - t, 3)
-      statValues.value[i] = s.value * eased
-      if (t < 1) requestAnimationFrame(step)
-    }
-    requestAnimationFrame(step)
-  })
-  // Décalé d'une frame pour que la transition CSS width parte bien de 0.
-  requestAnimationFrame(() => {
-    barWidths.value = stats.value.map((s) => barWidthFor(s))
-  })
-}
+const animSuccessRate = ref(0)
+const animAnalyzedMatches = ref(0)
 
 const heroSuccessRate = computed(() => {
-  const v = stats.value[0].value
-  return v !== null ? v.toFixed(1).replace('.', ',') + ' %' : '—'
+  if (stats.value[0].value === null) return '—'
+  return animSuccessRate.value.toFixed(1).replace('.', ',') + ' %'
 })
 const heroAnalyzedMatches = computed(() => {
-  const v = stats.value[1].value
-  return v !== null ? new Intl.NumberFormat('fr-FR').format(v) : '—'
-})
-const heroYearsOfHistory = computed(() => {
-  const v = yearsOfHistory.value
-  if (v === null) return '—'
-  const rounded = Math.round(v)
-  return rounded + (rounded > 1 ? ' ans' : ' an')
+  if (stats.value[1].value === null) return '—'
+  return new Intl.NumberFormat('fr-FR').format(Math.round(animAnalyzedMatches.value))
 })
 
+// Halo qui suit le curseur dans le hero (09/09/2026, passe "rendu premium") :
+// pur détail d'ambiance, jamais activé au toucher (pas de souris → rien à
+// suivre) ni si les animations système sont réduites — voir spotlightEnabled
+// et le v-if sur .hero-spotlight dans le template.
+const heroSpotlight = reactive({ x: 50, y: 38 })
+const spotlightEnabled = ref(false)
+function onHeroPointerMove(e) {
+  const rect = e.currentTarget.getBoundingClientRect()
+  heroSpotlight.x = ((e.clientX - rect.left) / rect.width) * 100
+  heroSpotlight.y = ((e.clientY - rect.top) / rect.height) * 100
+}
+
 onMounted(async () => {
+  spotlightEnabled.value = Boolean(window.matchMedia?.('(pointer: fine)').matches) && !prefersReducedMotion()
+
   try {
     const data = await api.get('/api/stats')
     stats.value[0].value = data.successRateLast90Days
     stats.value[1].value = data.analyzedMatchesCount
     stats.value[2].value = data.averageValueEdgePercent
     stats.value[3].value = data.brierScore
-    yearsOfHistory.value = data.yearsOfHistory
+    // Léger décalage pour démarrer le compteur pile quand .hero-stats entre
+    // en scène (animation-delay 0.95s côté CSS) plutôt qu'avant, invisible.
+    setTimeout(() => {
+      animateTo(animSuccessRate, stats.value[0].value)
+      animateTo(animAnalyzedMatches, stats.value[1].value, 1600)
+    }, 950)
   } catch (e) {
-    loadError.value = true
-  } finally {
-    loading.value = false
-    animateStats()
+    // Silencieux : le hero affiche "—" via les computed heroSuccessRate/
+    // heroAnalyzedMatches tant que value reste null.
   }
+  loadShowcaseFavorites()
   scheduleNextSlide()
   setTimeout(() => {
     introDone.value = true
   }, 1900)
 })
 
+// Bandeau défilant "façon Visifoot" sous le hero (17/09/2026, sur demande
+// explicite) : uniquement des noms réels de circuits/tournois déjà utilisés
+// ailleurs sur cette page (section Couverture plus bas) — pas de vrai logo
+// officiel (marque déposée de chaque organisation, droits distincts d'une
+// simple mention textuelle) tant qu'on n'a pas d'accord avec ces
+// organisations, donc un simple texte façon badge plutôt qu'une image.
+const tourMarquee = ['ATP', 'WTA', 'Grand Chelem', 'Australian Open', 'Roland-Garros', 'Wimbledon', 'US Open', 'Masters 1000']
+
 onUnmounted(() => {
   clearInterval(slideTimer)
 })
 
+// Animation de clic sur le bouton principal (16/09/2026, sur demande
+// explicite) : au lieu de naviguer instantanément vers /matchs, le bouton
+// joue un bref effet de "lancement" (voir .cta-main.launching / @keyframes
+// ctaLaunchPulse dans le <style>) pendant ~420ms avant de changer de page —
+// assez long pour être visible, assez court pour ne jamais donner
+// l'impression que le clic n'a pas fonctionné. `launching` est partagé par
+// les deux boutons "Lancer l'analyse" de la page (hero + bandeau final) :
+// seul celui réellement cliqué est visible à l'écran au moment du clic.
+// Respecte prefers-reduced-motion (déjà utilisé ailleurs dans ce fichier,
+// voir prefersReducedMotion) : dans ce cas, navigation immédiate, sans
+// délai artificiel ni animation.
+const launching = ref(false)
 function goToMatches() {
-  router.push('/matchs')
+  if (launching.value) return
+  if (prefersReducedMotion()) {
+    router.push('/matchs')
+    return
+  }
+  launching.value = true
+  setTimeout(() => {
+    router.push('/matchs')
+  }, 420)
 }
 
 // FAQ en accordéon (un seul item ouvert à la fois) — le premier reste ouvert
@@ -187,20 +253,20 @@ function goToMatches() {
 // affichage, plutôt que de tout présenter fermé.
 const faqs = [
   {
-    q: 'Tennly IA est-il gratuit ?',
-    a: "L'aperçu (favori pressenti + probabilité) est gratuit sur tous les matchs. L'analyse complète — radar comparatif, facteurs d'explication détaillés, cote de valeur — est réservée aux abonnés.",
+    q: 'Tennly est-il gratuit ?',
+    a: "Le favori et ses chances de gagner sont gratuits sur tous les matchs. L'explication complète est réservée aux abonnés.",
   },
   {
-    q: "Comment fonctionne l'IA ?",
-    a: 'Un système Elo par surface combiné à de vraies statistiques de jeu (service, retour, forme, repos), rejoué sur l\'historique ATP réel — pas un modèle opaque qu\'on ne peut pas expliquer.',
+    q: 'Comment on devine qui va gagner ?',
+    a: "On regarde la force de chaque joueur et de vraies statistiques (service, retour, forme, repos), à partir de matchs réels.",
   },
   {
-    q: 'Est-ce que Tennly IA agit à ma place ?',
-    a: "Non. Tennly IA est un outil d'aide à la décision et d'analyse : il ne constitue pas un conseil financier et ne garantit aucun résultat.",
+    q: 'Est-ce que Tennly décide à ma place ?',
+    a: "Non. Tennly t'aide à comprendre : ce n'est pas un conseil pour parier de l'argent, et rien n'est garanti.",
   },
   {
-    q: 'Les données sont-elles fiables ?',
-    a: "Elles viennent de résultats ATP réellement joués, avec la méthode de calcul documentée publiquement — aucune statistique n'est inventée ou estimée sans le dire.",
+    q: 'Est-ce que c\'est vrai, tout ça ?',
+    a: "Oui : tout vient de vrais matchs, et on explique comment on calcule, sans rien cacher.",
   },
 ]
 const openFaqIndex = ref(0)
@@ -217,7 +283,7 @@ function toggleFaq(i) {
     fond blanc) + ".clay-hero" (illustration SVG provisoire) par une seule
     scène immersive : le texte est maintenant surimposé à la photo.
   -->
-  <section class="hero-carousel">
+  <section class="hero-carousel" @pointermove="spotlightEnabled && onHeroPointerMove($event)">
     <div
       v-for="(slide, i) in slides"
       :key="slide.key"
@@ -226,18 +292,26 @@ function toggleFaq(i) {
       :style="{ backgroundImage: `url(${slide.img})`, animationDelay: i * 2 + 's' }"
     ></div>
     <div class="hero-overlay"></div>
+    <div v-if="spotlightEnabled" class="hero-spotlight" :style="{ '--mx': heroSpotlight.x + '%', '--my': heroSpotlight.y + '%' }"></div>
 
     <div class="hero-content">
-      <div class="eyebrow"><i></i>IA TENNIS · DONNÉES ATP RÉELLES</div>
-      <h1>Prédis chaque <span class="accent">victoire</span><br />avant qu'elle n'ait lieu.</h1>
-      <p>Des analyses tennis calibrées par IA, expliquées simplement, avec un historique de performance 100 % public.</p>
-      <button class="cta-main" @click="goToMatches">
-        Voir les analyses du jour <span class="arrow">→</span>
+      <div class="eyebrow"><i></i>TENNIS · ANALYSE PRO, DONNÉES RÉELLES</div>
+      <h1>Prédis chaque <span class="accent">match</span><br />avant qu'il ne commence.</h1>
+      <button class="cta-main" :class="{ launching }" @click="goToMatches">
+        Lancer l'analyse <span class="arrow">→</span>
       </button>
       <div class="hero-stats">
-        <div class="hs"><b>{{ heroSuccessRate }}</b> de réussite sur 90 jours</div>
-        <div class="hs"><b>{{ heroAnalyzedMatches }}</b> matchs analysés</div>
-        <div class="hs"><b>{{ heroYearsOfHistory }}</b> d'historique ATP rejoué</div>
+        <div class="hs"><b>{{ heroSuccessRate }}</b> de bonnes réponses ces 3 derniers mois</div>
+        <div class="hs"><b>{{ heroAnalyzedMatches }}</b> matchs déjà étudiés</div>
+        <!-- Remplace l'ancien "X an(s) d'historique ATP rejoué" (09/09/2026) :
+             ce chiffre venait de /api/stats et affichait parfois "1 an", ce
+             qui sonnait faible à côté des deux stats précédentes — sur
+             demande explicite, remplacé par un fait tout aussi réel mais qui
+             met en valeur le vrai travail d'intégration fait avec les API
+             externes (voir scripts/import_matches_cron.sh,
+             update_results_cron.sh, import_photos_cron.sh) plutôt qu'un
+             chiffre qui dépend juste de la date de lancement du site. -->
+        <div class="hs"><b>Tout seul</b>, chaque nuit · toujours à jour</div>
       </div>
     </div>
 
@@ -259,55 +333,83 @@ function toggleFaq(i) {
     <div class="hero-scrollcue" aria-hidden="true"><i></i></div>
   </section>
 
-  <div class="stat-banner">
-    <div class="stat-card" v-for="(s, i) in stats" :key="s.label" v-reveal="i * 90">
-      <div class="stat-icon" v-html="STAT_ICONS[s.key]"></div>
-      <!--
-        Le "—" (aucune donnée / pas encore de cote de marché, voir stats
-        ci-dessus) passait par le même dégradé de texte que les vrais
-        chiffres : un simple tiret rendu en 30px/800 avec ce dégradé
-        s'affiche comme une barre pleine sombre, ce qui ressemble à un
-        élément cassé plutôt qu'à un texte. Pendant le chargement réel de
-        /api/stats (`loading`), on affiche un skeleton animé ; une fois
-        chargé, un "—" définitif (valueEdge par ex.) reste du texte simple,
-        gris, sans le dégradé.
-      -->
-      <div class="num" :class="{ 'num-loading': loading, 'num-empty': !loading && s.value === null }">
-        <span v-if="loading" class="num-skeleton" aria-hidden="true"></span>
-        <template v-else>{{ formatStat(i) }}</template>
-      </div>
-      <div class="lbl">{{ s.label }}</div>
-      <div class="bar"><i :style="{ width: barWidths[i] + '%' }"></i></div>
+  <!-- Bandeau défilant des circuits/tournois (17/09/2026, "façon Visifoot",
+       sur demande explicite) — voir tourMarquee dans le script pour le choix
+       texte plutôt que logo. Liste dupliquée une fois ci-dessous pour que la
+       boucle CSS (translateX(-50%)) soit invisible, sans saut au raccord. -->
+  <div class="tour-ribbon">
+    <div class="tour-ribbon-track">
+      <span v-for="t in tourMarquee" :key="t" class="tour-chip">{{ t }}</span>
+      <span v-for="t in tourMarquee" :key="t + '-dup'" class="tour-chip">{{ t }}</span>
     </div>
   </div>
-  <p v-if="loadError" class="stat-banner-error">
-    Impossible de charger les statistiques pour le moment — réessaie un peu plus tard.
-  </p>
 
   <div class="section-divider" aria-hidden="true"><span></span></div>
+
+  <!-- ================= COMMENT ÇA MARCHE (09/09/2026) =================
+       Section ajoutée sur demande explicite (structure inspirée d'un site
+       concurrent) : Tennly n'avait jusqu'ici aucun explicatif "en 3 étapes"
+       avant de plonger directement dans la liste des matchs. Les 3 étapes
+       reprennent des faits déjà vrais ailleurs sur cette page (6 signaux
+       réels — voir la section "Sous le capot" plus bas — et le circuit ATP
+       complet — voir .level-row juste en dessous) plutôt que d'inventer un
+       nouveau discours.
+       Allègement (16/09/2026, sur demande explicite "trop de texte") : plus
+       de sous-titre sous le h2, et descriptions des 3 cartes raccourcies en
+       une ligne chacune — le ruban animé (.live-ribbon), qui répétait mot
+       pour mot les mêmes idées que la section "Sous le capot", a aussi été
+       retiré. -->
+  <div class="section">
+    <div class="section-head center" v-reveal>
+      <div class="eyebrow" style="justify-content: center"><i></i>EN 3 ÉTAPES</div>
+      <h2>Comment ça marche, Tennly ?</h2>
+    </div>
+    <div class="steps-row">
+      <div class="step-card" v-reveal="0">
+        <div class="step-num">1</div>
+        <h4>Choisis un match</h4>
+        <p>Parmi les matchs d'aujourd'hui ou de bientôt.</p>
+      </div>
+      <div class="step-arrow" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12h15M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      </div>
+      <div class="step-card" v-reveal="90">
+        <div class="step-num">2</div>
+        <h4>On analyse 6 points importants</h4>
+        <p>Toujours à partir de vrais matchs déjà joués.</p>
+      </div>
+      <div class="step-arrow" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12h15M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      </div>
+      <div class="step-card" v-reveal="180">
+        <div class="step-num">3</div>
+        <h4>On te dit qui a le plus de chances</h4>
+        <p>Avec toujours les raisons derrière.</p>
+      </div>
+    </div>
+  </div>
 
   <!-- ================= COUVERTURE (surfaces / tournois) ================= -->
   <div class="section">
     <div class="section-head center" v-reveal>
-      <div class="eyebrow" style="justify-content: center"><i></i>COUVERTURE</div>
-      <h2>Tous les tournois du circuit ATP, sur toutes les surfaces</h2>
-      <p>Le même moteur d'analyse s'adapte à chaque terrain — parce que la terre battue, le dur et le gazon ne se jouent pas pareil.</p>
+      <div class="eyebrow" style="justify-content: center"><i></i>TOUS LES TERRAINS</div>
+      <h2>Tous les tournois de tennis, sur tous les types de terrain</h2>
     </div>
     <div class="surface-row">
       <div class="surface-card dur" v-reveal="0">
         <div class="dot"></div>
         <div class="name">Dur</div>
-        <div class="desc">Australian Open, US Open, Masters 1000 indoor/outdoor.</div>
+        <div class="desc">Australian Open, US Open.</div>
       </div>
       <div class="surface-card terre" v-reveal="110">
         <div class="dot"></div>
         <div class="name">Terre battue</div>
-        <div class="desc">Roland-Garros, Monte-Carlo, Rome — l'Elo terre battue tourne à plein régime.</div>
+        <div class="desc">Roland-Garros, Monte-Carlo, Rome.</div>
       </div>
       <div class="surface-card gazon" v-reveal="220">
         <div class="dot"></div>
         <div class="name">Gazon</div>
-        <div class="desc">Wimbledon et la courte tournée sur herbe qui précède.</div>
+        <div class="desc">Wimbledon.</div>
       </div>
     </div>
     <div class="level-row" v-reveal="280">
@@ -321,20 +423,29 @@ function toggleFaq(i) {
   <!-- ================= EXEMPLE CONCRET ================= -->
   <div class="section">
     <div class="section-head" v-reveal>
-      <div class="eyebrow"><i></i>CONCRÈTEMENT</div>
-      <h2>Voici à quoi ressemble une analyse Tennly IA</h2>
-      <p>Une probabilité claire, et surtout les raisons derrière — jamais une boîte noire.</p>
+      <div class="eyebrow"><i></i>PAR EXEMPLE</div>
+      <h2>Voici à quoi ça ressemble, une analyse Tennly</h2>
     </div>
+    <!-- Restylé en carte sombre le 09/09/2026 (voir .example-panel) : même
+         langage visuel que le hero et la carte résultat plutôt qu'un simple
+         encart gris clair, avec un petit bandeau "Analyse prête" façon
+         aperçu produit. Toujours explicitement présenté comme un exemple
+         (voir le titre de section juste au-dessus, et l'étiquette
+         ci-dessous), jamais comme un vrai match du jour. -->
     <div class="example-panel">
+      <div class="example-tag" v-reveal>
+        <span class="example-match">Roland-Garros · Finale (exemple)</span>
+        <span class="example-ready"><i></i>C'est prêt !</span>
+      </div>
       <div class="duel" style="margin-bottom: 0; background: transparent" v-reveal>
         <div class="p-card">
           <div class="av">JS</div>
           <div class="name">Jannik Sinner</div>
           <div class="rank">N°1 mondial</div>
-          <div class="elo">Elo terre battue 2 118</div>
+          <div class="elo">Force sur terre battue : 2 118</div>
         </div>
         <div class="mid">
-          <div class="vslabel">PROBABILITÉ</div>
+          <div class="vslabel">CHANCES DE GAGNER</div>
           <div class="gauge">
             <svg width="150" height="150" viewBox="0 0 150 150">
               <circle class="ring-bg" cx="75" cy="75" r="64" stroke-width="14" fill="none" />
@@ -347,14 +458,14 @@ function toggleFaq(i) {
           <div class="av" style="background: var(--blue)">CA</div>
           <div class="name">Carlos Alcaraz</div>
           <div class="rank">N°2 mondial</div>
-          <div class="elo">Elo terre battue 2 041</div>
+          <div class="elo">Force sur terre battue : 2 041</div>
         </div>
       </div>
-      <div class="why" style="margin: 22px 0 0; box-shadow: none" v-reveal="120">
+      <div class="why" v-reveal="120">
         <ul>
-          <li><span class="tag ok">✓</span>Elo terre battue en faveur de Sinner (+77 points), recalculé sur l'historique réel de la surface.</li>
-          <li><span class="tag ok">✓</span>Dynamique du moment favorable : Elo en progression sur ses 8 derniers matchs.</li>
-          <li><span class="tag warn">!</span>Face-à-face équilibré (2 victoires partout) — facteur neutre sur ce match précis.</li>
+          <li><span class="tag ok">✓</span>Sinner est plus fort sur terre battue (+77 points).</li>
+          <li><span class="tag ok">✓</span>Il est en pleine forme depuis ses 8 derniers matchs.</li>
+          <li><span class="tag warn">!</span>Résultats déjà égaux entre eux (2 victoires chacun) — ça ne change rien.</li>
         </ul>
       </div>
     </div>
@@ -366,9 +477,8 @@ function toggleFaq(i) {
   <div class="section band-soft">
     <div class="band-inner">
     <div class="section-head center" v-reveal>
-      <div class="eyebrow" style="justify-content: center"><i></i>SOUS LE CAPOT</div>
-      <h2>Ce que l'IA regarde vraiment</h2>
-      <p>Pas de boîte noire : six signaux réels, calculés sur l'historique ATP — rien d'inventé, rien de figé.</p>
+      <div class="eyebrow" style="justify-content: center"><i></i>COMMENT ON CALCULE</div>
+      <h2>Ce qu'on regarde vraiment</h2>
     </div>
     <div class="feature-grid">
       <div class="feature-card" v-reveal="0">
@@ -377,8 +487,8 @@ function toggleFaq(i) {
             <path d="M4 18l5-6 4 4 7-9" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </div>
-        <h4>Elo par surface</h4>
-        <p>Recalculé match après match sur dur, terre battue et gazon séparément — un joueur peut monter sur l'un et stagner sur l'autre.</p>
+        <h4>La force de chaque joueur, terrain par terrain</h4>
+        <p>Recalculée après chaque match.</p>
       </div>
       <div class="feature-card" v-reveal="70">
         <div class="fi">
@@ -387,8 +497,8 @@ function toggleFaq(i) {
             <path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2" stroke-linecap="round" />
           </svg>
         </div>
-        <h4>Service &amp; retour réels</h4>
-        <p>Aces, % de premier service, balles de break — calculés sur les vraies statistiques de jeu, pas une estimation neutre.</p>
+        <h4>Le service et le retour</h4>
+        <p>De vraies statistiques de jeu.</p>
       </div>
       <div class="feature-card" v-reveal="140">
         <div class="fi">
@@ -396,8 +506,8 @@ function toggleFaq(i) {
             <path d="M4 20V10M12 20V4M20 20v-7" stroke="#fff" stroke-width="2" stroke-linecap="round" />
           </svg>
         </div>
-        <h4>Forme &amp; repos</h4>
-        <p>Taux de victoire récent et jours de repos réels avant le match — jamais le résultat du match lui-même.</p>
+        <h4>La forme et le repos</h4>
+        <p>Ses derniers résultats et son temps de repos.</p>
       </div>
       <div class="feature-card" v-reveal="0">
         <div class="fi">
@@ -405,8 +515,8 @@ function toggleFaq(i) {
             <path d="M4 4l16 16M20 4L4 20" stroke="#fff" stroke-width="2" stroke-linecap="round" />
           </svg>
         </div>
-        <h4>Face-à-face</h4>
-        <p>L'historique réel entre les deux joueurs, uniquement sur leurs confrontations déjà jouées.</p>
+        <h4>Leurs matchs l'un contre l'autre</h4>
+        <p>Leurs affrontements précédents.</p>
       </div>
       <div class="feature-card" v-reveal="70">
         <div class="fi">
@@ -414,8 +524,8 @@ function toggleFaq(i) {
             <path d="M4 16l5-9 4 6 3-4 4 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </div>
-        <h4>Dynamique du moment</h4>
-        <p>La tendance de l'Elo sur les 8 derniers matchs — un joueur peut progresser même avec un bilan moyen, face à plus fort.</p>
+        <h4>En pleine forme, ou pas ?</h4>
+        <p>Sa progression sur ses 8 derniers matchs.</p>
       </div>
       <div class="feature-card" v-reveal="140">
         <div class="fi">
@@ -423,21 +533,100 @@ function toggleFaq(i) {
             <path d="M12 3l2.6 6.2L21 10l-5 4.2L17.4 21 12 17.4 6.6 21 8 14.2 3 10l6.4-.8z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round" />
           </svg>
         </div>
-        <h4>Capacité à créer l'exploit</h4>
-        <p>Le taux de victoire réel d'un joueur quand il partait outsider au classement — une vraie mesure, pas une intuition.</p>
+        <h4>Les surprises</h4>
+        <p>Sa capacité à battre plus fort que lui.</p>
       </div>
     </div>
     </div>
   </div>
 
-  <!-- ================= MÉTHODOLOGIE / DONNÉES ================= -->
+  <!-- ================= CHIFFRES CLÉS ================= -->
   <div class="section">
-    <div class="method-band" v-reveal>
-      <div class="num">4 ans<small>d'historique ATP réel</small></div>
-      <p>
-        <strong style="color: #fff">Aucune donnée inventée.</strong> Tennly IA rejoue chronologiquement plusieurs années de résultats ATP réels pour
-        calculer chaque Elo, chaque score de service et chaque tendance — la méthode est documentée, pas cachée derrière une boîte noire marketing.
-      </p>
+    <!-- Refait le 09/09/2026 (structure inspirée d'un site concurrent, qui
+         présente 4 grands chiffres en rangée plutôt qu'un seul). Ancien
+         .method-band n'affichait qu'un seul nombre ("3 synchronisations
+         automatiques", lui-même un remplacement d'un "X ans d'historique"
+         qui sonnait faible — voir l'historique de ce fichier). Il devient
+         ici une des 4 cases, aux côtés des deux vrais chiffres déjà utilisés
+         dans le hero (réussite/matchs analysés, voir heroSuccessRate/
+         heroAnalyzedMatches) et du nombre de signaux réels déjà annoncé
+         partout ailleurs sur la page (.live-ribbon, section "Sous le
+         capot") — jamais un chiffre inventé pour l'occasion. -->
+    <div class="stats-band" v-reveal>
+      <div class="stat-cell">
+        <div class="stat-num">{{ heroSuccessRate }}</div>
+        <div class="stat-label">de bonnes réponses ces 3 derniers mois</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num">{{ heroAnalyzedMatches }}</div>
+        <div class="stat-label">matchs déjà étudiés</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num">6</div>
+        <div class="stat-label">choses importantes regardées à chaque match</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num">3<small>/nuit</small></div>
+        <div class="stat-label">mises à jour automatiques</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= CONFIANCE (16/09/2026, sur demande explicite) =================
+       Aucun badge inventé (pas de "10 000 utilisateurs", pas de fausse note
+       app store) : les 4 points ci-dessous sont des faits vérifiables du
+       site — paiement Stripe déjà en place (voir PaywallModal.vue), page
+       /fiabilite déjà publiée avec les vraies statistiques du modèle,
+       résiliation "à tout moment" réellement prévue dans les CGV
+       (CgvView.vue §"Durée et résiliation"), page /confidentialite déjà
+       publiée. Même esprit que le reste de la page : jamais un argument
+       qu'on ne peut pas prouver en cliquant dessus. -->
+  <div class="section">
+    <div class="section-head center" v-reveal>
+      <div class="eyebrow" style="justify-content: center"><i></i>CONFIANCE</div>
+      <h2>Pourquoi tu peux nous faire confiance</h2>
+    </div>
+    <div class="trust-grid">
+      <div class="trust-item" v-reveal="0">
+        <div class="fi">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <rect x="5" y="11" width="14" height="9" rx="2" stroke="#fff" stroke-width="2" />
+            <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="#fff" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </div>
+        <h4>Paiement sécurisé</h4>
+        <p>Via Stripe — on ne voit ni ne garde jamais ta carte bancaire.</p>
+      </div>
+      <div class="trust-item" v-reveal="70">
+        <div class="fi">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z" stroke="#fff" stroke-width="2" stroke-linejoin="round" />
+            <circle cx="12" cy="12" r="3" stroke="#fff" stroke-width="2" />
+          </svg>
+        </div>
+        <h4>Méthode publique</h4>
+        <p><RouterLink :to="{ name: 'model-reliability' }">Voir la fiabilité réelle du modèle →</RouterLink></p>
+      </div>
+      <div class="trust-item" v-reveal="140">
+        <div class="fi">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M3 12a9 9 0 1 0 3-6.7" stroke="#fff" stroke-width="2" stroke-linecap="round" />
+            <polyline points="3 4 3 9 8 9" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <h4>Résiliable à tout moment</h4>
+        <p>Sans engagement, en 2 clics depuis ton compte.</p>
+      </div>
+      <div class="trust-item" v-reveal="0">
+        <div class="fi">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z" stroke="#fff" stroke-width="2" stroke-linejoin="round" />
+            <path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </div>
+        <h4>Données protégées</h4>
+        <p><RouterLink :to="{ name: 'privacy' }">Conformes au RGPD →</RouterLink></p>
+      </div>
     </div>
   </div>
 
@@ -449,8 +638,8 @@ function toggleFaq(i) {
     </div>
     <div class="proof-placeholder" v-reveal="80">
       <div class="icon">💬</div>
-      <strong>Pas encore d'utilisateurs publics</strong>
-      <span>Tennly IA vient d'être lancé — dès les premiers retours réels, ils prendront place ici. Aucun avis fictif ne sera jamais affiché à leur place.</span>
+      <strong>On vient tout juste de commencer</strong>
+      <span>Les vrais avis arriveront ici bientôt.</span>
     </div>
   </div>
 
@@ -484,21 +673,77 @@ function toggleFaq(i) {
   </div>
 
   <div class="final-cta" v-reveal>
-    <h3>Prêt à voir tes premières analyses ?</h3>
-    <p>Gratuit à découvrir, sans carte bancaire.</p>
-    <button class="cta-main" @click="goToMatches">
-      Voir les analyses du jour <span class="arrow">→</span>
+    <h3>Prêt à voir qui va gagner ?</h3>
+    <p>C'est gratuit à découvrir, pas besoin de carte bancaire.</p>
+    <button class="cta-main" :class="{ launching }" @click="goToMatches">
+      Lancer l'analyse <span class="arrow">→</span>
     </button>
   </div>
 
+  <div class="site-footer">
+    <div class="footer-legal-links">
+      <RouterLink :to="{ name: 'legal-notice' }">Mentions légales</RouterLink>
+      <RouterLink :to="{ name: 'cgu' }">CGU</RouterLink>
+      <RouterLink :to="{ name: 'cgv' }">CGV</RouterLink>
+      <RouterLink :to="{ name: 'privacy' }">Confidentialité</RouterLink>
+    </div>
+    © Tennly — Un outil pour t'aider à réfléchir, à titre d'information seulement. Ce n'est pas un conseil pour parier de l'argent, et rien n'est garanti.
+  </div>
 </template>
 
 <style scoped>
-/* h1/h2/h3 text-wrap:balance, @keyframes fadeUp, .reveal/.reveal.is-visible
-   et le fallback prefers-reduced-motion vivent maintenant dans
-   src/assets/tokens.css (non-scoped) pour être partagés par toutes les
-   vues — voir aussi le footer, désormais global via App.vue/SiteFooter.vue
-   plutôt que dupliqué ici. */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* -- Révélation au scroll (v-reveal) --
+   Même langage que le hero (fondu + léger déplacement vers le haut),
+   déclenché quand chaque bloc entre dans le viewport (voir vReveal dans le
+   <script>) plutôt qu'au montage du composant — pour que tout ce qui est
+   sous le hero plein écran s'anime vraiment au fil du scroll, pas juste une
+   fois avant même d'être visible. Regroupe ici la transition de transform/
+   box-shadow pour les cartes qui ont aussi un effet de survol, afin que les
+   deux ne se marchent pas dessus. */
+/* Passe "rendu premium" (09/09/2026) : léger flou en plus du fondu/
+   déplacement, même langage que .hero-content h1 (heroTitleIn) plus haut —
+   une "mise au point" progressive plutôt qu'un simple fondu, sur la courbe
+   --ease-premium désormais partagée par toute la page. blur() reste léger
+   (6px) pour ne pas coûter cher au rendu pendant le scroll. */
+.reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  filter: blur(6px);
+  transition:
+    opacity 0.7s var(--ease-premium),
+    transform 0.6s var(--ease-premium),
+    filter 0.6s var(--ease-premium),
+    box-shadow 0.3s ease;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+  filter: blur(0);
+}
 
 /* -- Hero carrousel --
    Sort volontairement du conteneur `main` (max-width: 1120px, padding
@@ -585,6 +830,22 @@ function toggleFaq(i) {
     opacity: 1;
   }
 }
+/* Halo qui suit le curseur (09/09/2026, passe "rendu premium") : détail
+   d'ambiance discret, jamais rendu si spotlightEnabled est faux côté script
+   (tactile ou animations système réduites — voir le v-if dans le template),
+   donc jamais de listener pointermove posé pour rien sur mobile. */
+.hero-spotlight {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: radial-gradient(480px circle at var(--mx, 50%) var(--my, 38%), rgba(199, 255, 60, 0.16), transparent 62%);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+.hero-carousel:hover .hero-spotlight {
+  opacity: 1;
+}
 .eyebrow {
   display: inline-flex;
   align-items: center;
@@ -656,6 +917,9 @@ function toggleFaq(i) {
   animation: fadeUp 0.6s 0.55s ease both;
 }
 .cta-main {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -668,7 +932,12 @@ function toggleFaq(i) {
   border: none;
   cursor: pointer;
   box-shadow: var(--shadow-soft);
-  transition: transform 0.15s;
+  /* Passe "rendu premium" : une seule courbe (--ease-premium) et une ombre
+     qui se creuse en même temps que le bouton se soulève, plutôt qu'un
+     simple scale sans profondeur. */
+  transition:
+    transform 0.4s var(--ease-premium),
+    box-shadow 0.4s var(--ease-premium);
   animation: fadeUp 0.6s 0.2s ease both;
 }
 .hero-content .cta-main {
@@ -676,8 +945,64 @@ function toggleFaq(i) {
   color: var(--green2);
   animation-delay: 0.75s;
 }
+/* "Animations sur les boutons" (09/09/2026) : un reflet qui balaie le
+   bouton au survol, en plus du soulèvement déjà en place — même idée que
+   .result-shine sur la carte résultat de match, réutilisée ici en boucle
+   courte déclenchée par :hover plutôt qu'une seule fois au chargement. */
+.cta-main::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.35) 48%, transparent 66%);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+.cta-main:hover::after {
+  animation: ctaShine 0.9s var(--ease-premium);
+}
+@keyframes ctaShine {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(120%);
+  }
+}
+.cta-main > * {
+  position: relative;
+  z-index: 2;
+}
 .cta-main:hover {
-  transform: translateY(-2px) scale(1.02);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: var(--shadow-elevated);
+}
+.cta-main:active {
+  transform: translateY(-1px) scale(1.005);
+  transition-duration: 0.1s;
+}
+/* Animation de "lancement" au clic (16/09/2026, sur demande explicite) :
+   un anneau lumineux part du bouton et s'estompe pendant qu'il se
+   comprime puis rebondit légèrement, pendant les ~420ms où la navigation
+   vers /matchs est volontairement retardée côté script (voir `launching`/
+   goToMatches) pour laisser le temps à l'animation d'être vue. `pointer-
+   events: none` évite un double clic pendant que l'animation joue. */
+.cta-main.launching {
+  animation: ctaLaunchPulse 0.42s var(--ease-premium) both;
+  pointer-events: none;
+}
+@keyframes ctaLaunchPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(199, 255, 60, 0.55);
+  }
+  45% {
+    transform: scale(0.94);
+  }
+  100% {
+    transform: scale(1.03);
+    box-shadow: 0 0 0 24px rgba(199, 255, 60, 0);
+  }
 }
 .cta-main .arrow {
   transition: transform 0.15s;
@@ -785,111 +1110,78 @@ function toggleFaq(i) {
   }
 }
 
-/* -- Stats -- */
-.stat-banner {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin: 48px 0 60px;
-}
-.stat-banner-error {
-  margin: -44px 0 60px;
-  font-size: 13px;
-  color: var(--grey);
-  text-align: center;
-}
-.stat-card {
+/* -- Ruban animé "effet wow" --
+   Remplace l'ancien stat-banner à 4 cases, qui dépendait de /api/stats et
+   restait vide ou affichait une erreur tant que l'endpoint était lent ou en
+   échec. Ici : un ruban défilant en boucle infinie, purement CSS, jamais
+   bloqué par un chargement réseau. Sort du conteneur (même technique de
+   "breakout" que le hero) pour occuper toute la largeur de l'écran. La liste
+   de chips est dupliquée une fois dans le template pour que la boucle
+   translateX(-50%) soit invisible (pas de saut au raccord). */
+.tour-ribbon {
   position: relative;
-  isolation: isolate;
+  width: 100vw;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
   overflow: hidden;
-  background: var(--card);
-  border-radius: 18px;
-  padding: 24px 20px;
+  padding: 22px 0;
+  margin-top: -1px;
+  margin-bottom: 8px;
+  background: linear-gradient(120deg, var(--green2), var(--green) 55%, #051616);
+  isolation: isolate;
 }
-.stat-card::before {
+.tour-ribbon::before {
   content: '';
   position: absolute;
-  top: -40%;
-  right: -30%;
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(199, 255, 60, 0.16), transparent 70%);
-  z-index: -1;
+  inset: 0;
+  background: radial-gradient(600px 160px at 20% 50%, rgba(199, 255, 60, 0.22), transparent 65%);
+  animation: tourRibbonGlow 6s ease-in-out infinite alternate;
+  pointer-events: none;
 }
-.stat-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 14px 30px rgba(15, 61, 62, 0.12);
-}
-.stat-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 11px;
-  background: linear-gradient(135deg, var(--green), var(--lime));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 14px;
-}
-.stat-card .num {
-  min-height: 38px;
-  display: flex;
-  align-items: center;
-  font-size: 30px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-  background: linear-gradient(90deg, var(--ink), var(--green2));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-/* "—" définitif (pas encore de donnée, ex. value moyenne tant qu'aucune cote
-   de marché n'est intégrée) : du texte simple et gris, jamais le dégradé —
-   sinon le tiret se rend comme une barre pleine sombre. */
-.stat-card .num.num-empty {
-  background: none;
-  -webkit-background-clip: unset;
-  background-clip: unset;
-  color: var(--line);
-}
-.num-skeleton {
-  display: inline-block;
-  width: 58%;
-  max-width: 74px;
-  height: 22px;
-  border-radius: 6px;
-  background: linear-gradient(90deg, var(--line) 25%, rgba(15, 61, 62, 0.08) 50%, var(--line) 75%);
-  background-size: 200% 100%;
-  animation: skeletonShimmer 1.4s ease-in-out infinite;
-}
-@keyframes skeletonShimmer {
-  0% {
-    background-position: 200% 0;
+@keyframes tourRibbonGlow {
+  from {
+    transform: translateX(-12%);
+    opacity: 0.7;
   }
-  100% {
-    background-position: -200% 0;
+  to {
+    transform: translateX(12%);
+    opacity: 1;
   }
 }
-.stat-card .lbl {
-  font-size: 13px;
-  color: var(--grey);
-  margin-top: 6px;
+.tour-ribbon-track {
+  display: flex;
+  width: max-content;
+  gap: 14px;
+  animation: tourRibbonScroll 26s linear infinite;
 }
-.stat-card .bar {
-  height: 6px;
-  border-radius: 99px;
-  background: var(--line);
-  margin-top: 14px;
-  overflow: hidden;
+.tour-ribbon:hover .tour-ribbon-track {
+  animation-play-state: paused;
 }
-.stat-card .bar i {
-  display: block;
-  height: 100%;
-  background: var(--green);
-  border-radius: 99px;
-  width: 0;
-  transition: width 1.1s cubic-bezier(0.2, 0.8, 0.2, 1);
+@keyframes tourRibbonScroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.tour-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 /* -- Séparateur décoratif entre deux sections -- */
@@ -983,9 +1275,17 @@ function toggleFaq(i) {
   background: linear-gradient(180deg, rgba(10, 20, 20, 0.15) 0%, rgba(6, 12, 12, 0.85) 100%);
   transition: background 0.3s ease;
 }
+/* La transition manquait ici (passe "rendu premium", 09/09/2026) : le
+   survol changeait transform/box-shadow instantanément, sans le
+   soulèvement fluide qu'on voit partout ailleurs sur la page. */
+.surface-card {
+  transition:
+    transform 0.45s var(--ease-premium),
+    box-shadow 0.45s var(--ease-premium);
+}
 .surface-card:hover {
-  transform: translateY(-7px) scale(1.015);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.26);
+  transform: translateY(-8px) scale(1.015);
+  box-shadow: var(--shadow-elevated);
 }
 .surface-card.dur {
   background-image: url('https://images.pexels.com/photos/30760348/pexels-photo-30760348.jpeg?auto=compress&cs=tinysrgb&w=1080');
@@ -1037,20 +1337,76 @@ function toggleFaq(i) {
   font-weight: 600;
 }
 
-/* -- Exemple concret -- */
+/* -- Exemple concret --
+   Repensé en carte sombre le 09/09/2026 (voir le commentaire dans le
+   <template>) : même langage que le hero et la carte résultat de match,
+   avec un halo décoratif (--lime, jamais la couleur de surface d'un match
+   réel puisqu'il n'y en a pas ici) plutôt qu'un simple encart gris clair. */
 .example-panel {
-  background: var(--card);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(165deg, #10221f 0%, #050a09 78%);
   border-radius: 26px;
-  padding: 8px;
+  padding: 10px;
+  box-shadow: var(--shadow-elevated);
+}
+.example-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(650px 280px at 10% 0%, rgba(199, 255, 60, 0.12), transparent 60%);
+}
+.example-tag {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 18px 24px 6px;
+}
+.example-match {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.58);
+  letter-spacing: 0.01em;
+}
+.example-ready {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--lime);
+}
+.example-ready i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lime);
+  box-shadow: 0 0 0 3px rgba(199, 255, 60, 0.25);
+  animation: gentlePulseDot 1.8s ease-in-out infinite;
+}
+@keyframes gentlePulseDot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 .duel {
   display: grid;
   grid-template-columns: 1fr 200px 1fr;
   gap: 24px;
   align-items: center;
-  background: var(--card);
   border-radius: 26px;
-  padding: 36px;
+  padding: 26px 36px 36px;
+  color: #fff;
 }
 .p-card {
   text-align: center;
@@ -1067,6 +1423,7 @@ function toggleFaq(i) {
   font-size: 28px;
   font-weight: 700;
   background: var(--green);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.08);
 }
 .p-card.right .av {
   background: var(--blue);
@@ -1074,27 +1431,30 @@ function toggleFaq(i) {
 .p-card .name {
   font-size: 20px;
   font-weight: 700;
+  color: #fff;
 }
 .p-card .rank {
-  color: var(--grey);
+  color: rgba(255, 255, 255, 0.6);
   font-size: 13px;
   margin-top: 4px;
 }
 .p-card .elo {
   margin-top: 10px;
   font-size: 12px;
-  background: #fff;
-  color: var(--btn);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
   display: inline-block;
   padding: 4px 10px;
   border-radius: 999px;
+  font-variant-numeric: tabular-nums;
 }
 .mid {
   text-align: center;
 }
 .mid .vslabel {
   font-size: 12px;
-  color: var(--grey);
+  color: rgba(255, 255, 255, 0.55);
   margin-bottom: 8px;
   letter-spacing: 0.08em;
 }
@@ -1110,10 +1470,10 @@ function toggleFaq(i) {
   transform: rotate(-90deg);
 }
 .gauge .ring-bg {
-  stroke: var(--line);
+  stroke: rgba(255, 255, 255, 0.14);
 }
 .gauge .ring-fill {
-  stroke: var(--green);
+  stroke: var(--lime);
   stroke-dasharray: 402;
   stroke-dashoffset: 402;
   stroke-linecap: round;
@@ -1135,16 +1495,19 @@ function toggleFaq(i) {
 }
 .gauge .pct b {
   font-size: 26px;
+  color: #fff;
 }
 .gauge .pct span {
   font-size: 11px;
-  color: var(--grey);
+  color: rgba(255, 255, 255, 0.6);
 }
 .why {
-  background: #fff;
-  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 22px;
-  padding: 30px 34px;
+  padding: 26px 32px 30px;
+  margin: 0 10px 10px;
+  backdrop-filter: blur(8px);
 }
 .why ul {
   list-style: none;
@@ -1157,7 +1520,7 @@ function toggleFaq(i) {
 .why li {
   display: flex;
   gap: 12px;
-  color: #2a2a2a;
+  color: rgba(255, 255, 255, 0.82);
   font-size: 14px;
   line-height: 1.6;
 }
@@ -1173,12 +1536,12 @@ function toggleFaq(i) {
   margin-top: 1px;
 }
 .why .tag.ok {
-  background: #e6f9ea;
-  color: #1f7d33;
+  background: rgba(199, 255, 60, 0.18);
+  color: var(--lime);
 }
 .why .tag.warn {
-  background: #fff3cd;
-  color: #8a6100;
+  background: rgba(255, 159, 10, 0.2);
+  color: var(--amber);
 }
 
 /* -- Fonctionnalités -- */
@@ -1192,10 +1555,17 @@ function toggleFaq(i) {
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 24px;
+  /* Idem .surface-card ci-dessus : transition ajoutée pour un survol fluide
+     plutôt qu'un changement instantané (passe "rendu premium"). */
+  transition:
+    transform 0.45s var(--ease-premium),
+    box-shadow 0.45s var(--ease-premium),
+    border-color 0.3s ease;
 }
 .feature-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 16px 34px rgba(15, 61, 62, 0.13);
+  transform: translateY(-7px);
+  box-shadow: var(--shadow-elevated);
+  border-color: transparent;
 }
 .feature-card .fi {
   width: 38px;
@@ -1223,37 +1593,169 @@ function toggleFaq(i) {
   margin: 0;
 }
 
-/* -- Méthodologie / données -- */
-.method-band {
+/* -- Confiance (16/09/2026) --
+   Même grammaire visuelle que .feature-card (icône en pastille dégradée,
+   carte bordée) pour rester cohérent avec le reste de la page, sur 4
+   colonnes plutôt que 3 — 4 points de confiance courts et indépendants,
+   pas des paragraphes. */
+.trust-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.trust-item {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 22px;
+  transition:
+    transform 0.45s var(--ease-premium),
+    box-shadow 0.45s var(--ease-premium),
+    border-color 0.3s ease;
+}
+.trust-item:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-elevated);
+  border-color: transparent;
+}
+.trust-item .fi {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--green), var(--lime));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.trust-item h4 {
+  font-size: 14.5px;
+  margin: 0 0 6px;
+  font-weight: 700;
+}
+.trust-item p {
+  font-size: 13px;
+  color: var(--grey);
+  line-height: 1.5;
+  margin: 0;
+}
+.trust-item p a {
+  color: var(--green);
+  font-weight: 600;
+  text-decoration: none;
+}
+.trust-item p a:hover {
+  text-decoration: underline;
+}
+
+/* -- Comment ça marche (09/09/2026) -- */
+.steps-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  gap: 18px;
+  align-items: stretch;
+}
+.step-card {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 28px 24px;
+  transition:
+    transform 0.45s var(--ease-premium),
+    box-shadow 0.45s var(--ease-premium),
+    border-color 0.3s ease;
+}
+.step-card:hover {
+  transform: translateY(-7px);
+  box-shadow: var(--shadow-elevated);
+  border-color: transparent;
+}
+.step-num {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--green), var(--lime));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 18px rgba(15, 61, 62, 0.3);
+}
+.step-card h4 {
+  font-size: 16px;
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+.step-card p {
+  font-size: 13.5px;
+  color: var(--grey);
+  line-height: 1.55;
+  margin: 0;
+}
+.step-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--line);
+}
+
+/* -- Chiffres clés (09/09/2026, remplace l'ancien .method-band à un seul
+   chiffre — voir le commentaire dans le <template>) -- */
+.stats-band {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   background: linear-gradient(120deg, var(--green), var(--green2) 70%, #051616);
   color: #fff;
   border-radius: 28px;
-  padding: 44px 48px;
+  padding: 44px 40px;
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 40px;
-  align-items: center;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 28px;
 }
-.method-band .num {
-  font-size: 46px;
+.stats-band::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(700px 260px at 85% -10%, rgba(199, 255, 60, 0.16), transparent 65%);
+}
+.stat-cell {
+  text-align: center;
+}
+.stat-num {
+  font-size: clamp(28px, 3.2vw, 42px);
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--lime);
-  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
-.method-band .num small {
-  display: block;
-  font-size: 12px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.7);
-  margin-top: 4px;
+.stat-num small {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  margin-left: 1px;
 }
-.method-band p {
-  font-size: 14.5px;
+.stat-label {
+  margin-top: 9px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.4;
+}
+.stats-note {
+  max-width: 720px;
+  margin: 22px auto 0;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--grey);
   line-height: 1.6;
-  opacity: 0.9;
-  margin: 0;
-  max-width: 520px;
+}
+.stats-note strong {
+  color: var(--ink);
 }
 
 /* -- Emplacement avis (placeholder honnête, pas de faux témoignages) -- */
@@ -1318,6 +1820,10 @@ function toggleFaq(i) {
   font-family: inherit;
   cursor: pointer;
   padding: 22px 26px;
+  transition: background 0.25s ease;
+}
+.faq-question:hover {
+  background: var(--card);
 }
 .faq-question span {
   font-size: 15px;
@@ -1388,6 +1894,22 @@ function toggleFaq(i) {
   text-align: center;
   line-height: 1.6;
 }
+.footer-legal-links {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-bottom: 12px;
+}
+.footer-legal-links a {
+  color: var(--grey);
+  font-weight: 600;
+  text-decoration: none;
+}
+.footer-legal-links a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
 
 @media (max-width: 820px) {
   .hero-content h1 {
@@ -1399,10 +1921,10 @@ function toggleFaq(i) {
   .hero-carousel {
     /* En dessous de 820px, le bloc de texte (titre + stats) peut devenir plus
        haut que le carrousel avec ses pastilles positionnées en absolu — elles
-       se retrouvaient alors superposées ("1 an d'historique" chevauchait la
-       pastille Terre battue/Gazon/Dur). On repasse en flux normal (colonne)
-       avec les pastilles après le texte, plutôt qu'en position absolue, pour
-       que la hauteur s'adapte toujours au contenu sans jamais se chevaucher. */
+       se retrouvaient alors superposées au texte du hero. On repasse en flux
+       normal (colonne) avec les pastilles après le texte, plutôt qu'en
+       position absolue, pour que la hauteur s'adapte toujours au contenu
+       sans jamais se chevaucher. */
     flex-direction: column;
     min-height: 560px;
     padding-bottom: 28px;
@@ -1410,15 +1932,49 @@ function toggleFaq(i) {
   .hero-content {
     padding: 84px 20px 0;
   }
+  /* Refait le 09/09/2026 : en flex-wrap, les 3 pastilles (labels + lieux,
+     assez longs — "US Open · Australian Open") ne tenaient jamais sur une
+     seule ligne en mobile. La 3e retombait sur une 2e ligne à l'intérieur
+     du même conteneur arrondi, qui perdait alors sa forme de pilule (coins
+     visibles au milieu) — c'est ce rendu cassé qui posait problème. Remplacé
+     par une rangée qui défile horizontalement (une seule ligne, jamais de
+     retour à la ligne) avec CHAQUE pastille comme sa propre pilule autonome,
+     plutôt qu'un unique conteneur pilule partagé qui ne peut pas se couper
+     proprement au bord de l'écran. */
   .hero-dots {
     position: static;
     left: auto;
     bottom: auto;
     transform: none;
-    flex-wrap: wrap;
-    max-width: calc(100% - 32px);
-    justify-content: center;
-    margin: 28px auto 0;
+    background: none;
+    border: none;
+    backdrop-filter: none;
+    padding: 0;
+    max-width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    justify-content: flex-start;
+    gap: 10px;
+    margin: 26px 0 0;
+    padding: 2px 20px 6px;
+  }
+  .hero-dots::-webkit-scrollbar {
+    display: none;
+  }
+  .hero-dot {
+    flex: none;
+    scroll-snap-align: start;
+    background: rgba(10, 20, 20, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(10px);
+  }
+  .hero-dot.active {
+    background: #fff;
+    border-color: #fff;
   }
   .hero-scrollcue {
     display: none;
@@ -1427,16 +1983,23 @@ function toggleFaq(i) {
   .feature-grid {
     grid-template-columns: 1fr;
   }
-  .method-band {
+  .trust-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .steps-row {
     grid-template-columns: 1fr;
-    text-align: center;
-    padding: 32px 28px;
+  }
+  .step-arrow {
+    transform: rotate(90deg);
+    padding: 2px 0;
+  }
+  .stats-band {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 26px 16px;
+    padding: 32px 24px;
   }
   .band-inner {
     padding: 0 20px;
-  }
-  .stat-banner {
-    grid-template-columns: 1fr 1fr;
   }
   .duel {
     grid-template-columns: 1fr;
@@ -1465,7 +2028,10 @@ function toggleFaq(i) {
     gap: 16px 22px;
   }
   .hero-dots {
-    padding: 5px;
+    /* Même rangée défilante qu'au-dessus (820px) — juste le gouttière
+       latérale réajustée sur le padding de .hero-content à cette largeur
+       (18px au lieu de 20px), pour rester alignée avec le texte. */
+    padding: 2px 18px 6px;
   }
   .hero-dot {
     padding: 7px 12px;
@@ -1473,9 +2039,9 @@ function toggleFaq(i) {
   .band-inner {
     padding: 0 16px;
   }
-  .stat-banner {
-    grid-template-columns: 1fr;
-    margin: 36px 0 48px;
+  .tour-chip {
+    padding: 8px 16px;
+    font-size: 12.5px;
   }
   .section {
     padding: 48px 0;
@@ -1495,11 +2061,12 @@ function toggleFaq(i) {
     width: 120px;
     height: 120px;
   }
-  .method-band {
-    padding: 28px 20px;
+  .stats-band {
+    grid-template-columns: 1fr 1fr;
+    padding: 28px 18px;
   }
-  .method-band .num {
-    font-size: 36px;
+  .trust-grid {
+    grid-template-columns: 1fr;
   }
   .proof-placeholder {
     padding: 28px 20px;
