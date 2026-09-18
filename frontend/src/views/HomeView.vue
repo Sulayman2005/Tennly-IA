@@ -21,32 +21,53 @@ const router = useRouter()
 // n'a pas le droit de publier. Si aucun match exploitable n'est trouvé pour
 // une surface (creux du calendrier, aucun joueur avec photo…), cette surface
 // garde simplement sa photo de secours Pexels — jamais de portrait inventé.
+//
+// Photos de secours changées le 17/09/2026 (demande explicite) pour des
+// prises de vue plus "premium" (drone/aérien, terrains vides, haute
+// résolution) — voir aussi le filtre `p.tour === 'atp'` dans
+// loadShowcaseFavorites() ci-dessous, qui garantit qu'un vrai joueur mis en
+// avant ici est toujours un joueur du circuit ATP (jamais une joueuse WTA),
+// sur demande explicite également.
 const SHOWCASE_FALLBACK = [
   {
     key: 'terre',
     apiSurface: 'terre_battue',
     label: 'Terre battue',
     place: 'Roland-Garros',
-    img: 'https://images.pexels.com/photos/32289805/pexels-photo-32289805.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    img: 'https://images.pexels.com/photos/30894524/pexels-photo-30894524.jpeg?auto=compress&cs=tinysrgb&w=1920',
   },
   {
     key: 'gazon',
     apiSurface: 'gazon',
     label: 'Gazon',
     place: 'Wimbledon',
-    img: 'https://images.pexels.com/photos/19872965/pexels-photo-19872965.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    img: 'https://images.pexels.com/photos/11301815/pexels-photo-11301815.jpeg?auto=compress&cs=tinysrgb&w=1920',
   },
   {
     key: 'dur',
     apiSurface: 'dur',
     label: 'Dur',
     place: 'US Open · Australian Open',
-    img: 'https://images.pexels.com/photos/33436529/pexels-photo-33436529.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    img: 'https://images.pexels.com/photos/9093874/pexels-photo-9093874.jpeg?auto=compress&cs=tinysrgb&w=1920',
   },
 ]
 const slides = ref(SHOWCASE_FALLBACK.map((s) => ({ ...s, player: null })))
 const activeSlide = ref(0)
 let slideTimer = null
+
+// Vérifie qu'une image se charge vraiment avant de l'utiliser en fond de
+// carrousel : contrairement à une balise <img> (qui a déjà un repli visuel
+// naturel en cas d'échec), un background-image CSS raté reste simplement
+// invisible, sans aucun signal — d'où ce test explicite pour ne jamais
+// remplacer une photo de secours qui marche par une URL cassée.
+function preloadImage(url) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => resolve(true)
+    img.onerror = () => resolve(false)
+    img.src = url
+  })
+}
 
 async function loadShowcaseFavorites() {
   await Promise.all(
@@ -59,8 +80,12 @@ async function loadShowcaseFavorites() {
         for (const m of matches) {
           const favorite = m.prediction?.favoritePlayer
           const candidates = favorite ? [favorite, m.playerA, m.playerB] : [m.playerA, m.playerB]
-          const player = candidates.find((p) => p && hasPhoto(p))
-          if (player) {
+          // tour === 'atp' (sur demande explicite, jamais une joueuse WTA en
+          // photo ici) — donnée réelle exposée par l'API (Player::$tour, cf.
+          // TourBadge.vue qui s'en sert déjà pour la puce ATP/WTA), jamais
+          // devinée.
+          const player = candidates.find((p) => p && p.tour === 'atp' && hasPhoto(p))
+          if (player && (await preloadImage(player.photoUrl))) {
             slides.value[i] = { ...slides.value[i], img: player.photoUrl, place: m.tournamentName, player: player.fullName }
             return
           }
@@ -75,7 +100,7 @@ async function loadShowcaseFavorites() {
 function scheduleNextSlide() {
   clearInterval(slideTimer)
   slideTimer = setInterval(() => {
-    activeSlide.value = (activeSlide.value + 1) % slides.length
+    activeSlide.value = (activeSlide.value + 1) % slides.value.length
   }, 5500)
 }
 
@@ -289,7 +314,7 @@ function toggleFaq(i) {
       :key="slide.key"
       class="hero-slide"
       :class="{ active: i === activeSlide, 'intro-slide': i === 0 && !introDone }"
-      :style="{ backgroundImage: `url(${slide.img})`, animationDelay: i * 2 + 's' }"
+      :style="{ backgroundImage: `url('${slide.img}')`, animationDelay: i * 2 + 's' }"
     ></div>
     <div class="hero-overlay"></div>
     <div v-if="spotlightEnabled" class="hero-spotlight" :style="{ '--mx': heroSpotlight.x + '%', '--my': heroSpotlight.y + '%' }"></div>
