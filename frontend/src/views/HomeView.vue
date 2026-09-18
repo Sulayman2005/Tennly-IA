@@ -291,7 +291,7 @@ const faqs = [
   },
   {
     q: 'Comment on devine qui va gagner ?',
-    a: "On regarde la force de chaque joueur et de vraies statistiques (service, retour, forme, repos), à partir de matchs réels.",
+    a: "On analyse 6 points importants (niveau sur la surface, forme récente, service, retour, repos, confrontations directes), toujours à partir de vrais matchs déjà joués.",
   },
   {
     q: 'Est-ce que Tennly décide à ma place ?',
@@ -334,7 +334,7 @@ function toggleFaq(i) {
         Lancer l'analyse <span class="arrow">→</span>
       </button>
       <div class="hero-stats">
-        <div class="hs"><b>{{ heroSuccessRate }}</b> de bonnes réponses ces 3 derniers mois</div>
+        <div class="hs"><b>{{ heroSuccessRate }}</b> de pronostics justes ces 3 derniers mois</div>
         <div class="hs"><b>{{ heroAnalyzedMatches }}</b> matchs déjà étudiés</div>
         <!-- Remplace l'ancien "X an(s) d'historique ATP rejoué" (09/09/2026) :
              ce chiffre venait de /api/stats et affichait parfois "1 an", ce
@@ -409,15 +409,15 @@ function toggleFaq(i) {
       <div class="step-card" v-reveal="90">
         <div class="step-num">2</div>
         <h4>On analyse 6 points importants</h4>
-        <p>Toujours à partir de vrais matchs déjà joués.</p>
+        <p>Toujours à partir de vrais matchs déjà joués, jamais de suppositions.</p>
       </div>
       <div class="step-arrow" aria-hidden="true">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12h15M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
       </div>
       <div class="step-card" v-reveal="180">
         <div class="step-num">3</div>
-        <h4>On te dit qui a le plus de chances</h4>
-        <p>Avec toujours les raisons derrière.</p>
+        <h4>On te donne le favori</h4>
+        <p>Et les facteurs qui expliquent pourquoi.</p>
       </div>
     </div>
   </div>
@@ -426,7 +426,7 @@ function toggleFaq(i) {
   <div class="section">
     <div class="section-head center" v-reveal>
       <div class="eyebrow" style="justify-content: center"><i></i>TOUS LES TERRAINS</div>
-      <h2>Tous les tournois de tennis, sur tous les types de terrain</h2>
+      <h2>Toutes les surfaces, tous les grands tournois</h2>
     </div>
     <div class="surface-row">
       <div class="surface-card dur" v-reveal="0">
@@ -464,7 +464,7 @@ function toggleFaq(i) {
   <div class="section">
     <div class="section-head" v-reveal>
       <div class="eyebrow"><i></i>PAR EXEMPLE</div>
-      <h2>Voici à quoi ça ressemble, une analyse Tennly</h2>
+      <h2>Voici à quoi ressemble une analyse Tennly</h2>
     </div>
     <!-- Restylé en carte sombre le 09/09/2026 (voir .example-panel) : même
          langage visuel que le hero et la carte résultat plutôt qu'un simple
@@ -556,7 +556,7 @@ function toggleFaq(i) {
           </svg>
         </div>
         <h4>Leurs matchs l'un contre l'autre</h4>
-        <p>Leurs affrontements précédents.</p>
+        <p>Combien de fois ils se sont déjà affrontés, et qui a gagné.</p>
       </div>
       <div class="feature-card" v-reveal="70">
         <div class="fi">
@@ -564,8 +564,8 @@ function toggleFaq(i) {
             <path d="M4 16l5-9 4 6 3-4 4 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </div>
-        <h4>En pleine forme, ou pas ?</h4>
-        <p>Sa progression sur ses 8 derniers matchs.</p>
+        <h4>Sa dynamique du moment</h4>
+        <p>Est-ce qu'il progresse ou recule sur ses 8 derniers matchs ?</p>
       </div>
       <div class="feature-card" v-reveal="140">
         <div class="fi">
@@ -574,7 +574,7 @@ function toggleFaq(i) {
           </svg>
         </div>
         <h4>Les surprises</h4>
-        <p>Sa capacité à battre plus fort que lui.</p>
+        <p>Sa capacité à créer l'exploit face à un adversaire mieux classé.</p>
       </div>
     </div>
     </div>
@@ -595,7 +595,7 @@ function toggleFaq(i) {
     <div class="stats-band" v-reveal>
       <div class="stat-cell">
         <div class="stat-num">{{ heroSuccessRate }}</div>
-        <div class="stat-label">de bonnes réponses ces 3 derniers mois</div>
+        <div class="stat-label">de pronostics justes ces 3 derniers mois</div>
       </div>
       <div class="stat-cell">
         <div class="stat-num">{{ heroAnalyzedMatches }}</div>
@@ -603,7 +603,7 @@ function toggleFaq(i) {
       </div>
       <div class="stat-cell">
         <div class="stat-num">6</div>
-        <div class="stat-label">choses importantes regardées à chaque match</div>
+        <div class="stat-label">points importants analysés à chaque match</div>
       </div>
       <div class="stat-cell">
         <div class="stat-num">3<small>/nuit</small></div>
@@ -713,7 +713,7 @@ function toggleFaq(i) {
   </div>
 
   <div class="final-cta" v-reveal>
-    <h3>Prêt à voir qui va gagner ?</h3>
+    <h3>Prêt à prédire ta première victoire ?</h3>
     <p>C'est gratuit à découvrir, pas besoin de carte bancaire.</p>
     <button class="cta-main" :class="{ launching }" @click="goToMatches">
       Lancer l'analyse <span class="arrow">→</span>
