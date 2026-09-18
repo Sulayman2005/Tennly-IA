@@ -806,8 +806,25 @@ h3 {
   margin-left: -50vw;
   margin-right: -50vw;
   overflow: hidden;
-  min-height: calc(100vh - 71px); /* 71px ≈ hauteur du header sticky (App.vue) */
-  margin-top: -1px; /* colle au header, sans liseré d'un pixel */
+  min-height: 100vh;
+  /* dvh en plus de vh (17/09/2026, demande explicite "prendre tout le
+     téléphone") : sur mobile, 100vh ne tient pas toujours compte de la barre
+     d'adresse qui apparaît/disparaît au scroll, ce qui peut laisser un peu
+     de blanc sous l'image. 100dvh suit la vraie hauteur visible ; navigateurs
+     qui ne le supportent pas gardent simplement la valeur vh ci-dessus. */
+  min-height: 100dvh;
+  /* Remonte sous le header (17/09/2026, demande explicite : plus de bande
+     blanche derrière le header) : le header (App.vue, .topbar) réserve
+     toujours son espace habituel dans la page — rien ne bouge ailleurs sur
+     le site — mais devient transparent le temps que ce hero soit visible
+     (voir heroOverlay dans App.vue). On remonte l'image pour qu'elle aille
+     jusqu'au tout haut de l'écran, visible à travers le header désormais
+     transparent. Le header mesure ~62 à 74px selon la largeur d'écran
+     (padding + logo) : -80px "remonte" toujours un peu plus que nécessaire
+     plutôt que pas assez — un excès rogne un cheveu d'image en haut, invisible,
+     alors qu'un manque referait apparaître exactement le liseré blanc qu'on
+     corrige ici. */
+  margin-top: -80px;
   margin-bottom: 0;
   display: flex;
   align-items: center;
