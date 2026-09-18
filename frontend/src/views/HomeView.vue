@@ -392,7 +392,7 @@ function toggleFaq(i) {
        une ligne chacune — le ruban animé (.live-ribbon), qui répétait mot
        pour mot les mêmes idées que la section "Sous le capot", a aussi été
        retiré. -->
-  <div class="section">
+  <div class="section section--tight-top">
     <div class="section-head center" v-reveal>
       <div class="eyebrow" style="justify-content: center"><i></i>EN 3 ÉTAPES</div>
       <h2>Comment ça marche, Tennly ?</h2>
@@ -807,6 +807,17 @@ h3 {
   margin-right: -50vw;
   overflow: hidden;
   min-height: calc(100vh - 71px); /* 71px ≈ hauteur du header sticky (App.vue) */
+  /* dvh en plus de vh (17/09/2026, demande explicite "prendre tout le
+     téléphone") : sur mobile, 100vh ne tient pas toujours compte de la barre
+     d'adresse qui apparaît/disparaît au scroll, ce qui peut laisser un peu
+     de blanc sous l'image. 100dvh suit la vraie hauteur visible ; navigateurs
+     qui ne le supportent pas gardent simplement la valeur vh ci-dessus. */
+  min-height: calc(100dvh - 71px);
+  /* Revenu à l'ancien comportement (17/09/2026, demande explicite "redescend
+     le header à 100vh comme avant") : le header reste solide/opaque en
+     permanence (plus de mode transparent flottant sur le hero, voir App.vue),
+     donc le hero reprend simplement sa place juste en dessous, sans le
+     remonter derrière lui. */
   margin-top: -1px; /* colle au header, sans liseré d'un pixel */
   margin-bottom: 0;
   display: flex;
@@ -1282,6 +1293,14 @@ h3 {
 /* -- Sections génériques -- */
 .section {
   padding: 64px 0;
+}
+/* -- Transition hero → "Comment ça marche" resserrée (17/09/2026, demande
+   explicite : moins de blanc entre le bandeau vert des tournois et la
+   section suivante). Modificateur local, appliqué uniquement à cette
+   section : le rythme d'espacement standard (.section, 64px/48px) reste
+   inchangé partout ailleurs sur la page. -->
+.section--tight-top {
+  padding-top: 20px;
 }
 .section-head {
   max-width: 600px;
@@ -2081,6 +2100,10 @@ h3 {
        sans jamais se chevaucher. */
     flex-direction: column;
     min-height: 560px;
+    /* Revenu à 28px (17/09/2026) : l'essai à 140px pour repousser le bandeau
+       hors du premier écran laissait un grand vide visible au milieu de la
+       photo — sur retour explicite ("je préfère comme c'était avant"),
+       annulé. */
     padding-bottom: 28px;
   }
   .hero-content {
@@ -2199,6 +2222,12 @@ h3 {
   }
   .section {
     padding: 48px 0;
+  }
+  /* Répété ici (cascade) pour continuer à gagner sur .section en dessous de
+     cette largeur — sinon la version mobile de .section reprendrait le
+     dessus et redonnerait le grand espace blanc qu'on vient de resserrer. */
+  .section--tight-top {
+    padding-top: 20px;
   }
   .section-head h2 {
     font-size: 22px;
