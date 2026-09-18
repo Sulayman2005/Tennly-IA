@@ -28,6 +28,14 @@ const router = useRouter()
 // loadShowcaseFavorites() ci-dessous, qui garantit qu'un vrai joueur mis en
 // avant ici est toujours un joueur du circuit ATP (jamais une joueuse WTA),
 // sur demande explicite également.
+//
+// Deuxième passe le 17/09/2026 (toujours sur demande explicite, après retour
+// sur le premier choix) : le court "Dur" coincé entre deux immeubles et le
+// court "Gazon" au rendu trop sombre ont été remplacés — "Dur" par un
+// ensemble de courts bleus en plein jour entouré de verdure (pas de bâtiment
+// dans le cadre), "Gazon" par un gros plan lumineux sur les lignes blanches
+// d'un vrai gazon (le rendu large de Melbourne posait un problème de
+// luminosité). Terre battue inchangée (déjà jugée correcte).
 const SHOWCASE_FALLBACK = [
   {
     key: 'terre',
@@ -41,14 +49,14 @@ const SHOWCASE_FALLBACK = [
     apiSurface: 'gazon',
     label: 'Gazon',
     place: 'Wimbledon',
-    img: 'https://images.pexels.com/photos/11301815/pexels-photo-11301815.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    img: 'https://images.pexels.com/photos/23940468/pexels-photo-23940468.jpeg?auto=compress&cs=tinysrgb&w=1920',
   },
   {
     key: 'dur',
     apiSurface: 'dur',
     label: 'Dur',
     place: 'US Open · Australian Open',
-    img: 'https://images.pexels.com/photos/9093874/pexels-photo-9093874.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    img: 'https://images.pexels.com/photos/31379978/pexels-photo-31379978.jpeg?auto=compress&cs=tinysrgb&w=1920',
   },
 ]
 const slides = ref(SHOWCASE_FALLBACK.map((s) => ({ ...s, player: null })))
@@ -437,11 +445,18 @@ function toggleFaq(i) {
         <div class="desc">Wimbledon.</div>
       </div>
     </div>
-    <div class="level-row" v-reveal="280">
-      <span class="level-chip">Grand Chelem</span>
-      <span class="level-chip">Masters 1000</span>
-      <span class="level-chip">ATP 500</span>
-      <span class="level-chip">ATP 250</span>
+    <!-- "Logos" des compétitions (17/09/2026, sur demande explicite du CEO,
+         "façon Visifoot") : pas de vraie image de logo officiel (ATP/Grand
+         Chelem) réutilisée ici — on n'a pas les droits sur ces marques
+         déposées, contrairement à une photo de terrain générique. À la
+         place, un bandeau de "blasons" texte, un par Grand Chelem réel,
+         avec la couleur signature de chaque tournoi — même esprit visuel
+         qu'un bandeau de logos, sans utiliser de vraie image protégée. -->
+    <div class="comp-row" v-reveal="280">
+      <span class="comp-badge ao"><b>AO</b>Australian Open</span>
+      <span class="comp-badge rg"><b>RG</b>Roland-Garros</span>
+      <span class="comp-badge wm"><b>W</b>Wimbledon</span>
+      <span class="comp-badge us"><b>US</b>US Open</span>
     </div>
   </div>
 
@@ -799,12 +814,20 @@ h3 {
   background-size: cover;
   background-position: center;
   opacity: 0;
-  transition: opacity 1.6s ease;
+  /* Anime aussi la luminosité/saturation en plus du fondu (17/09/2026, sur
+     demande explicite "avec des animations") : chaque nouvelle photo se
+     "réveille" doucement (un peu terne → pleine couleur) au lieu d'un simple
+     fondu plat, en plus du zoom lent continu (heroKenBurns) déjà en place. */
+  filter: brightness(0.86) saturate(0.85);
+  transition:
+    opacity 1.8s ease,
+    filter 1.8s ease;
   animation: heroKenBurns 20s ease-in-out infinite alternate;
-  will-change: opacity, transform;
+  will-change: opacity, transform, filter;
 }
 .hero-slide.active {
   opacity: 1;
+  filter: brightness(1) saturate(1);
   z-index: 1;
 }
 @keyframes heroKenBurns {
@@ -1087,7 +1110,8 @@ h3 {
   line-height: 1.3;
   transition:
     background 0.25s,
-    color 0.25s;
+    color 0.25s,
+    transform 0.25s ease;
 }
 .hero-dot-place {
   font-size: 10.5px;
@@ -1097,6 +1121,9 @@ h3 {
 .hero-dot.active {
   background: #fff;
   color: var(--green2);
+  /* Petit "pop" au changement de photo (17/09/2026, "avec des animations") :
+     renforce visuellement que la pastille active vient de changer. */
+  transform: scale(1.045);
 }
 .hero-dot.active .hero-dot-place {
   opacity: 0.6;
@@ -1312,14 +1339,20 @@ h3 {
   transform: translateY(-8px) scale(1.015);
   box-shadow: var(--shadow-elevated);
 }
+/* Alignées le 17/09/2026 (demande explicite "les mêmes images que sur les
+   slides") sur les photos du carrousel du hero (voir SHOWCASE_FALLBACK plus
+   haut dans le <script>) — avant, cette section "Tous les terrains" avait
+   ses 3 propres photos, jamais mises à jour en même temps que le hero, d'où
+   la confusion : les captures partagées montraient CETTE section-ci, pas le
+   hero, alors que je ne corrigeais que le hero. */
 .surface-card.dur {
-  background-image: url('https://images.pexels.com/photos/30760348/pexels-photo-30760348.jpeg?auto=compress&cs=tinysrgb&w=1080');
+  background-image: url('https://images.pexels.com/photos/31379978/pexels-photo-31379978.jpeg?auto=compress&cs=tinysrgb&w=1080');
 }
 .surface-card.terre {
-  background-image: url('https://images.pexels.com/photos/30617588/pexels-photo-30617588.jpeg?auto=compress&cs=tinysrgb&w=1080');
+  background-image: url('https://images.pexels.com/photos/30894524/pexels-photo-30894524.jpeg?auto=compress&cs=tinysrgb&w=1080');
 }
 .surface-card.gazon {
-  background-image: url('https://images.pexels.com/photos/19872965/pexels-photo-19872965.jpeg?auto=compress&cs=tinysrgb&w=1080');
+  background-image: url('https://images.pexels.com/photos/23940468/pexels-photo-23940468.jpeg?auto=compress&cs=tinysrgb&w=1080');
 }
 .surface-card .dot {
   width: 12px;
@@ -1348,18 +1381,50 @@ h3 {
   color: rgba(255, 255, 255, 0.82);
   line-height: 1.5;
 }
-.level-row {
+.comp-row {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
-.level-chip {
-  padding: 7px 15px;
+.comp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 8px 8px;
   border-radius: 999px;
   background: var(--card);
   font-size: 12.5px;
   color: var(--grey);
   font-weight: 600;
+  border: 1px solid var(--line);
+}
+.comp-badge b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 6px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+/* Une couleur "signature" par tournoi (celle associée à son identité visuelle
+   habituelle), jamais son vrai logo — voir le commentaire dans le
+   <template>. */
+.comp-badge.ao b {
+  background: linear-gradient(135deg, #0f4fa8, #1976d2);
+}
+.comp-badge.rg b {
+  background: linear-gradient(135deg, var(--clay), #b25a2e);
+}
+.comp-badge.wm b {
+  background: linear-gradient(135deg, #1f6b3a, #2e7d32);
+}
+.comp-badge.us b {
+  background: linear-gradient(135deg, #123a6b, #1d4e89);
 }
 
 /* -- Exemple concret --
