@@ -1385,6 +1385,9 @@ h3 {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  /* Marge verticale ajoutée pour laisser la place au flottement des badges
+     (transform translateY) sans que le haut/bas ne soit rogné. */
+  padding: 10px 0 14px;
 }
 .comp-badge {
   display: inline-flex;
@@ -1397,6 +1400,40 @@ h3 {
   color: var(--grey);
   font-weight: 600;
   border: 1px solid var(--line);
+  /* "Flottement" demandé explicitement : chaque badge lévite doucement, à
+     son propre rythme (durée/décalage différents par badge ci-dessous) pour
+     ne jamais bouger en même temps que ses voisins — plus organique qu'un
+     mouvement synchronisé. L'ombre respire en même temps (badgeFloat),
+     comme si le badge se soulevait vraiment du fond. */
+  animation: badgeFloat 3.6s ease-in-out infinite;
+  box-shadow: 0 2px 6px rgba(15, 61, 62, 0.08);
+}
+@keyframes badgeFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(15, 61, 62, 0.08);
+  }
+  50% {
+    transform: translateY(-7px);
+    box-shadow: 0 14px 18px -10px rgba(15, 61, 62, 0.22);
+  }
+}
+.comp-badge:nth-child(1) {
+  animation-duration: 3.4s;
+  animation-delay: 0s;
+}
+.comp-badge:nth-child(2) {
+  animation-duration: 4s;
+  animation-delay: -1.1s;
+}
+.comp-badge:nth-child(3) {
+  animation-duration: 3.7s;
+  animation-delay: -2.3s;
+}
+.comp-badge:nth-child(4) {
+  animation-duration: 4.3s;
+  animation-delay: -0.6s;
 }
 .comp-badge b {
   display: inline-flex;
