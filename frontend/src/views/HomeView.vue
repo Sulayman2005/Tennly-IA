@@ -392,7 +392,7 @@ function toggleFaq(i) {
       <div class="step-card" v-reveal="0">
         <div class="step-num">1</div>
         <h4>Choisis un match</h4>
-        <p>Parmi les matchs d'aujourd'hui ou de bientôt.</p>
+        <p>Parmi les matchs en cours et à venir.</p>
       </div>
       <div class="step-arrow" aria-hidden="true">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 12h15M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
@@ -400,7 +400,7 @@ function toggleFaq(i) {
       <div class="step-card" v-reveal="90">
         <div class="step-num">2</div>
         <h4>On analyse 6 points importants</h4>
-        <p>Sur 4 années de matchs ATP et WTA déjà joués, récupérés via une API tennis.</p>
+        <p>Sur les dernières 4 années de matchs ATP et WTA déjà joués, récupérés via une API tennis de données privées et publiques confirmées.</p>
         <div class="points-row">
           <span class="point-chip">Niveau sur la surface</span>
           <span class="point-chip">Forme récente</span>
