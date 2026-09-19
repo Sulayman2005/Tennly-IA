@@ -453,7 +453,9 @@ onMounted(async () => {
            centré, surface-badge à droite) : un nom de tournoi long
            entrerait en collision avec eux, alors qu'une ligne simple
            au-dessus n'a pas cette contrainte. -->
-      <p class="match-meta">{{ match.tournamentName }} · {{ match.round }}</p>
+      <!-- Repli (19/09/2026) : masque le round quand il est vide ou vaut
+           "?" (voir même correctif sur MatchCard.vue). -->
+      <p class="match-meta">{{ match.tournamentName }}{{ match.round && match.round !== '?' ? ' · ' + match.round : '' }}</p>
 
       <!-- Face-off (11/09/2026) : masqué une fois le match terminé, sur
            demande explicite — "enlève ce qui est en bleu en haut quand le
@@ -633,7 +635,7 @@ onMounted(async () => {
             </div>
             <p v-else-if="match.scoreText" class="result-sub">{{ match.scoreText }}</p>
 
-            <div class="result-meta">{{ match.tournamentName }} · {{ match.round }} · {{ surfaceLabel(match.surface) }}</div>
+            <div class="result-meta">{{ match.tournamentName }}{{ match.round && match.round !== '?' ? ' · ' + match.round : '' }} · {{ surfaceLabel(match.surface) }}</div>
           </div>
         </div>
 
@@ -1876,8 +1878,13 @@ onMounted(async () => {
 .unlock-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(4, 12, 12, 0.56);
-  backdrop-filter: blur(3px);
+  /* Voile renforcé (19/09/2026, sur demande explicite) : à 0.56 d'opacité
+     et 3px de flou, le nom du gagnant et le score d'un match déjà terminé
+     (voir .result-showcase, affiché en dessous même quand l'analyse est
+     verrouillée) restaient lisibles en transparence derrière ce popup. Le
+     popup doit maintenant masquer complètement ce qu'il y a dessous. */
+  background: rgba(4, 12, 12, 0.86);
+  backdrop-filter: blur(28px);
   display: flex;
   align-items: center;
   justify-content: center;

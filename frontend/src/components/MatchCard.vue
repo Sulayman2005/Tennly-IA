@@ -60,7 +60,11 @@ function isWinner(player) {
     <div class="mc-top">
       <span class="mc-tag">
         <TourBadge :tour="match.playerA.tour" on-dark />
-        {{ match.tournamentName }} · {{ match.round }}
+        <!-- Repli (19/09/2026, sur demande explicite) : certains matchs
+             (ex. tours de Coupe Davis) arrivent sans round exploitable côté
+             import — ça affichait un "· ?" moche sur toutes ces cartes.
+             On masque simplement le round quand il est vide ou vaut "?". -->
+        {{ match.tournamentName }}{{ match.round && match.round !== '?' ? ' · ' + match.round : '' }}
       </span>
       <span class="mc-surface">{{ surfaceLabel(match.surface) }}</span>
       <!-- Badge "En direct" dédié (10/09/2026) : distinct de .mc-status pour
@@ -102,7 +106,11 @@ function isWinner(player) {
               <path d="M7 12.5l3 3 7-7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </div>
-          <div class="mc-rank">N°{{ match.playerA.atpWtaRank }} mondial</div>
+          <!-- Repli (19/09/2026, sur demande explicite) : certains joueurs
+               n'ont pas de classement ATP/WTA connu (atpWtaRank absent/null,
+               ex. joueurs très peu classés ou tout juste pros) — ça affichait
+               "N° mondial" sans aucun chiffre. -->
+          <div class="mc-rank">{{ match.playerA.atpWtaRank ? `N°${match.playerA.atpWtaRank} mondial` : 'Non classé' }}</div>
         </div>
       </div>
       <div class="mc-vs">VS</div>
@@ -115,7 +123,7 @@ function isWinner(player) {
             </svg>
             {{ match.playerB.fullName }}
           </div>
-          <div class="mc-rank">N°{{ match.playerB.atpWtaRank }} mondial</div>
+          <div class="mc-rank">{{ match.playerB.atpWtaRank ? `N°${match.playerB.atpWtaRank} mondial` : 'Non classé' }}</div>
         </div>
         <div class="mc-avatar" :class="{ 'is-favorite': isFavorite(match.playerB) }" :style="!showPhoto(match.playerB) ? avatarGradient(match.playerB.fullName) : null">
           <img
