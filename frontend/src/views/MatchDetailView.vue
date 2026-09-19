@@ -762,10 +762,13 @@ onMounted(async () => {
   <!-- Popup "affiche" (16/09/2026) : une seule affiche (icône + message en
        gros), pas un formulaire — voir showUnlockPopup dans le script pour
        le pourquoi. Son bouton ouvre le vrai popup de paiement
-       (paywallOpen) plutôt que de dupliquer les formules ici. -->
-  <div v-if="showUnlockPopup" class="unlock-overlay" @click.self="showUnlockPopup = false">
+       (paywallOpen) plutôt que de dupliquer les formules ici.
+       Croix + fermeture au clic extérieur retirées (19/09/2026, sur demande
+       explicite) : le visiteur bloqué doit choisir "Voir les formules" ou
+       "Déjà abonné ? Se connecter" plutôt que de pouvoir fermer ce popup
+       sans rien faire. -->
+  <div v-if="showUnlockPopup" class="unlock-overlay">
     <div class="unlock-modal">
-      <button class="unlock-modal-close" @click="showUnlockPopup = false" aria-label="Fermer">✕</button>
       <div class="unlock-poster">
         <!-- Cadenas remplacé par le logo (17/09/2026, demande explicite),
              avec une animation "rebond" plutôt que le pulse précédent, pour
@@ -1909,28 +1912,6 @@ onMounted(async () => {
   .unlock-modal {
     animation: none;
   }
-}
-.unlock-modal-close {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 2;
-  width: 30px;
-  height: 30px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(15, 61, 62, 0.08);
-  color: var(--ink);
-  font-size: 13px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s ease;
-}
-.unlock-modal-close:hover {
-  background: rgba(15, 61, 62, 0.16);
 }
 .unlock-poster {
   position: relative;
