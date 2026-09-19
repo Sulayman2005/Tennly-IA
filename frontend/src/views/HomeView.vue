@@ -2098,17 +2098,28 @@ h3 {
     padding-bottom: 28px;
   }
   .hero-content {
-    padding: 84px 20px 0;
+    /* Remonté un peu (19/09/2026, sur demande explicite) : moins d'espace
+       vide au-dessus du titre sur mobile, pour que le texte ne parte pas
+       trop bas sur la photo. */
+    padding: 60px 20px 0;
   }
   /* Refait le 09/09/2026 : en flex-wrap, les 3 pastilles (labels + lieux,
      assez longs — "US Open · Australian Open") ne tenaient jamais sur une
      seule ligne en mobile. La 3e retombait sur une 2e ligne à l'intérieur
      du même conteneur arrondi, qui perdait alors sa forme de pilule (coins
      visibles au milieu) — c'est ce rendu cassé qui posait problème. Remplacé
-     par une rangée qui défile horizontalement (une seule ligne, jamais de
-     retour à la ligne) avec CHAQUE pastille comme sa propre pilule autonome,
-     plutôt qu'un unique conteneur pilule partagé qui ne peut pas se couper
-     proprement au bord de l'écran. */
+     par CHAQUE pastille comme sa propre pilule autonome (fond + bordure
+     propres), plutôt qu'un unique conteneur pilule partagé — donc plus de
+     souci de forme cassée si ça revient à la ligne.
+     Recentré (19/09/2026, sur demande explicite "recentre-moi les 3 ronds") :
+     la version précédente défilait horizontalement en partant du bord
+     gauche (justify-content: flex-start + overflow-x: auto), ce qui
+     laissait la 1ère pastille ("Terre battue") à moitié hors champ sur les
+     petits écrans tant qu'on ne la faisait pas glisser à la main. Remplacé
+     par une rangée centrée qui peut revenir à la ligne (flex-wrap: wrap) au
+     lieu de défiler — avec seulement 3 pastilles courtes, ça tient sur une
+     ligne la plupart du temps, et si la 3e ne tient pas elle retombe sur une
+     2e ligne toujours centrée, sans jamais couper de texte. */
   .hero-dots {
     position: static;
     left: auto;
@@ -2117,15 +2128,10 @@ h3 {
     background: none;
     border: none;
     backdrop-filter: none;
-    padding: 0;
     max-width: 100%;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scroll-snap-type: x proximity;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    justify-content: flex-start;
+    flex-wrap: wrap;
+    overflow-x: visible;
+    justify-content: center;
     gap: 10px;
     margin: 26px 0 0;
     padding: 2px 20px 6px;
@@ -2135,7 +2141,8 @@ h3 {
   }
   .hero-dot {
     flex: none;
-    scroll-snap-align: start;
+    align-items: center;
+    text-align: center;
     background: rgba(10, 20, 20, 0.4);
     border: 1px solid rgba(255, 255, 255, 0.16);
     backdrop-filter: blur(10px);
@@ -2190,13 +2197,14 @@ h3 {
     font-size: 28px;
   }
   .hero-content {
-    padding: 72px 18px 0;
+    /* Remonté un peu (19/09/2026), même raison qu'au-dessus (820px). */
+    padding: 48px 18px 0;
   }
   .hero-stats {
     gap: 16px 22px;
   }
   .hero-dots {
-    /* Même rangée défilante qu'au-dessus (820px) — juste le gouttière
+    /* Même rangée centrée qu'au-dessus (820px) — juste la gouttière
        latérale réajustée sur le padding de .hero-content à cette largeur
        (18px au lieu de 20px), pour rester alignée avec le texte. */
     padding: 2px 18px 6px;
