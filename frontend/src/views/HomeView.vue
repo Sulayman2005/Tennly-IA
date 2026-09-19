@@ -329,22 +329,13 @@ function toggleFaq(i) {
 
     <div class="hero-content">
       <div class="eyebrow"><i></i>TENNIS · ANALYSE PRO, DONNÉES RÉELLES</div>
-      <h1>Prédis chaque <span class="accent">match</span><br />avant qu'il ne commence.</h1>
+      <h1>Analyse et Prédis chaque <span class="accent">Victoire</span></h1>
       <button class="cta-main" :class="{ launching }" @click="goToMatches">
         Lancer l'analyse <span class="arrow">→</span>
       </button>
       <div class="hero-stats">
         <div class="hs"><b>{{ heroSuccessRate }}</b> de pronostics justes ces 3 derniers mois</div>
         <div class="hs"><b>{{ heroAnalyzedMatches }}</b> matchs déjà étudiés</div>
-        <!-- Remplace l'ancien "X an(s) d'historique ATP rejoué" (09/09/2026) :
-             ce chiffre venait de /api/stats et affichait parfois "1 an", ce
-             qui sonnait faible à côté des deux stats précédentes — sur
-             demande explicite, remplacé par un fait tout aussi réel mais qui
-             met en valeur le vrai travail d'intégration fait avec les API
-             externes (voir scripts/import_matches_cron.sh,
-             update_results_cron.sh, import_photos_cron.sh) plutôt qu'un
-             chiffre qui dépend juste de la date de lancement du site. -->
-        <div class="hs"><b>Tout seul</b>, chaque nuit · toujours à jour</div>
       </div>
     </div>
 
