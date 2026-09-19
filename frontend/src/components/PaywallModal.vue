@@ -94,8 +94,18 @@ async function choosePlan(code) {
 
         <label class="waiver">
           <input v-model="withdrawalWaiverAccepted" type="checkbox" />
-          Je demande l'exécution immédiate de mon abonnement et je renonce en conséquence à mon droit de rétractation
-          de 14 jours (<RouterLink to="/cgv">voir les CGV</RouterLink>).
+          <!-- Texte regroupé dans un seul <span> (19/09/2026, correctif) :
+               le conteneur .waiver est en display:flex — laissé tel quel,
+               le texte brut + le <RouterLink> au milieu formaient plusieurs
+               "flex items" séparés au lieu d'un seul paragraphe, ce qui
+               cassait le retour à la ligne naturel et faisait rétrécir le
+               lien "voir les CGV" sur plusieurs lignes verticales. Un seul
+               <span> autour de tout le texte règle ça : la case à cocher et
+               ce span sont les deux seuls enfants flex. -->
+          <span>
+            Je demande l'exécution immédiate de mon abonnement et je renonce en conséquence à mon droit de rétractation
+            de 14 jours (<RouterLink to="/cgv">voir les CGV</RouterLink>).
+          </span>
         </label>
 
         <div class="foot">Résiliable à tout moment en un clic. Aucun engagement caché.</div>
