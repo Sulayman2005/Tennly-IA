@@ -57,9 +57,15 @@ async function choosePlan(code) {
 </script>
 
 <template>
-  <div v-if="open" class="overlay" @click.self="emit('close')">
+  <!-- Croix + fermeture au clic extérieur retirées (19/09/2026, sur demande
+       explicite "je veux la même chose que débloque l'analyse") : ce popup
+       doit se comporter comme l'annonce "Débloque l'analyse complète" dans
+       MatchDetailView.vue — impossible à fermer sans choisir une formule
+       (le composant garde son emit('close') défini au cas où un futur appel
+       voudrait le fermer par programme, mais plus aucun contrôle dans ce
+       template n'en déclenche l'émission). -->
+  <div v-if="open" class="overlay">
     <div class="modal">
-      <button class="close" @click="emit('close')" aria-label="Fermer">✕</button>
 
       <!-- Bandeau "hero" sombre (même dégradé --green/--green2 + halo que
            MatchCard.vue / MatchDetailView.vue) : la popup qui invite à
@@ -159,28 +165,6 @@ async function choosePlan(code) {
   }
 }
 
-.close {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 2;
-  width: 30px;
-  height: 30px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.16);
-  color: #fff;
-  font-size: 13px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s ease;
-}
-.close:hover {
-  background: rgba(255, 255, 255, 0.28);
-}
 
 /* Même traitement visuel "wow" que MatchCard.vue / .face-off
    (MatchDetailView.vue) : dégradé teal → vert profond avec un halo lime en
