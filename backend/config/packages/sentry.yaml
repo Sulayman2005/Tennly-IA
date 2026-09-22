@@ -1,0 +1,18 @@
+# Monitoring d'erreurs backend (voir Sentry.yaml -- projet "tennly-backend"
+# sur sentry.io). Enregistré manuellement dans config/bundles.php (voir ce
+# fichier pour pourquoi Flex ne le fait pas tout seul ici).
+#
+# dsn vide (par défaut en local, voir backend/.env) => le SDK Sentry se
+# désactive silencieusement, sans erreur : aucune configuration
+# conditionnelle "when@prod" nécessaire, la même config sert partout et
+# seule la présence d'un SENTRY_DSN réel (mis uniquement dans .env.prod sur
+# le VPS) l'active.
+sentry:
+    dsn: '%env(default::SENTRY_DSN)%'
+    options:
+        environment: '%kernel.environment%'
+        # Suivi de performance désactivé (0.0) : on ne veut que la remontée
+        # d'erreurs, pas le traçage de requêtes, pour rester confortablement
+        # dans le plan gratuit de Sentry (quota d'erreurs distinct de celui
+        # des "transactions" de tracing).
+        traces_sample_rate: 0.0
