@@ -36,27 +36,64 @@ const router = useRouter()
 // dans le cadre), "Gazon" par un gros plan lumineux sur les lignes blanches
 // d'un vrai gazon (le rendu large de Melbourne posait un problème de
 // luminosité). Terre battue inchangée (déjà jugée correcte).
+//
+// Troisième passe le 29/09/2026 (demande explicite du CEO, "plus premium,
+// effet wow" que les courts vides ci-dessus) : d'abord essayé avec 5 captures
+// fournies directement par le CEO (photos de tribunes/matchs, hébergées un
+// temps dans frontend/public/hero/), puis abandonné sur demande explicite car
+// leur provenance/droits n'étaient pas garantis (logos de sponsors visibles).
+// Un premier remplacement par des photos d'action génériques sous licence
+// libre a ensuite été jugé encore trop plat ("je n'aime pas les images").
+// Remplacées ici par des vraies photos d'ambiance de tournoi (Roland-Garros,
+// French Open, US Open), toujours sous licence libre Pexels — mêmes
+// conditions d'usage que les photos de secours d'origine plus haut — mais
+// avec de vrais stades/tribunes pleins plutôt que des courts vides ou une
+// action générique, pour se rapprocher de l'effet recherché. Photo "Gazon"
+// changée plusieurs fois ensuite sur retours explicites ("pas fade", "en
+// grand sur un terrain") — choisie avec le CEO parmi plusieurs propositions,
+// finalement une vue aérienne drone sous licence libre Unsplash (même
+// principe que Pexels : gratuite, usage commercial autorisé) plutôt que
+// Pexels, faute d'y trouver un rendu assez vif. Chargées
+// directement depuis le CDN Pexels — pas de copie locale. Terre battue et Dur
+// ont chacune 2 photos (2 entrées avec le même `apiSurface`) —
+// loadShowcaseFavorites() ci-dessous boucle sur CHAQUE entrée du tableau, pas
+// sur chaque surface unique, donc ça fonctionne sans changement à cette
+// fonction.
 const SHOWCASE_FALLBACK = [
   {
-    key: 'terre',
+    key: 'terre-1',
     apiSurface: 'terre_battue',
     label: 'Terre battue',
     place: 'Roland-Garros',
-    img: 'https://images.pexels.com/photos/30894524/pexels-photo-30894524.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    img: 'https://images.pexels.com/photos/26841963/pexels-photo-26841963.jpeg?auto=compress&cs=tinysrgb&w=1920',
+  },
+  {
+    key: 'terre-2',
+    apiSurface: 'terre_battue',
+    label: 'Terre battue',
+    place: 'Court en terre battue',
+    img: 'https://images.pexels.com/photos/37693849/pexels-photo-37693849.jpeg?auto=compress&cs=tinysrgb&w=1920',
   },
   {
     key: 'gazon',
     apiSurface: 'gazon',
     label: 'Gazon',
     place: 'Wimbledon',
-    img: 'https://images.pexels.com/photos/23940468/pexels-photo-23940468.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    img: 'https://images.unsplash.com/photo-1717869835053-bc3f150e105f?w=1920&fm=jpg&q=80&auto=format&fit=crop',
   },
   {
-    key: 'dur',
+    key: 'dur-1',
     apiSurface: 'dur',
     label: 'Dur',
-    place: 'US Open · Australian Open',
-    img: 'https://images.pexels.com/photos/31379978/pexels-photo-31379978.jpeg?auto=compress&cs=tinysrgb&w=1920',
+    place: 'US Open',
+    img: 'https://images.pexels.com/photos/171568/pexels-photo-171568.jpeg?auto=compress&cs=tinysrgb&w=1920',
+  },
+  {
+    key: 'dur-2',
+    apiSurface: 'dur',
+    label: 'Dur',
+    place: "Open d'Australie",
+    img: 'https://images.pexels.com/photos/29893721/pexels-photo-29893721.jpeg?auto=compress&cs=tinysrgb&w=1920',
   },
 ]
 const slides = ref(SHOWCASE_FALLBACK.map((s) => ({ ...s, player: null })))
@@ -250,8 +287,34 @@ onMounted(async () => {
 // ailleurs sur cette page (section Couverture plus bas) — pas de vrai logo
 // officiel (marque déposée de chaque organisation, droits distincts d'une
 // simple mention textuelle) tant qu'on n'a pas d'accord avec ces
-// organisations, donc un simple texte façon badge plutôt qu'une image.
-const tourMarquee = ['ATP', 'WTA', 'Grand Chelem', 'Australian Open', 'Roland-Garros', 'Wimbledon', 'US Open', 'Masters 1000']
+// organisations.
+//
+// Passe "avec les logos" (29/09/2026, sur demande explicite) : toujours pas
+// de vraie image de logo protégée (même raison qu'au-dessus — voir aussi le
+// commentaire sur .comp-badge plus bas dans ce fichier, qui applique déjà
+// exactement ce principe), mais chaque chip a maintenant son propre
+// "monogramme" — un rond coloré avec les initiales, dans la couleur
+// signature du circuit/tournoi — plutôt qu'un simple texte plat, pour se
+// rapprocher visuellement d'un logo sans en reprendre un vrai.
+//
+// Repasse "encore plus proche d'un vrai logo" (29/09/2026, sur demande
+// explicite, le client a choisi cette option plutôt que de fournir ses
+// propres fichiers de logos officiels) : le rond devient un écusson à double
+// anneau (voir .tour-mono ::after) façon "seal" d'un vrai badge de
+// compétition, dans une police condensée façon wordmark. Le libellé à côté du
+// rond ATP/WTA ne répète plus le sigle du rond (qui suffisait déjà à
+// l'identifier) pour éviter le doublon visuel signalé par le client
+// ("ATP ATP").
+const tourMarquee = [
+  { label: 'Circuit ATP', mono: 'ATP', cls: 'atp' },
+  { label: 'Circuit WTA', mono: 'WTA', cls: 'wta' },
+  { label: 'Grand Chelem', mono: 'GC', cls: 'gc' },
+  { label: 'Australian Open', mono: 'AO', cls: 'ao' },
+  { label: 'Roland-Garros', mono: 'RG', cls: 'rg' },
+  { label: 'Wimbledon', mono: 'W', cls: 'wm' },
+  { label: 'US Open', mono: 'US', cls: 'us' },
+  { label: 'Masters 1000', mono: 'M1000', cls: 'm1000' },
+]
 
 onUnmounted(() => {
   clearInterval(slideTimer)
@@ -339,36 +402,40 @@ function toggleFaq(i) {
       </div>
     </div>
 
-    <div class="hero-dots" role="tablist" aria-label="Choisir une surface">
-      <button
-        v-for="(slide, i) in slides"
-        :key="'dot-' + slide.key"
-        class="hero-dot"
-        role="tab"
-        :aria-selected="i === activeSlide"
-        :class="{ active: i === activeSlide }"
-        @click="goToSlide(i)"
-      >
-        <span class="hero-dot-name">{{ slide.label }}</span>
-        <span class="hero-dot-place">{{ slide.place }}</span>
-      </button>
+    <!--
+      Navigation du carrousel (29/09/2026) : avec 3 photos, chaque pastille
+      pouvait porter son nom + son lieu en toutes lettres sans problème. Avec
+      5 photos, ces 5 pastilles à deux lignes de texte deviennent trop larges
+      pour tenir sur une ligne (débordement/retour à la ligne moche, y compris
+      en desktop). Remplacé par un indicateur compact universel (5 petits
+      ronds, celui actif s'allonge en pilule) plus UNE seule légende texte
+      au-dessus qui affiche le nom/lieu du slide actif — l'info n'est pas
+      perdue, juste affichée une fois au lieu de 5 fois. `:key="activeSlide"`
+      sur la légende force Vue à recréer l'élément à chaque changement de
+      slide, ce qui relance son animation d'entrée (même technique que les
+      fondus déjà utilisés dans cette page). -->
+    <div class="hero-nav">
+      <p class="hero-nav-caption" :key="activeSlide">
+        <span class="hero-nav-caption-name">{{ slides[activeSlide]?.label }}</span>
+        <span class="hero-nav-caption-sep" aria-hidden="true"></span>
+        <span class="hero-nav-caption-place">{{ slides[activeSlide]?.place }}</span>
+      </p>
+      <div class="hero-dots" role="tablist" aria-label="Choisir une surface">
+        <button
+          v-for="(slide, i) in slides"
+          :key="'dot-' + slide.key"
+          class="hero-dot"
+          role="tab"
+          :aria-selected="i === activeSlide"
+          :aria-label="slide.label + ' — ' + slide.place"
+          :class="{ active: i === activeSlide }"
+          @click="goToSlide(i)"
+        ></button>
+      </div>
     </div>
 
     <div class="hero-scrollcue" aria-hidden="true"><i></i></div>
   </section>
-
-  <!-- Bandeau défilant des circuits/tournois (17/09/2026, "façon Visifoot",
-       sur demande explicite) — voir tourMarquee dans le script pour le choix
-       texte plutôt que logo. Liste dupliquée une fois ci-dessous pour que la
-       boucle CSS (translateX(-50%)) soit invisible, sans saut au raccord. -->
-  <div class="tour-ribbon">
-    <div class="tour-ribbon-track">
-      <span v-for="t in tourMarquee" :key="t" class="tour-chip">{{ t }}</span>
-      <span v-for="t in tourMarquee" :key="t + '-dup'" class="tour-chip">{{ t }}</span>
-    </div>
-  </div>
-
-  <div class="section-divider" aria-hidden="true"><span></span></div>
 
   <!-- ================= COMMENT ÇA MARCHE (09/09/2026) =================
        Section ajoutée sur demande explicite (structure inspirée d'un site
@@ -382,8 +449,14 @@ function toggleFaq(i) {
        de sous-titre sous le h2, et descriptions des 3 cartes raccourcies en
        une ligne chacune — le ruban animé (.live-ribbon), qui répétait mot
        pour mot les mêmes idées que la section "Sous le capot", a aussi été
-       retiré. -->
-  <div class="section section--tight-top">
+       retiré.
+       Retour au padding-top standard (29/09/2026) : le modificateur
+       .section--tight-top compensait la présence du bandeau de tournois +
+       séparateur juste au-dessus (moins d'espace nécessaire par-dessus). Ce
+       bandeau a été déplacé plus bas dans la page (voir plus loin) — cette
+       section suit donc directement le hero et reprend l'espacement standard
+       (.section, 64px) pour ne pas coller au hero. -->
+  <div class="section">
     <div class="section-head center" v-reveal>
       <div class="eyebrow" style="justify-content: center"><i></i>EN 3 ÉTAPES</div>
       <h2>Comment ça marche, Tennly ?</h2>
@@ -420,6 +493,38 @@ function toggleFaq(i) {
       </div>
     </div>
   </div>
+
+  <!-- Bandeau défilant des circuits/tournois (17/09/2026, "façon Visifoot",
+       sur demande explicite) — voir tourMarquee dans le script pour le choix
+       monogramme coloré plutôt que vrai logo. Liste dupliquée une fois
+       ci-dessous pour que la boucle CSS (translateX(-50%)) soit invisible,
+       sans saut au raccord.
+       Déplacé le 29/09/2026 (sur demande explicite) : il vivait juste après
+       le hero, entre le hero et "Comment ça marche" — déplacé ici, entre
+       "Comment ça marche" et "Couverture", pour combler le grand espace vide
+       qui apparaissait à cet endroit (les deux sections juste au-dessus/
+       en-dessous n'ayant chacune que leur propre padding, sans rien entre les
+       deux).
+       Fond vert retiré + monogrammes ajoutés (29/09/2026, sur demande
+       explicite "enlève le fond vert et met les logos") : le bandeau est
+       maintenant sur fond blanc, et chaque chip porte un rond coloré avec des
+       initiales (voir tourMarquee) au lieu d'un texte plat — même principe
+       que .comp-badge plus bas (pas de vraie image de logo protégée, une
+       couleur signature à la place). -->
+  <div class="tour-ribbon">
+    <div class="tour-ribbon-track">
+      <span v-for="t in tourMarquee" :key="t.label" class="tour-chip">
+        <b class="tour-mono" :class="t.cls">{{ t.mono }}</b>
+        {{ t.label }}
+      </span>
+      <span v-for="t in tourMarquee" :key="t.label + '-dup'" class="tour-chip">
+        <b class="tour-mono" :class="t.cls">{{ t.mono }}</b>
+        {{ t.label }}
+      </span>
+    </div>
+  </div>
+
+  <div class="section-divider" aria-hidden="true"><span></span></div>
 
   <!-- ================= COUVERTURE (surfaces / tournois) ================= -->
   <div class="section">
@@ -1089,53 +1194,91 @@ h3 {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.hero-dots {
+/* Indicateur du carrousel (29/09/2026, voir commentaire dans le template) :
+   conteneur .hero-nav = légende texte du slide actif + rangée de petits
+   ronds, groupés et centrés en bas du hero. Volontairement compact (largeur
+   totale toujours ~150-180px, quel que soit le nombre de slides) pour ne
+   jamais déborder ni s'empiler sur plusieurs lignes, contrairement à
+   l'ancienne version avec de grosses pastilles texte. */
+.hero-nav {
   position: absolute;
   z-index: 3;
   left: 50%;
   bottom: 26px;
   transform: translateX(-50%);
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: fadeUp 0.6s 1.1s ease both;
+}
+.hero-nav-caption {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
+  /* Rejoue à chaque changement de slide grâce au :key côté template — même
+     langage de fondu que le reste du hero (fadeUp), en plus discret. */
+  animation: heroCaptionIn 0.45s ease both;
+}
+.hero-nav-caption-place {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.78);
+}
+.hero-nav-caption-sep {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  flex: none;
+}
+@keyframes heroCaptionIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.hero-dots {
+  display: flex;
+  align-items: center;
   gap: 8px;
   background: rgba(10, 20, 20, 0.32);
   border: 1px solid rgba(255, 255, 255, 0.16);
   backdrop-filter: blur(10px);
   border-radius: 999px;
-  padding: 6px;
-  animation: fadeUp 0.6s 1.1s ease both;
+  padding: 8px;
 }
 .hero-dot {
   border: none;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.38);
+  width: 8px;
+  height: 8px;
   border-radius: 999px;
-  padding: 9px 16px;
-  font-size: 12.5px;
-  font-weight: 600;
+  padding: 0;
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  line-height: 1.3;
   transition:
-    background 0.25s,
-    color 0.25s,
-    transform 0.25s ease;
+    width 0.3s ease,
+    background 0.3s ease,
+    transform 0.2s ease;
 }
-.hero-dot-place {
-  font-size: 10.5px;
-  font-weight: 500;
-  opacity: 0.75;
+.hero-dot:hover {
+  background: rgba(255, 255, 255, 0.65);
 }
 .hero-dot.active {
-  background: #fff;
-  color: var(--green2);
+  width: 24px;
+  background: var(--lime);
   /* Petit "pop" au changement de photo (17/09/2026, "avec des animations") :
      renforce visuellement que la pastille active vient de changer. */
-  transform: scale(1.045);
-}
-.hero-dot.active .hero-dot-place {
-  opacity: 0.6;
+  transform: scaleY(1.15);
 }
 .hero-scrollcue {
   position: absolute;
@@ -1179,6 +1322,11 @@ h3 {
    "breakout" que le hero) pour occuper toute la largeur de l'écran. La liste
    de chips est dupliquée une fois dans le template pour que la boucle
    translateX(-50%) soit invisible (pas de saut au raccord). */
+/* Fond vert + halo retirés (29/09/2026, sur demande explicite) : le bandeau
+   vit maintenant directement sur le fond blanc de la page, comme la section
+   "Couverture" juste après — un masque en dégradé sur les bords (mask-image)
+   fait disparaître les chips en douceur plutôt qu'une coupure nette, vu qu'il
+   n'y a plus de fond de couleur pour la camoufler. */
 .tour-ribbon {
   position: relative;
   width: 100vw;
@@ -1190,26 +1338,8 @@ h3 {
   padding: 22px 0;
   margin-top: -1px;
   margin-bottom: 8px;
-  background: linear-gradient(120deg, var(--green2), var(--green) 55%, #051616);
-  isolation: isolate;
-}
-.tour-ribbon::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(600px 160px at 20% 50%, rgba(199, 255, 60, 0.22), transparent 65%);
-  animation: tourRibbonGlow 6s ease-in-out infinite alternate;
-  pointer-events: none;
-}
-@keyframes tourRibbonGlow {
-  from {
-    transform: translateX(-12%);
-    opacity: 0.7;
-  }
-  to {
-    transform: translateX(12%);
-    opacity: 1;
-  }
+  mask-image: linear-gradient(90deg, transparent 0, #000 64px, #000 calc(100% - 64px), transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 64px, #000 calc(100% - 64px), transparent 100%);
 }
 .tour-ribbon-track {
   display: flex;
@@ -1232,17 +1362,79 @@ h3 {
   flex: none;
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  padding: 10px 20px;
+  gap: 12px;
+  padding: 8px 20px 8px 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(6px);
-  color: #fff;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--ink);
   font-size: 13.5px;
   font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(15, 61, 62, 0.06);
+}
+/* Monogramme rond coloré (voir commentaire dans le template) : même principe
+   que .comp-badge b plus bas dans ce fichier (une couleur "signature" par
+   circuit/tournoi, jamais un vrai logo protégé), poussé plus loin (29/09/2026,
+   sur demande explicite) façon écusson/"seal" pour se rapprocher visuellement
+   d'un vrai logo : double anneau (blanc puis teinté) autour du rond, relief
+   intérieur (inset) et légère ombre portée, police condensée en petites
+   capitales façon wordmark plutôt qu'un simple aplat de couleur avec du texte
+   dessus. --ring fixe la teinte du second anneau, propre à chaque badge. */
+.tour-mono {
+  --ring: rgba(15, 61, 62, 0.3);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 7px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  flex: none;
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 3px var(--ring),
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.3),
+    0 3px 7px rgba(15, 25, 25, 0.16);
+}
+.tour-mono.atp {
+  --ring: rgba(15, 61, 62, 0.35);
+  background: linear-gradient(135deg, var(--green), var(--green2));
+}
+.tour-mono.wta {
+  --ring: rgba(166, 55, 124, 0.32);
+  background: linear-gradient(135deg, #a6377c, #7a2a5c);
+}
+.tour-mono.gc {
+  --ring: rgba(138, 109, 31, 0.32);
+  background: linear-gradient(135deg, #8a6d1f, #4a3b10);
+}
+.tour-mono.ao {
+  --ring: rgba(15, 79, 168, 0.32);
+  background: linear-gradient(135deg, #0f4fa8, #1976d2);
+}
+.tour-mono.rg {
+  --ring: rgba(193, 101, 46, 0.32);
+  background: linear-gradient(135deg, var(--clay), #b25a2e);
+}
+.tour-mono.wm {
+  --ring: rgba(31, 107, 58, 0.32);
+  background: linear-gradient(135deg, #1f6b3a, #2e7d32);
+}
+.tour-mono.us {
+  --ring: rgba(18, 58, 107, 0.32);
+  background: linear-gradient(135deg, #123a6b, #1d4e89);
+}
+.tour-mono.m1000 {
+  --ring: rgba(74, 47, 122, 0.32);
+  background: linear-gradient(135deg, #4a2f7a, #2c1b4d);
 }
 
 /* -- Séparateur décoratif entre deux sections -- */
@@ -1284,14 +1476,6 @@ h3 {
 /* -- Sections génériques -- */
 .section {
   padding: 64px 0;
-}
-/* -- Transition hero → "Comment ça marche" resserrée (17/09/2026, demande
-   explicite : moins de blanc entre le bandeau vert des tournois et la
-   section suivante). Modificateur local, appliqué uniquement à cette
-   section : le rythme d'espacement standard (.section, 64px/48px) reste
-   inchangé partout ailleurs sur la page. -->
-.section--tight-top {
-  padding-top: 20px;
 }
 .section-head {
   max-width: 600px;
@@ -1362,14 +1546,18 @@ h3 {
    ses 3 propres photos, jamais mises à jour en même temps que le hero, d'où
    la confusion : les captures partagées montraient CETTE section-ci, pas le
    hero, alors que je ne corrigeais que le hero. */
+/* Resynchronisées le 29/09/2026 avec les nouvelles photos du hero (mêmes
+   images que la 1re entrée "Terre"/"Dur" du carrousel, voir SHOWCASE_FALLBACK
+   plus haut) — décision produit du 17/09/2026 de garder cette section et le
+   hero visuellement cohérents, toujours valable. */
 .surface-card.dur {
-  background-image: url('https://images.pexels.com/photos/31379978/pexels-photo-31379978.jpeg?auto=compress&cs=tinysrgb&w=1080');
+  background-image: url('https://images.pexels.com/photos/171568/pexels-photo-171568.jpeg?auto=compress&cs=tinysrgb&w=1080');
 }
 .surface-card.terre {
-  background-image: url('https://images.pexels.com/photos/30894524/pexels-photo-30894524.jpeg?auto=compress&cs=tinysrgb&w=1080');
+  background-image: url('https://images.pexels.com/photos/26841963/pexels-photo-26841963.jpeg?auto=compress&cs=tinysrgb&w=1080');
 }
 .surface-card.gazon {
-  background-image: url('https://images.pexels.com/photos/23940468/pexels-photo-23940468.jpeg?auto=compress&cs=tinysrgb&w=1080');
+  background-image: url('https://images.unsplash.com/photo-1717869835053-bc3f150e105f?w=1080&fm=jpg&q=80&auto=format&fit=crop');
 }
 .surface-card .dot {
   width: 12px;
@@ -1452,7 +1640,15 @@ h3 {
   animation-duration: 4.3s;
   animation-delay: -0.6s;
 }
+/* Écusson/"seal" (29/09/2026, sur demande explicite, même passe que
+   .tour-mono plus haut dans ce fichier — pour que les deux endroits de la
+   page qui montrent ces badges restent visuellement cohérents entre eux) :
+   double anneau blanc puis teinté, relief intérieur et légère ombre portée,
+   plutôt qu'un simple rond plat — toujours une couleur "signature" par
+   tournoi, jamais son vrai logo (voir le commentaire dans le <template>).
+   --ring fixe la teinte du second anneau, propre à chaque tournoi. */
 .comp-badge b {
+  --ring: rgba(15, 61, 62, 0.3);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1463,21 +1659,28 @@ h3 {
   color: #fff;
   font-size: 11.5px;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: -0.01em;
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 3px var(--ring),
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.3),
+    0 3px 7px rgba(15, 25, 25, 0.16);
 }
-/* Une couleur "signature" par tournoi (celle associée à son identité visuelle
-   habituelle), jamais son vrai logo — voir le commentaire dans le
-   <template>. */
 .comp-badge.ao b {
+  --ring: rgba(15, 79, 168, 0.32);
   background: linear-gradient(135deg, #0f4fa8, #1976d2);
 }
 .comp-badge.rg b {
+  --ring: rgba(193, 101, 46, 0.32);
   background: linear-gradient(135deg, var(--clay), #b25a2e);
 }
 .comp-badge.wm b {
+  --ring: rgba(31, 107, 58, 0.32);
   background: linear-gradient(135deg, #1f6b3a, #2e7d32);
 }
 .comp-badge.us b {
+  --ring: rgba(18, 58, 107, 0.32);
   background: linear-gradient(135deg, #123a6b, #1d4e89);
 }
 
@@ -2075,6 +2278,22 @@ h3 {
   text-decoration: underline;
 }
 
+/* Palier tablette / petit écran de bureau (29/09/2026, sur demande explicite,
+   "au format desktop et tablette ça rend pas bien") : jusqu'ici le hero
+   n'avait que deux paliers, un desktop "plein écran" (58px de titre) et un
+   mobile empilé sous 820px. Sur une largeur intermédiaire (tablette en
+   paysage, ou simplement une fenêtre de navigateur pas maximisée sur un
+   ordinateur portable), le titre à 58px + le padding desktop laissaient trop
+   peu de marge, surtout en hauteur sur un écran de portable. */
+@media (max-width: 1180px) and (min-width: 821px) {
+  .hero-content h1 {
+    font-size: 46px;
+  }
+  .hero-content {
+    padding: 80px 32px 48px;
+  }
+}
+
 @media (max-width: 820px) {
   .hero-content h1 {
     font-size: 36px;
@@ -2103,53 +2322,21 @@ h3 {
        trop bas sur la photo. */
     padding: 60px 20px 0;
   }
-  /* Refait le 09/09/2026 : en flex-wrap, les 3 pastilles (labels + lieux,
-     assez longs — "US Open · Australian Open") ne tenaient jamais sur une
-     seule ligne en mobile. La 3e retombait sur une 2e ligne à l'intérieur
-     du même conteneur arrondi, qui perdait alors sa forme de pilule (coins
-     visibles au milieu) — c'est ce rendu cassé qui posait problème. Remplacé
-     par CHAQUE pastille comme sa propre pilule autonome (fond + bordure
-     propres), plutôt qu'un unique conteneur pilule partagé — donc plus de
-     souci de forme cassée si ça revient à la ligne.
-     Recentré (19/09/2026, sur demande explicite "recentre-moi les 3 ronds") :
-     la version précédente défilait horizontalement en partant du bord
-     gauche (justify-content: flex-start + overflow-x: auto), ce qui
-     laissait la 1ère pastille ("Terre battue") à moitié hors champ sur les
-     petits écrans tant qu'on ne la faisait pas glisser à la main. Remplacé
-     par une rangée centrée qui peut revenir à la ligne (flex-wrap: wrap) au
-     lieu de défiler — avec seulement 3 pastilles courtes, ça tient sur une
-     ligne la plupart du temps, et si la 3e ne tient pas elle retombe sur une
-     2e ligne toujours centrée, sans jamais couper de texte. */
-  .hero-dots {
+  /* Ancienne version (avant le 29/09/2026) : chaque pastille portait son nom
+     + son lieu en toutes lettres, ce qui obligeait à gérer ici un retour à
+     la ligne (flex-wrap) et un style de pilule par pastille pour rester
+     propre une fois empilées. Devenu inutile depuis le passage à .hero-nav
+     (légende unique + petits ronds, voir plus haut dans ce fichier) : la
+     barre est maintenant assez compacte pour toujours tenir sur une seule
+     ligne, à toutes les largeurs. Il ne reste donc plus qu'à la repasser en
+     flux normal (elle était en position absolue) puisque le bloc de texte
+     peut devenir plus haut que le carrousel sur mobile. */
+  .hero-nav {
     position: static;
     left: auto;
     bottom: auto;
     transform: none;
-    background: none;
-    border: none;
-    backdrop-filter: none;
-    max-width: 100%;
-    flex-wrap: wrap;
-    overflow-x: visible;
-    justify-content: center;
-    gap: 10px;
-    margin: 26px 0 0;
-    padding: 2px 20px 6px;
-  }
-  .hero-dots::-webkit-scrollbar {
-    display: none;
-  }
-  .hero-dot {
-    flex: none;
-    align-items: center;
-    text-align: center;
-    background: rgba(10, 20, 20, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    backdrop-filter: blur(10px);
-  }
-  .hero-dot.active {
-    background: #fff;
-    border-color: #fff;
+    margin: 24px 0 0;
   }
   .hero-scrollcue {
     display: none;
@@ -2203,30 +2390,21 @@ h3 {
   .hero-stats {
     gap: 16px 22px;
   }
-  .hero-dots {
-    /* Même rangée centrée qu'au-dessus (820px) — juste la gouttière
-       latérale réajustée sur le padding de .hero-content à cette largeur
-       (18px au lieu de 20px), pour rester alignée avec le texte. */
-    padding: 2px 18px 6px;
-  }
-  .hero-dot {
-    padding: 7px 12px;
-  }
   .band-inner {
     padding: 0 16px;
   }
   .tour-chip {
-    padding: 8px 16px;
+    padding: 6px 16px 6px 6px;
+    gap: 10px;
     font-size: 12.5px;
+  }
+  .tour-mono {
+    min-width: 32px;
+    height: 32px;
+    font-size: 10.5px;
   }
   .section {
     padding: 48px 0;
-  }
-  /* Répété ici (cascade) pour continuer à gagner sur .section en dessous de
-     cette largeur — sinon la version mobile de .section reprendrait le
-     dessus et redonnerait le grand espace blanc qu'on vient de resserrer. */
-  .section--tight-top {
-    padding-top: 20px;
   }
   .section-head h2 {
     font-size: 22px;
