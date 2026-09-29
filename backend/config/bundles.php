@@ -16,5 +16,5 @@ return [
     // sentry/sentry-symfony (recette "contrib", pas officielle) — sans cette
     // ligne, le bundle serait installé par Composer mais jamais activé, et
     // le SENTRY_DSN de config/packages/sentry.yaml resterait sans effet.
-    Sentry\SentryBundle\SentryBundle::class => ['all' => true],
+    // Sentry\SentryBundle\SentryBundle::class => ['all' => true],
 ];
