@@ -275,7 +275,16 @@ onMounted(async () => {
     // Silencieux : le hero affiche "—" via les computed heroSuccessRate/
     // heroAnalyzedMatches tant que value reste null.
   }
-  loadShowcaseFavorites()
+  // Appel désactivé (29/09/2026, sur demande explicite) : une fois le
+  // backend enfin joignable en prod, cette fonction s'est déclenchée pour la
+  // première fois et a remplacé une photo de terrain par un portrait
+  // Wikipedia de joueur — pensé pour un portrait, il rend mal une fois étiré
+  // en fond de hero plein écran (gros plan disgracieux sur le visage). Le
+  // hero garde donc en permanence les photos de terrain choisies dans
+  // SHOWCASE_FALLBACK. loadShowcaseFavorites() reste définie plus haut,
+  // inchangée, au cas où on voudrait un jour la réactiver avec un affichage
+  // adapté (ex: vignette à côté du texte plutôt qu'en fond plein écran).
+  // loadShowcaseFavorites()
   scheduleNextSlide()
   setTimeout(() => {
     introDone.value = true
